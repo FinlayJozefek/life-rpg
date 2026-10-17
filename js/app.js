@@ -1,7 +1,7 @@
 import { SKILLS, SKILL, ITEM, ITEMS_BY_SKILL, RARITY, RARITIES, OUTFIT_XP_BOOST, PET_BOOST, BADGE_COUNT, COLLECTION_COMPLETE_XP_BOOST } from './data.js';
 import {
   load, save, newState, validateImport, levelProgress, previewLog, logActivity,
-  boostsFor, pct, sell, sellPrice, canSell, equip, totalLevel, discoveredCount, isCollectionComplete,
+  boostsFor, pct, effectiveDropChance, sell, sellPrice, canSell, equip, totalLevel, discoveredCount, isCollectionComplete,
   MAX_LEVEL,
 } from './game.js';
 import { itemSprite, avatarSprite } from './sprites.js';
@@ -18,6 +18,8 @@ const $modal = document.getElementById('modal-root');
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n) => Math.round(n).toLocaleString();
+// Drop chances: 1 decimal above 1%, 2 below so 0.25% doesn't show as 0.3%.
+const fmtChance = (p) => `${(p * 100).toFixed(p >= 0.01 ? 1 : 2)}%`;
 let saveWarned = false;
 const persist = () => {
   if (!save(state) && !saveWarned) {
@@ -187,7 +189,9 @@ function viewCollection() {
         ${i.type === 'pet' && seen ? '<span class="type-dot">🐾</span>' : ''}
       </button>`;
     }).join('');
-    return `<h3 class="r-${r.id}">${r.name} <span class="muted">· ${pct(r.chance)} each per unit</span></h3><div class="grid">${tiles}</div>`;
+    const droppable = items.find((i) => !(i.type === 'pet' && state.everOwned[i.id]));
+    const chance = droppable ? `${fmtChance(effectiveDropChance(state, droppable.id))} each per roll` : 'pet owned';
+    return `<h3 class="r-${r.id}">${r.name} <span class="muted">· ${chance}</span></h3><div class="grid">${tiles}</div>`;
   }).join('');
   const done = discoveredCount(state, sid);
   return `<section class="panel">
@@ -434,6 +438,9 @@ function showItem(id) {
       <h2>${esc(it.name)}</h2>
       <div>${rarityTag(it.rarity)} <span class="muted">${SKILL[it.skill].name}</span></div>
       <p>${itemEffect(it)}</p>
+      <p class="muted">${it.type === 'pet' && state.everOwned[id]
+        ? 'Pet owned — it no longer drops.'
+        : `Drop chance: <b>${fmtChance(effectiveDropChance(state, id))}</b> per roll (1 roll = ${fmtDuration(SKILL[it.skill].unit)} of ${SKILL[it.skill].name})`}</p>
       ${it.type !== 'pet' ? `<p class="muted">Owned: <b>${fmt(n)}</b> · Sells for ${fmt(price)} coins each${n >= BADGE_COUNT ? ' · 🏅 badge earned' : ` · ${BADGE_COUNT} for a badge`}</p>` : ''}
     </div>
     <div class="btn-col">

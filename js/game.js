@@ -164,6 +164,30 @@ export function previewLog(state, skillId, minutes) {
   };
 }
 
+// The real chance that one specific item drops from a single roll, after the
+// per-rarity cap, pets you already own (they leave the table) and luck.
+// With n items each at chance p, the number that hit is Binomial(n, p); the cap
+// keeps min(hits, cap) of them, shared evenly because items are checked in random order.
+export function effectiveDropChance(state, itemId) {
+  const item = ITEM[itemId];
+  if (item.type === 'pet' && state.everOwned[itemId]) return 0;
+  const rar = RARITY[item.rarity];
+  const luck = boostsFor(state, item.skill).luck;
+  const p = Math.min(1, rar.index >= LUCK_MIN_RARITY ? rar.chance * (1 + luck) : rar.chance);
+  const n = ITEMS_BY_SKILL[item.skill].filter((i) =>
+    i.rarity === item.rarity && !(i.type === 'pet' && state.everOwned[i.id])).length;
+  const binom = (k) => choose(n, k) * p ** k * (1 - p) ** (n - k);
+  let expectedKept = 0;
+  for (let k = 1; k <= n; k++) expectedKept += Math.min(k, MAX_PER_RARITY_PER_ROLL) * binom(k);
+  return expectedKept / n;
+}
+
+function choose(n, k) {
+  let r = 1;
+  for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i;
+  return r;
+}
+
 function shuffled(arr, rng) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
