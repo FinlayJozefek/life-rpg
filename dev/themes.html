@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Theme preview</title>
+<!-- Dev-only page: shows the real game in several colour themes side by side.
+     Themes are injected into each frame; the game's own files are not changed.
+     Not deployed (the Pages workflow only copies the game files). -->
+<style>
+  body { margin: 0; background: #0b0b0e; color: #ddd; font: 14px system-ui, sans-serif; }
+  header { padding: 16px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  header h1 { font-size: 18px; margin: 0 12px 0 0; }
+  header button { background: #222; color: #ddd; border: 1px solid #444; padding: 6px 12px; cursor: pointer; }
+  header button.on { border-color: #e8b84a; color: #e8b84a; }
+  .grid { display: flex; gap: 20px; padding: 0 20px 30px; overflow-x: auto; }
+  figure { margin: 0; flex: none; }
+  figcaption { margin-bottom: 8px; }
+  figcaption b { font-size: 15px; }
+  figcaption span { display: block; color: #999; font-size: 12px; max-width: 360px; }
+  .swatches { display: flex; gap: 4px; margin-top: 6px; }
+  .swatches i { width: 18px; height: 18px; border: 1px solid #000; }
+  .grid { flex-wrap: wrap; }
+  .phone { width: calc(375px * var(--z)); height: calc(720px * var(--z)); overflow: hidden; border: 1px solid #333; border-radius: 6px; }
+  iframe { width: 375px; height: 720px; border: 0; background: #000; transform: scale(var(--z)); transform-origin: 0 0; }
+  figcaption span { max-width: calc(375px * var(--z)); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Life RPG theme preview</h1>
+  <span>Show every phone on:</span>
+  <button data-view="home" class="on">Character</button>
+  <button data-view="skills">Skills</button>
+  <button data-view="collection">Collection</button>
+  <button data-view="settings">Settings</button>
+  <span style="margin-left:12px">Size:</span>
+  <button data-zoom="1">100%</button>
+  <button data-zoom="0.7">70%</button>
+  <button data-zoom="0.5">50%</button>
+</header>
+<div class="grid" id="grid"></div>
+
+<script>
+// Each theme: CSS variables + the handful of colours the stylesheet hardcodes.
+const THEMES = [
+  {
+    name: 'Current', blurb: 'What the game looks like now, for comparison.',
+    v: null,
+  },
+  {
+    name: 'Royal Arcane', blurb: 'Deep midnight blue with bright gold and a teal-green accent. Classic "fantasy UI" feel, high contrast.',
+    v: { bg: '#0c0e24', glow: '#23285e', panel: '#161a3a', panel2: '#1e2350', line: '#2f3670', deep: '#080a1a',
+         text: '#eef0ff', muted: '#9aa0cc', gold: '#ffc94a', goldDark: '#b88a1c', coinBg: '#2a2410',
+         accent: '#3ee0a0', primary: '#1f8a5c', primaryLine: '#3ee0a0', bar1: '#5ff0b4', bar2: '#1fa36b', bars: '#0a0c1e' },
+  },
+  {
+    name: 'Ember Forge', blurb: 'Warm charcoal and smouldering orange, like a blacksmith\'s workshop. Cosy and punchy.',
+    v: { bg: '#16100e', glow: '#3d1d12', panel: '#231816', panel2: '#2e1f1b', line: '#4a2e25', deep: '#0d0807',
+         text: '#fbeee4', muted: '#b89c8e', gold: '#ffb84a', goldDark: '#b5711c', coinBg: '#2e1d0c',
+         accent: '#ff8a3d', primary: '#c2451f', primaryLine: '#ff8a3d', bar1: '#ffb35c', bar2: '#e0601f', bars: '#0d0807' },
+  },
+  {
+    name: 'Emerald Grove', blurb: 'Rich forest green with warm gold. Grounded, natural, RuneScape-ish.',
+    v: { bg: '#0b1712', glow: '#183d2c', panel: '#13241c', panel2: '#1a3126', line: '#2a4a3a', deep: '#06100b',
+         text: '#ecf5ee', muted: '#94b3a2', gold: '#f2c35b', goldDark: '#a7801f', coinBg: '#26220e',
+         accent: '#5be08f', primary: '#2a8a52', primaryLine: '#5be08f', bar1: '#7cf0a8', bar2: '#2fa862', bars: '#06100b' },
+  },
+  {
+    name: 'Twilight Amethyst', blurb: 'Deep purple night with bright gold and violet. Magical, a bit more vibrant.',
+    v: { bg: '#130c22', glow: '#3a1f63', panel: '#1e1433', panel2: '#281b44', line: '#3d2b66', deep: '#0b0616',
+         text: '#f3edff', muted: '#a99bc9', gold: '#ffd25e', goldDark: '#b88c1f', coinBg: '#2a2210',
+         accent: '#b98bff', primary: '#6d3ad6', primaryLine: '#b98bff', bar1: '#cfa8ff', bar2: '#7d48e8', bars: '#0b0616' },
+  },
+  {
+    name: 'Frost Citadel', blurb: 'Cold steel blue with icy cyan and gold trim. Clean and crisp.',
+    v: { bg: '#0b141c', glow: '#1b3a52', panel: '#132230', panel2: '#1a2d3e', line: '#2a4459', deep: '#070d13',
+         text: '#eaf4fb', muted: '#91a9bb', gold: '#f5c85a', goldDark: '#a8821f', coinBg: '#24210f',
+         accent: '#5fd4ff', primary: '#1f6fa8', primaryLine: '#5fd4ff', bar1: '#86e2ff', bar2: '#2a8fd0', bars: '#070d13' },
+  },
+];
+
+function themeCss(v) {
+  return `
+  :root { --bg:${v.bg}; --panel:${v.panel}; --panel-2:${v.panel2}; --line:${v.line}; --text:${v.text};
+          --muted:${v.muted}; --gold:${v.gold}; --gold-dark:${v.goldDark}; --accent:${v.accent}; }
+  body { background-color:${v.bg}; background-image: radial-gradient(circle at 50% -20%, ${v.glow} 0%, ${v.bg} 60%); }
+  .topbar { background: ${v.bg}ee; }
+  .tabbar { background: ${v.deep}; }
+  .panel { box-shadow: inset 0 0 0 2px ${v.deep}, 4px 4px 0 ${v.deep}; }
+  .coin-pill, .install-banner, .banner.levelup, .welcome-install { background: ${v.coinBg}; }
+  .btn.primary { background: ${v.primary}; border-color: ${v.primaryLine}; color: #fff; }
+  .bar { background: ${v.bars}; border-color: ${v.bars}; }
+  .bar > span { background: linear-gradient(${v.bar1}, ${v.bar2}); }
+  .skill-icon, .slot-icon, .time-inputs input, .field input { background: ${v.deep}; border-color: ${v.line}; }
+  .tabbar button.on, .lvl, .brand { color: ${v.gold}; }
+  .boost, .boost-list { color: ${v.accent}; }`;
+}
+
+const grid = document.getElementById('grid');
+const frames = [];
+for (const t of THEMES) {
+  const fig = document.createElement('figure');
+  const sw = t.v ? ['bg', 'panel', 'line', 'gold', 'accent', 'primary'].map((k) => `<i style="background:${t.v[k]}"></i>`).join('') : '';
+  fig.innerHTML = `<figcaption><b>${t.name}</b><span>${t.blurb}</span><div class="swatches">${sw}</div></figcaption>`;
+  const f = document.createElement('iframe');
+  f.src = '/';
+  f.addEventListener('load', () => {
+    if (t.v) {
+      const s = f.contentDocument.createElement('style');
+      s.textContent = themeCss(t.v);
+      f.contentDocument.head.appendChild(s);
+    }
+    showView(f, currentView);
+  });
+  const phone = document.createElement('div');
+  phone.className = 'phone';
+  phone.appendChild(f);
+  fig.appendChild(phone);
+  grid.appendChild(fig);
+  frames.push(f);
+}
+
+let currentView = 'home';
+function showView(f, view) {
+  const btn = f.contentDocument?.querySelector(`.tabbar [data-view="${view}"]`);
+  if (btn) btn.click();
+}
+document.querySelectorAll('header button[data-view]').forEach((b) => b.addEventListener('click', () => {
+  currentView = b.dataset.view;
+  document.querySelectorAll('header button[data-view]').forEach((x) => x.classList.toggle('on', x === b));
+  frames.forEach((f) => showView(f, currentView));
+}));
+function setZoom(z) {
+  document.body.style.setProperty('--z', z);
+  document.querySelectorAll('header button[data-zoom]').forEach((x) => x.classList.toggle('on', x.dataset.zoom === String(z)));
+}
+document.querySelectorAll('header button[data-zoom]').forEach((b) => b.addEventListener('click', () => setZoom(b.dataset.zoom)));
+setZoom(innerWidth < 1200 ? '0.5' : '0.7');
+</script>
+</body>
+</html>
