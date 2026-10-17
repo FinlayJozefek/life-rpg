@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Item catalogue</title>
+<!-- Dev-only page: all 288 items with art, rarity, slot, drop chance and effect. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding-bottom: 40px; }
+  main { max-width: 1100px; padding-left: 8px; padding-right: 8px; }
+  .panel { padding: 10px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; align-items: center; }
+  .controls .lbl { font-size: 12px; color: var(--muted); margin-right: 2px; }
+  .group { margin: 16px 0 6px; }
+  .group h3 { margin: 0 0 2px; font-size: 18px; }
+  .group .sub { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .it { display: flex; gap: 8px; align-items: center; background: var(--panel-2); border: 2px solid var(--line); padding: 6px; min-width: 0; }
+  .it img { width: 44px; height: 44px; object-fit: contain; image-rendering: pixelated; flex: none; }
+  .it .txt { min-width: 0; line-height: 1.25; }
+  .it .nm { font-weight: 600; font-size: 13px; }
+  .it .meta { font-size: 11px; color: var(--muted); }
+  .it .fx { font-size: 11px; color: var(--accent); }
+  .summary { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+  .summary th, .summary td { border: 1px solid var(--line); padding: 4px 6px; text-align: center; }
+  .summary th { background: var(--panel-2); }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="brand">Item catalogue</div><div class="muted small">288 items · 12 skills · 7 rarities</div></header>
+<main>
+  <section class="panel">
+    <div class="controls" id="groupby"><span class="lbl">Group by:</span></div>
+    <div class="controls" id="types"><span class="lbl">Show:</span></div>
+    <div class="controls" id="rarities"><span class="lbl">Rarity:</span></div>
+    <div id="list"></div>
+  </section>
+  <section class="panel">
+    <h2>At a glance</h2>
+    <p class="muted small">Per skill. Chance shown is per item per roll (one roll = one unit logged), before the 2-per-rarity cap trims Common/Uncommon/Rare slightly.</p>
+    <table class="summary" id="summary"></table>
+  </section>
+</main>
+<script type="module">
+import { SKILLS, SKILL, ITEMS, RARITIES, RARITY, OUTFIT_XP_BOOST, PET_BOOST, SLOT_LABEL } from '../js/data.js';
+import { itemSprite } from '../js/sprites.js';
+import { outfitIcon, petIcon } from '../js/sprites2.js';
+
+const pct = (v) => `${+(v * 100).toFixed(2)}%`;
+const icon = (it) => it.type === 'outfit' ? outfitIcon(it.id) : it.type === 'pet' ? petIcon(it.id) : itemSprite(it.id);
+const kind = (it) => it.type === 'pet' ? 'Pet' : it.type === 'outfit' ? `Wearable · ${SLOT_LABEL[it.slot]}` : 'Collection';
+function effect(it) {
+  if (it.type === 'outfit') return `+${pct(OUTFIT_XP_BOOST[it.rarity])} ${SKILL[it.skill].name} XP`;
+  if (it.type === 'pet') {
+    const b = PET_BOOST[it.rarity];
+    const p = [`+${pct(b.xp)} XP`];
+    if (b.coins) p.push(`+${pct(b.coins)} coins`);
+    if (b.luck) p.push(`+${pct(b.luck)} luck`);
+    if (b.bonusRollChance === 1) p.push('bonus roll every log');
+    else if (b.bonusRollChance) p.push(`${pct(b.bonusRollChance)} bonus roll`);
+    return p.join(', ');
+  }
+  return `Sells for ${RARITY[it.rarity].sell.toLocaleString()} coins`;
+}
+
+let groupBy = 'rarity', type = 'all', rarity = 'all';
+
+function card(it, showSkill) {
+  return `<div class="it r-border-${it.rarity}">
+    <img src="${icon(it)}" alt="">
+    <div class="txt"><div class="nm">${it.name}</div>
+      <div class="meta"><span class="rtag r-${it.rarity}">${RARITY[it.rarity].name}</span>${showSkill ? ` · ${SKILL[it.skill].icon} ${SKILL[it.skill].name}` : ''}</div>
+      <div class="meta">${kind(it)} · ${pct(RARITY[it.rarity].chance)}</div>
+      <div class="fx">${effect(it)}</div></div></div>`;
+}
+
+function draw() {
+  const items = ITEMS.filter((i) => (type === 'all' || i.type === type) && (rarity === 'all' || i.rarity === rarity));
+  const groups = groupBy === 'rarity'
+    ? RARITIES.map((r) => ({ key: r.id, title: `<span class="r-${r.id}">${r.name}</span>`, sub: `${pct(r.chance)} per item per roll · ${r.id === 'divine' ? "all pets, which can't be sold" : `sells for ${r.sell.toLocaleString()} coins`}`, items: items.filter((i) => i.rarity === r.id), showSkill: true }))
+    : SKILLS.map((s) => ({ key: s.id, title: `${s.icon} ${s.name}`, sub: `1 roll every ${s.unit >= 60 ? `${s.unit / 60} hr${s.unit > 60 ? 's' : ''}` : `${s.unit} min`} logged`, items: items.filter((i) => i.skill === s.id), showSkill: false }));
+  document.getElementById('list').innerHTML = groups.filter((g) => g.items.length).map((g) => `
+    <div class="group"><h3>${g.title} <span class="muted small">(${g.items.length})</span></h3><div class="sub">${g.sub}</div>
+    <div class="items">${g.items.map((i) => card(i, g.showSkill)).join('')}</div></div>`).join('') || '<p class="muted">Nothing matches.</p>';
+}
+
+function chips(containerId, options, get, set) {
+  const c = document.getElementById(containerId);
+  for (const [value, label] of options) {
+    const b = document.createElement('button');
+    b.className = `chip ${get() === value ? 'on' : ''}`;
+    b.textContent = label;
+    b.onclick = () => { set(value); c.querySelectorAll('.chip').forEach((x) => x.classList.toggle('on', x === b)); draw(); };
+    c.appendChild(b);
+  }
+}
+chips('groupby', [['rarity', 'Rarity'], ['skill', 'Skill']], () => groupBy, (v) => { groupBy = v; });
+chips('types', [['all', 'Everything'], ['outfit', 'Wearables'], ['pet', 'Pets'], ['collection', 'Collection']], () => type, (v) => { type = v; });
+chips('rarities', [['all', 'All'], ...RARITIES.map((r) => [r.id, r.name])], () => rarity, (v) => { rarity = v; });
+
+// Summary table: rarity rows, with counts of wearables / pets / collection items per skill.
+const rows = RARITIES.map((r) => {
+  const of = ITEMS.filter((i) => i.rarity === r.id && i.skill === SKILLS[0].id);
+  const n = (t) => of.filter((i) => i.type === t).length;
+  return `<tr><td class="r-${r.id}"><b>${r.name}</b></td><td>${of.length}</td><td>${pct(r.chance)}</td><td>${r.sell.toLocaleString()}</td>
+    <td>${OUTFIT_XP_BOOST[r.id] ? '+' + pct(OUTFIT_XP_BOOST[r.id]) : '—'}</td><td>${PET_BOOST[r.id] ? '+' + pct(PET_BOOST[r.id].xp) : '—'}</td></tr>`;
+}).join('');
+document.getElementById('summary').innerHTML = `<tr><th>Rarity</th><th>Items per skill</th><th>Drop chance</th><th>Sell price</th><th>Wearable boost</th><th>Pet XP boost</th></tr>${rows}`;
+
+draw();
+</script>
+</body>
+</html>
