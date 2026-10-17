@@ -518,3 +518,15 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 .result.skipped .big-drop.revealed::after { display: none; }
 .result.skipped .big-drop.revealed .rays { animation: spin 9s linear infinite !important; }
 .drop-text { min-width: 0; overflow-wrap: anywhere; }
+
+/* charging = the card just flashes in its rarity colour, faster for rarer tiers, brightening until it bursts */
+.mystery-orb { display: none !important; }
+.big-drop.charging::before {
+  content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; background: var(--c);
+  animation: card-flash 0.5s ease-in-out infinite, flash-build var(--charge) ease-in both;
+}
+.big-drop.rar-legendary.charging::before { animation: card-flash 0.34s ease-in-out infinite, flash-build var(--charge) ease-in both; }
+.big-drop.rar-mythic.charging::before { animation: card-flash 0.22s ease-in-out infinite, flash-build var(--charge) ease-in both; }
+.big-drop.rar-divine.charging::before { animation: card-flash 0.15s ease-in-out infinite, flash-build var(--charge) ease-in both; }
+@keyframes card-flash { 0%, 100% { opacity: 0.08; } 50% { opacity: 0.85; } }
+@keyframes flash-build { from { filter: brightness(0.6); } to { filter: brightness(1.6); } }
