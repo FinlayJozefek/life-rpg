@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UI icon options</title>
+<!-- Dev-only page: pixel-art replacements for every emoji in the UI. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding-bottom: 40px; }
+  main { max-width: 900px; padding-left: 8px; padding-right: 8px; }
+  .panel { padding: 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border-bottom: 1px solid var(--line); padding: 5px 3px; text-align: center; vertical-align: middle; }
+  th { font-family: var(--display-font); color: var(--gold); font-size: 12px; }
+  th small { display: block; font-family: system-ui, sans-serif; color: var(--muted); font-weight: 400; font-size: 10px; }
+  td.name { text-align: left; font-size: 12px; }
+  td.name small { display: block; color: var(--muted); font-size: 10px; }
+  td img { width: 42px; height: 42px; image-rendering: pixelated; display: block; margin: 0 auto; }
+  td.emoji { font-size: 26px; }
+  .group-title { margin: 14px 0 4px; color: var(--gold); font-family: var(--display-font); }
+  .bars { display: flex; flex-direction: column; gap: 10px; }
+  .mockbar { display: grid; grid-template-columns: repeat(5, 1fr); background: var(--tabbar); border: 2px solid var(--line); }
+  .mockbar div { display: flex; flex-direction: column; align-items: center; padding: 6px 0; font-size: 10px; color: var(--muted); gap: 2px; }
+  .mockbar div.on { color: var(--gold); }
+  .mockbar img { width: 30px; height: 30px; image-rendering: pixelated; }
+  .mockbar div:not(.on) img { filter: grayscale(0.7) brightness(0.75); }
+  .mockbar span.e { font-size: 20px; }
+  .mock-label { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .badge-card { display: flex; gap: 8px; align-items: center; background: var(--panel-2); border: 2px solid var(--line); padding: 6px; }
+  .badge-card img { width: 56px; height: 56px; image-rendering: pixelated; flex: none; }
+  .badge-card .t { font-size: 12px; line-height: 1.25; }
+  .badge-card .t small { display: block; color: var(--muted); font-size: 10px; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .legend img { width: 40px; height: 40px; image-rendering: pixelated; vertical-align: middle; }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="brand">UI icons</div><div class="muted small">emoji → pixel art</div></header>
+<main>
+  <section class="panel">
+    <h2>Tab bar</h2>
+    <p class="muted small">The bar along the bottom of the game. "Skills" is shown as the active tab.</p>
+    <div class="bars" id="bars"></div>
+  </section>
+  <section class="panel">
+    <h2>Every other icon</h2>
+    <table id="table"></table>
+  </section>
+  <section class="panel">
+    <h2>Achievements as badges</h2>
+    <p class="muted small">Idea: reuse the skill-icon frames by difficulty, so easy badges are bronze and the hardest are legendary. Locked ones are grey stone.</p>
+    <div class="legend" id="legend"></div>
+    <div class="badges" id="badges"></div>
+  </section>
+</main>
+<script type="module">
+import { ACHIEVEMENTS } from '../js/engage.js';
+import { uiIcon, UI_STYLES, symbolRows, symbolPal } from '../js/uiicons.js';
+import { badgeIcon, skillSymbol, tieredIcon } from '../js/skillicons.js';
+
+// ---- tab bar ----
+const TABS = [['helmet', '🛡️', 'Character'], ['swords', '⚔️', 'Skills'], ['scroll', '📜', 'Quests'], ['chest', '🎒', 'Collection'], ['gear', '⚙️', 'Settings']];
+const bar = (label, cell) => `<div><div class="mock-label">${label}</div><div class="mockbar">${TABS.map((t, i) => `<div class="${i === 1 ? 'on' : ''}">${cell(t)}${t[2]}</div>`).join('')}</div></div>`;
+document.getElementById('bars').innerHTML =
+  bar('Now (emoji)', (t) => `<span class="e">${t[1]}</span>`) +
+  UI_STYLES.map((s, i) => bar(`${String.fromCharCode(65 + i)}. ${s.name}`, (t) => `<img src="${uiIcon(t[0], s.id)}" alt="">`)).join('');
+
+// ---- everything else ----
+const GROUPS = [
+  ['Top bar & buttons', [['flame', '🔥', 'Streak', 'top bar, Quests'], ['coin', '🪙', 'Coins', 'top bar (currently a square)'], ['trophy', '🏆', 'Achievements', 'button'], ['title', '🎖️', 'Titles', 'button, new title'], ['card', '🪪', 'Profile card', 'button'], ['lock', '🔒', 'Locked', 'achievements, titles'], ['sound', '🔊', 'Sound', 'Settings'], ['pencil', '✎', 'Rename', 'next to your name']]],
+  ['Empty gear slots', [['hat', '🎩', 'Head'], ['tunic', '👕', 'Body'], ['boot', '👢', 'Feet'], ['paw', '🐾', 'Pet', 'also the PET tag']]],
+  ['Quests', [['target', '🎯', 'Variety quest'], ['hourglass', '⏳', 'Time quest'], ['compass', '🧭', 'Weekly variety'], ['calendar', '📅', 'Weekly days'], ['check', '✅', 'Quest done'], ['medal', '🏅', 'Item badge (100 owned)']]],
+];
+const t = document.getElementById('table');
+t.innerHTML = `<tr><th>Icon</th><th>Now<small>emoji</small></th>${UI_STYLES.map((s, i) => `<th>${String.fromCharCode(65 + i)}. ${s.name}<small>${s.blurb}</small></th>`).join('')}</tr>` +
+  GROUPS.map(([title, rows]) => `<tr><td colspan="${2 + UI_STYLES.length}" class="name"><div class="group-title">${title}</div></td></tr>` +
+    rows.map(([id, emoji, name, where]) => `<tr><td class="name">${name}${where ? `<small>${where}</small>` : ''}</td><td class="emoji">${emoji}</td>${UI_STYLES.map((s) => `<td><img src="${uiIcon(id, s.id)}" alt=""></td>`).join('')}</tr>`).join('')).join('');
+
+// ---- achievements as tiered badges ----
+const TIER_NAMES = ['Stone (locked)', 'Bronze · easy', 'Silver · medium', 'Gold · hard', 'Legendary · epic'];
+const A = {
+  'first-log': ['boot', 1, '#8ab83a'], 'first-rare': ['gem', 1, '#4a90e2'], 'first-epic': ['gem', 2, '#a35ae0'], 'first-legendary': ['star', 3, '#f0a020'],
+  'first-mythic': ['flame', 4, '#e8435a'], 'first-divine': ['crown', 4, '#fff1a8'], 'lvl-15': ['medal', 1, '#c8963a'], 'lvl-30': ['medal', 2, '#9aa3b8'],
+  'lvl-45': ['medal', 3, '#ffc94a'], 'lvl-60': ['trophy', 4, '#ffc94a'], 'total-100': ['trophy', 2, '#4a7ae0'], 'all-skills': ['compass', 2, '#3ac0b0'],
+  'hours-10': ['hourglass', 1, '#e0a030'], 'hours-100': ['hourglass', 3, '#e0a030'], 'fitness-100': ['skill:fitness', 3, '#e0603a'], 'streak-7': ['flame', 2, '#ff8a2e'],
+  'streak-30': ['flame', 3, '#ff6a3a'], 'pets-10': ['paw', 2, '#c89a6a'], 'common-pets': ['paw', 3, '#8ab83a'], 'collection': ['chest', 3, '#a87a4a'],
+  'hoarder': ['chest', 2, '#c8963a'], 'rich': ['coin', 3, '#ffc94a'],
+};
+const symOf = (s) => (s.startsWith('skill:') ? skillSymbol(s.slice(6)) : { rows: symbolRows(s), pal: symbolPal(s) });
+document.getElementById('legend').innerHTML = TIER_NAMES.map((n, i) => {
+  const { rows, pal } = symOf('star');
+  return `<span><img src="${badgeIcon(rows, pal, '#ffc94a', i, { locked: i === 0 })}" alt=""> ${n}</span>`;
+}).join('');
+document.getElementById('badges').innerHTML = ACHIEVEMENTS.map((a, i) => {
+  const [sym, tier, col] = A[a.id] || ['star', 1, '#ffc94a'];
+  const { rows, pal } = symOf(sym);
+  const locked = i % 4 === 3;   // show some as locked for comparison
+  return `<div class="badge-card"><img src="${badgeIcon(rows, pal, col, tier, { locked })}" alt="">
+    <div class="t"><b>${a.name}</b><small>${locked ? 'Locked · ' : ''}${a.desc}</small><small>was ${a.icon}</small></div></div>`;
+}).join('');
+</script>
+</body>
+</html>

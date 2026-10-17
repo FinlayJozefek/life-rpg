@@ -64,6 +64,8 @@ const SYMBOLS = {
     '.......de.......', '.......de.......', '.......ee.......', '................'] },
 };
 
+export const skillSymbol = (id) => SYMBOLS[id];
+
 // Each skill's colour, used for the shield / medallion / stone frames.
 export const SKILL_COLOR = {
   fitness: '#e0603a', intelligence: '#4a7ae0', cooking: '#e0a030', farming: '#8ab83a',
@@ -163,9 +165,8 @@ function outline32(g, col = OUT) {
 const inShield = (bx, by) => { const half = by < 14 ? 11 : 11 - Math.round((by - 13) * 1.15); return by >= 1 && by <= 22 && Math.abs(bx - 11.5) <= half; };
 const shieldEdge = (bx, by) => { const half = by < 14 ? 11 : 11 - Math.round((by - 13) * 1.15); return by <= 2 || Math.abs(bx - 11.5) > half - 1.5 || (by >= 14 && Math.abs(bx - 11.5) > half - 2); };
 
-function tierFrame(tier, skillId) {
+function tierFrame(tier, col) {
   const g = g32();
-  const col = SKILL_COLOR[skillId];
   const METAL = [null, ['#e0a060', '#b87333', '#7a4318'], ['#f4f6fb', '#c4c9d6', '#7a8090'], ['#fff1a0', '#ffc94a', '#b88a1c'], ['#fff6c0', '#ffd84a', '#c8961c']][tier];
   for (let by = 0; by < 24; by++) for (let bx = 0; bx < 24; bx++) {
     const cx = bx - 11.5, cy = by - 11.5, x = bx + B, y = by + B;
@@ -213,10 +214,14 @@ function tierFrame(tier, skillId) {
 }
 
 function tieredGrid(skillId, level) {
-  const tier = tierOf(level);
-  const g = tierFrame(tier, skillId);
+  return framedGrid(SYMBOLS[skillId].rows, SYMBOLS[skillId].pal, SKILL_COLOR[skillId], tierOf(level), pipsFor(level));
+}
+
+// Any 16x16 symbol in a tier frame. pips = null hides the progress dots.
+function framedGrid(rows, pal, col, tier, pips) {
+  const g = tierFrame(tier, col);
   outline32(g);
-  const sym = SYMBOLS[skillId];
+  const sym = { rows, pal };
   const oy = tier >= 2 ? 7 : 8;
   sym.rows.forEach((row, y) => [...row].forEach((ch, x) => { if (sym.pal[ch]) put(g, x + 8, y + oy, sym.pal[ch]); }));
   // symbol outline (only where it sits on the frame)
@@ -227,8 +232,8 @@ function tieredGrid(skillId, level) {
     if (symMask[y]?.[x - 1] || symMask[y]?.[x + 1] || symMask[y - 1]?.[x] || symMask[y + 1]?.[x]) put(g, x, y, OUT);
   }
   // progress pips along the bottom (not at max level)
-  if (tier < 4) {
-    const filled = pipsFor(level);
+  if (tier < 4 && pips !== null) {
+    const filled = pips;
     for (let i = 0; i < 5; i++) {
       const x0 = 8 + i * 3.4 | 0;
       const c = i < filled ? '#ffc94a' : '#3a3f62';
@@ -247,6 +252,21 @@ function gridToCanvas(g, scale, bright = 0) {
     ctx.fillRect(x * scale, y * scale, scale, scale);
   }
   return cv;
+}
+
+// Achievement-style badge: any symbol, any colour, a fixed tier (0 stone ... 4 legendary).
+// `locked` shows a greyed-out stone version.
+export function badgeIcon(rows, pal, col, tier, { scale = 3, locked = false } = {}) {
+  let usePal = pal, useCol = col, useTier = tier;
+  if (locked) {
+    useTier = 0; useCol = '#4a4e66';
+    usePal = Object.fromEntries(Object.entries(pal).map(([k, v]) => {
+      const n = parseInt(v.slice(1), 16);
+      const l = Math.round((0.3 * (n >> 16) + 0.59 * ((n >> 8) & 255) + 0.11 * (n & 255)) * 0.55);
+      return [k, `#${[l, l, l + 12].map((x) => Math.min(255, x).toString(16).padStart(2, '0')).join('')}`];
+    }));
+  }
+  return gridToCanvas(framedGrid(rows, usePal, useCol, useTier, null), scale).toDataURL();
 }
 
 const tierCache = new Map();
