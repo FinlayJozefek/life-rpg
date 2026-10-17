@@ -5,6 +5,8 @@ import { levelForXp, totalLevel, currentStreak } from './game.js';
 import { titleLabel, bestDrops } from './engage.js';
 import { buildAvatar, outfitIcon, petIcon } from './sprites2.js';
 import { itemSprite } from './sprites.js';
+import { tieredIcon } from './skillicons.js';
+import { uiIcon } from './uiicons.js';
 
 const W = 1080, H = 1350;
 const C = { bg: '#0c0e24', glow: '#23285e', panel: '#161a3a', line: '#2f3670', gold: '#ffc94a', goldDark: '#b88a1c', text: '#eef0ff', muted: '#9aa0cc' };
@@ -58,26 +60,30 @@ export async function drawCard(state) {
   }
 
   // headline stats
+  const flameImg = await loadImg(uiIcon('flame', 'color', 3));
   const streak = currentStreak(state);
   const found = Object.keys(state.everOwned).length;
-  const stats = [['Total level', totalLevel(state)], ['Day streak', `🔥 ${streak}`], ['Items found', `${found}/288`], ['Coins', state.coins.toLocaleString()]];
+  const stats = [['Total level', totalLevel(state)], ['Day streak', String(streak)], ['Items found', `${found}/288`], ['Coins', state.coins.toLocaleString()]];
   stats.forEach(([label, value], i) => {
     const y = 262 + i * 152;
     panel(ctx, 540, y, 470, 136);
     ctx.textAlign = 'left';
     ctx.fillStyle = C.muted; ctx.font = `600 24px ${SANS}`; ctx.fillText(label.toUpperCase(), 570, y + 46);
-    ctx.fillStyle = label === 'Coins' ? C.gold : C.text; ctx.font = `700 56px ${SERIF}`; ctx.fillText(String(value), 570, y + 110);
+    let vx = 570;
+    if (label === 'Day streak' && flameImg) { ctx.drawImage(flameImg, 566, y + 58, 60, 60); vx = 634; }
+    ctx.fillStyle = label === 'Coins' ? C.gold : C.text; ctx.font = `700 56px ${SERIF}`; ctx.fillText(String(value), vx, y + 110);
   });
 
   // skills grid
+  const skillImgs = await Promise.all(SKILLS.map((s) => loadImg(tieredIcon(s.id, levelForXp(state.skills[s.id].xp), 3))));
   ctx.textAlign = 'left';
   ctx.fillStyle = C.gold; ctx.font = `700 34px ${SERIF}`; ctx.fillText('Skills', 70, 922);
   SKILLS.forEach((s, i) => {
     const col = i % 3, row = Math.floor(i / 3);
     const x = 70 + col * 318, y = 944 + row * 68;
     panel(ctx, x, y, 304, 58);
-    ctx.font = `30px ${SANS}`; ctx.fillStyle = C.text; ctx.fillText(s.icon, x + 12, y + 41);
-    ctx.font = `600 24px ${SANS}`; ctx.fillText(s.name, x + 58, y + 38);
+    if (skillImgs[i]) ctx.drawImage(skillImgs[i], x + 6, y + 3, 52, 52);
+    ctx.fillStyle = C.text; ctx.font = `600 24px ${SANS}`; ctx.fillText(s.name, x + 62, y + 38);
     ctx.textAlign = 'right'; ctx.fillStyle = C.gold; ctx.font = `700 28px ${SERIF}`;
     ctx.fillText(String(levelForXp(state.skills[s.id].xp)), x + 290, y + 40);
     ctx.textAlign = 'left';

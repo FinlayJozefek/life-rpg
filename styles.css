@@ -518,3 +518,41 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 .result.skipped .big-drop.revealed::after { display: none; }
 .result.skipped .big-drop.revealed .rays { animation: spin 9s linear infinite !important; }
 .drop-text { min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- pixel-art icons ---------- */
+.ui-ic, .skill-ic, .ach-ic { image-rendering: pixelated; display: inline-block; vertical-align: middle; }
+.ui-ic { width: 26px; height: 26px; }
+.ui-ic.tiny { width: 18px; height: 18px; margin: -3px 1px 0; }
+.ui-ic.btn-ic { width: 22px; height: 22px; margin: -3px 4px 0 -2px; }
+.ui-ic.ban-ic { width: 24px; height: 24px; margin: -4px 4px 0 0; }
+.ui-ic.pill-ic { width: 20px; height: 20px; margin: -2px 0 0; }
+.ui-ic.big-flame { width: 64px; height: 64px; }
+.ui-ic.tab-ic { width: 30px; height: 30px; }
+.tabbar button span { filter: grayscale(0.75) brightness(0.7); display: block; line-height: 0; }
+.tabbar button.on span { filter: none; }
+.coin-pill { gap: 4px; padding: 3px 9px; }
+.streak-pill { gap: 2px; padding: 3px 8px 3px 5px; }
+.skill-icon { background: none !important; border: 0 !important; width: 48px; height: 48px; }
+.skill-icon .skill-ic { width: 48px; height: 48px; }
+.skill-icon.big, .skill-icon.big .skill-ic { width: 60px; height: 60px; }
+.li-icon .skill-ic { width: 34px; height: 34px; }
+.skill-ic.chip-ic { width: 22px; height: 22px; margin: -3px 2px 0 -3px; }
+.quest-icon .ui-ic, .quest-icon .skill-ic { width: 32px; height: 32px; }
+.slot-empty .ui-ic { width: 30px; height: 30px; opacity: 0.45; }
+.gear-icon .slot-empty .ui-ic { width: 26px; height: 26px; }
+.ach-icon { width: 52px; }
+.ach-icon .ach-ic { width: 52px; height: 52px; }
+.banner .ach-ic { width: 40px; height: 40px; margin: -6px 6px -6px 0; }
+.title-icon .ui-ic { width: 28px; height: 28px; }
+.die .skill-ic { width: 72px; height: 72px; }
+.die { font-size: 0; }
+.name .ui-ic.tiny { opacity: 0.6; }
+.badge .ui-ic, .type-dot .ui-ic { width: 16px; height: 16px; margin: 0; }
+/* tier-up moment on milestone level-ups: old icon → new icon */
+.tier-up { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 6px 0; }
+.tier-up .skill-ic { width: 64px; height: 64px; }
+.tier-up b { font-size: 26px; color: var(--gold); }
+.tier-up .old { opacity: 0.55; filter: grayscale(0.5); }
+.tier-up .new { animation: tier-pop 1.2s 0.3s cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes tier-pop { 0% { transform: scale(0.2) rotate(-20deg); filter: brightness(4); } 60% { transform: scale(1.25) rotate(4deg); filter: brightness(1.8); } 100% { transform: scale(1); filter: brightness(1); } }
+.btn > .muted { margin-left: 5px; }

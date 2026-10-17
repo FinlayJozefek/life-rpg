@@ -2,15 +2,17 @@ import { SKILLS, SKILL, ITEM, ITEMS_BY_SKILL, RARITY, RARITIES, OUTFIT_XP_BOOST,
 import {
   load, save, newState, validateImport, levelProgress, previewLog, logActivity,
   boostsFor, pct, effectiveDropChance, sell, sellPrice, canSell, equip, isEquipped, totalLevel, discoveredCount, isCollectionComplete,
-  currentStreak, streakAtRisk, streakBonus,
+  currentStreak, streakAtRisk, streakBonus, levelForXp,
   MAX_LEVEL,
 } from './game.js';
 import { itemSprite } from './sprites.js';
 import { mountAvatar, mountPet, outfitIcon, petIcon } from './sprites2.js';
 import { startAutoUpdate } from './updates.js';
-import { checkProgress, questsFor, rewardText, ACHIEVEMENTS, TITLES, TITLE, titleLabel, bestDrops } from './engage.js';
+import { checkProgress, questsFor, rewardText, ACH_BADGE, ACHIEVEMENTS, TITLES, TITLE, titleLabel, bestDrops } from './engage.js';
 import * as sfx from './sfx.js';
 import { drawCard } from './card.js';
+import { uiIcon, symbolRows, symbolPal } from './uiicons.js';
+import { tieredIcon, mountSkillIcon, badgeIcon, skillSymbol, tierOf } from './skillicons.js';
 import { confetti, shake, flash, vibrate } from './celebrate.js';
 import { isInstalled, isIOS, inAppBrowser, installInstructions, promptInstall, onInstallChange, canPromptInstall } from './install.js';
 
@@ -104,7 +106,21 @@ function itemImg(id, { hidden = false, cls = '' } = {}) {
   return `<img class="sprite ${cls} ${item.type !== 'collection' ? 'outfit-icon' : ''} ${hidden ? '' : 'glow-' + item.rarity}" src="${src}" alt="${hidden ? 'Unknown item' : esc(item.name)}">`;
 }
 
-const SLOT_EMPTY_ICON = { head: '🎩', body: '👕', feet: '👢', pet: '🐾' };
+const SLOT_EMPTY_ICON = { head: 'hat', body: 'tunic', feet: 'boot', pet: 'paw' };
+
+// ---------- pixel-art icons ----------
+const ic = (id, cls = '') => `<img class="ui-ic ${cls}" src="${uiIcon(id, 'color', 3)}" alt="">`;
+const skillLevel = (id) => levelForXp(state.skills[id].xp);
+// A skill's icon at its current tier (stone → bronze → silver → gold → legendary).
+const skillIc = (id, cls = '') => `<img class="skill-ic ${cls}" src="${tieredIcon(id, skillLevel(id), 3)}" alt="">`;
+// Same, but level-60 icons are a canvas that animates (mounted after render).
+const skillIcLive = (id, cls = '') => (skillLevel(id) >= 60 ? `<canvas class="skill-ic ${cls}" data-skill-anim="${id}"></canvas>` : skillIc(id, cls));
+const questIc = (icon) => (icon.startsWith('skill:') ? skillIc(icon.slice(6)) : ic(icon));
+function achBadge(a, locked = false) {
+  const [sym, tier, col] = ACH_BADGE[a.id] || ['star', 1, '#ffc94a'];
+  const s = sym.startsWith('skill:') ? skillSymbol(sym.slice(6)) : { rows: symbolRows(sym), pal: symbolPal(sym) };
+  return `<img class="ach-ic" src="${badgeIcon(s.rows, s.pal, col, tier, { locked })}" alt="">`;
+}
 
 function itemEffect(item) {
   if (item.type === 'outfit') return `${SLOT_LABEL[item.slot]} · +${pct(OUTFIT_XP_BOOST[item.rarity])} ${SKILL[item.skill].name} XP when worn`;
@@ -127,7 +143,7 @@ function viewHome() {
     const item = state.equipped[type] && ITEM[state.equipped[type]];
     return `
     <button class="slot" data-action="pick-slot" data-type="${type}">
-      <div class="slot-icon">${item ? itemImg(item.id) : `<span class="slot-empty">${SLOT_EMPTY_ICON[type]}</span>`}</div>
+      <div class="slot-icon">${item ? itemImg(item.id) : `<span class="slot-empty">${ic(SLOT_EMPTY_ICON[type])}</span>`}</div>
       <div class="slot-text">
         <div class="slot-label">${SLOT_LABEL[type]}</div>
         <div class="slot-name">${item ? esc(item.name) : 'Empty'}</div>
@@ -137,7 +153,7 @@ function viewHome() {
   };
   const recent = state.log.slice(0, 8).map((e) => {
     const n = Object.values(e.drops).reduce((a, b) => a + b, 0);
-    return `<li><span class="li-icon">${SKILL[e.skill].icon}</span>
+    return `<li><span class="li-icon">${skillIc(e.skill)}</span>
       <span class="li-main"><b>${SKILL[e.skill].name}</b> · ${fmtDuration(e.minutes)}<br>
       <span class="muted">+${fmt(e.xp)} XP · +${fmt(e.coins)} coins · ${n} drop${n === 1 ? '' : 's'}</span></span>
       <span class="li-time muted">${timeAgo(e.at)}</span></li>`;
@@ -149,7 +165,7 @@ function viewHome() {
         <canvas class="avatar" id="avatar-canvas" role="img" aria-label="Your character"></canvas>
         ${state.equipped.pet ? `<canvas class="avatar-pet detailed" id="pet-canvas" role="img" aria-label="${esc(ITEM[state.equipped.pet].name)}"></canvas>` : ''}
       </div>
-      <button class="name" data-action="rename">${esc(state.name)} <span class="muted">✎</span></button>
+      <button class="name" data-action="rename">${esc(state.name)} ${ic('pencil', 'tiny')}</button>
       <button class="title-line" data-action="pick-title">${titleLabel(state) ? esc(titleLabel(state)) : '<span class="muted">No title yet</span>'} <span class="muted">▾</span></button>
       <div class="stats">
         <div><div class="stat-num">${totalLevel(state)}</div><div class="stat-label">Total level</div></div>
@@ -157,8 +173,8 @@ function viewHome() {
         <div><div class="stat-num">${totalDiscovered}<span class="muted">/288</span></div><div class="stat-label">Items found</div></div>
       </div>
       <div class="btn-row hero-btns">
-        <button class="btn" data-action="achievements">🏆 Achievements <span class="muted">${Object.keys(state.achievements).length}/${ACHIEVEMENTS.length}</span></button>
-        <button class="btn" data-action="profile-card">🪪 Profile card</button>
+        <button class="btn" data-action="achievements">${ic('trophy', 'btn-ic')} Achievements <span class="muted">${Object.keys(state.achievements).length}/${ACHIEVEMENTS.length}</span></button>
+        <button class="btn" data-action="profile-card">${ic('card', 'btn-ic')} Profile card</button>
       </div>
     </section>
     <section class="panel">
@@ -178,7 +194,7 @@ function viewSkills() {
     const p = levelProgress(sk.xp);
     const b = boostsFor(state, s.id);
     return `<li><button class="skill-row" data-action="open-log" data-skill="${s.id}">
-      <span class="skill-icon">${s.icon}</span>
+      <span class="skill-icon">${skillIcLive(s.id)}</span>
       <span class="skill-body">
         <span class="skill-top"><b>${s.name}</b><span class="lvl">Lv ${p.level}</span></span>
         <span class="bar"><span style="width:${(p.pct * 100).toFixed(1)}%"></span></span>
@@ -190,7 +206,7 @@ function viewSkills() {
 
 function viewCollection() {
   const sid = collectionSkill;
-  const chips = SKILLS.map((s) => `<button class="chip ${s.id === sid ? 'on' : ''}" data-action="coll-skill" data-skill="${s.id}">${s.icon} ${s.name}${isCollectionComplete(state, s.id) ? ' ★' : ''}</button>`).join('');
+  const chips = SKILLS.map((s) => `<button class="chip ${s.id === sid ? 'on' : ''}" data-action="coll-skill" data-skill="${s.id}">${skillIc(s.id, 'chip-ic')} ${s.name}${isCollectionComplete(state, s.id) ? ' ★' : ''}</button>`).join('');
   const groups = RARITIES.map((r) => {
     const items = ITEMS_BY_SKILL[sid].filter((i) => i.rarity === r.id);
     const tiles = items.map((i) => {
@@ -201,9 +217,9 @@ function viewCollection() {
         ${itemImg(i.id, { hidden: !seen })}
         <span class="tile-name">${seen ? esc(i.name) : '???'}</span>
         ${seen && i.type !== 'pet' ? `<span class="count">x${fmt(n)}</span>` : ''}
-        ${n >= BADGE_COUNT ? '<span class="badge" title="100+ owned">🏅</span>' : ''}
+        ${n >= BADGE_COUNT ? `<span class="badge" title="100+ owned">${ic('medal', 'tiny')}</span>` : ''}
         ${isEq ? '<span class="eq">E</span>' : ''}
-        ${i.type === 'pet' && seen ? '<span class="type-dot">🐾</span>' : ''}
+        ${i.type === 'pet' && seen ? `<span class="type-dot">${ic('paw', 'tiny')}</span>` : ''}
       </button>`;
     }).join('');
     const droppable = items.find((i) => !(i.type === 'pet' && state.everOwned[i.id]));
@@ -246,7 +262,7 @@ function viewSettings() {
     </section>
     <section class="panel">
       <h2>Sound</h2>
-      <button class="btn" data-action="toggle-sound">${sfx.isMuted() ? '🔇 Sound off: tap to turn on' : '🔊 Sound on: tap to mute'}</button>
+      <button class="btn" data-action="toggle-sound">${ic('sound', 'btn-ic')} ${sfx.isMuted() ? 'Sound off: tap to turn on' : 'Sound on: tap to mute'}</button>
     </section>
     <section class="panel">
       <h2>How it works</h2>
@@ -275,7 +291,7 @@ function viewQuests() {
     const pctDone = Math.min(1, q.progress / q.goal);
     const prog = q.unit === 'min' ? `${fmtDuration(Math.min(q.progress, q.goal))} / ${fmtDuration(q.goal)}` : `${Math.min(q.progress, q.goal)} / ${q.goal}`;
     return `<li class="quest ${q.claimed ? 'claimed' : ''}">
-      <span class="quest-icon">${q.claimed ? '✅' : q.icon}</span>
+      <span class="quest-icon">${q.claimed ? ic('check') : questIc(q.icon)}</span>
       <span class="quest-body"><b>${esc(q.text)}</b>
         <span class="bar"><span style="width:${(pctDone * 100).toFixed(0)}%"></span></span>
         <span class="small muted">${prog} · Reward: ${rewardText(q.reward)}${q.claimed ? ' · claimed' : ''}</span></span>
@@ -285,7 +301,7 @@ function viewQuests() {
   const weekly = quests.filter((q) => q.period === 'weekly');
   return `
     <section class="panel streak-card ${atRisk ? 'at-risk' : ''}">
-      <div class="flame">🔥</div>
+      <div class="flame">${ic('flame', 'big-flame')}</div>
       <div class="streak-info">
         <div class="streak-big">${streak} day${streak === 1 ? '' : 's'}</div>
         <div class="small">${streak === 0 ? 'Log anything today to start a streak.'
@@ -307,8 +323,8 @@ function viewQuests() {
     </section>
     <section class="panel">
       <div class="btn-row">
-        <button class="btn" data-action="achievements">🏆 Achievements ${Object.keys(state.achievements).length}/${ACHIEVEMENTS.length}</button>
-        <button class="btn" data-action="pick-title">🎖️ Titles ${Object.keys(state.titlesUnlocked || {}).length}/${TITLES.length}</button>
+        <button class="btn" data-action="achievements">${ic('trophy', 'btn-ic')} Achievements ${Object.keys(state.achievements).length}/${ACHIEVEMENTS.length}</button>
+        <button class="btn" data-action="pick-title">${ic('title', 'btn-ic')} Titles ${Object.keys(state.titlesUnlocked || {}).length}/${TITLES.length}</button>
       </div>
     </section>`;
 }
@@ -318,7 +334,7 @@ function showAchievements() {
     const got = state.achievements[a.id];
     const [have, goal] = a.have(state);
     return `<div class="ach ${got ? 'got' : 'locked'}">
-      <div class="ach-icon">${got ? a.icon : '🔒'}</div>
+      <div class="ach-icon">${achBadge(a, !got)}</div>
       <div class="ach-text"><b>${esc(a.name)}</b><span class="small">${esc(a.desc)}</span>
         ${got ? `<span class="small boost">Earned ${new Date(got).toLocaleDateString()}</span>`
           : goal > 1 ? `<span class="bar"><span style="width:${Math.min(100, (have / goal) * 100).toFixed(0)}%"></span></span><span class="small muted">${fmt(have)} / ${fmt(goal)}</span>` : ''}
@@ -334,7 +350,7 @@ function showTitles() {
   const rows = TITLES.map((t) => {
     const ok = unlocked[t.id];
     return `<button class="pick title-pick ${state.title === t.id ? 'on' : ''}" ${ok ? `data-action="set-title" data-id="${t.id}"` : 'disabled'}>
-      <span class="title-icon">${ok ? '🎖️' : '🔒'}</span>
+      <span class="title-icon">${ok ? ic('title') : ic('lock')}</span>
       <span><b>${esc(state.name)} ${esc(t.label)}</b><br><span class="small muted">${esc(t.how)}</span></span>
     </button>`;
   }).join('');
@@ -384,6 +400,7 @@ function render() {
   document.getElementById('quest-dot').hidden = !questsFor(state).some((q) => q.period === 'daily' && !q.claimed);
   if (view === 'collection') setupChipScroller();
   if (view === 'home') mountCharacter();
+  document.querySelectorAll('[data-skill-anim]').forEach((cv) => stopAnimations.push(mountSkillIcon(cv, cv.dataset.skillAnim, 60)));
 }
 
 // The animated character (and pet, if it has detailed art) on the home screen.
@@ -446,7 +463,7 @@ function renderLogSheet() {
   const prev = minutes > 0 ? previewLog(state, s.id, minutes) : null;
   const b = boostsFor(state, s.id);
   openModal(`
-    <div class="sheet-head"><span class="skill-icon big">${s.icon}</span><div><h2>${s.name}</h2>
+    <div class="sheet-head"><span class="skill-icon big">${skillIc(s.id)}</span><div><h2>${s.name}</h2>
       <div class="muted">Level ${p.level} · 1 unit = ${fmtDuration(s.unit)}${sk.carryMin ? ` · ${fmtDuration(sk.carryMin)} carried over` : ''}</div></div></div>
     <div class="time-inputs">
       <label>Hours<input type="number" inputmode="numeric" min="0" max="24" id="in-hours" value="${logDraft.hours}"></label>
@@ -540,19 +557,19 @@ function showResult(r, progress = { quests: [], achievements: [], titles: [] }) 
   const extrasAt = levelAt + (levelled ? (milestone ? 1600 : 900) : 0);
 
   const banners = [];
-  if (r.completedCollection) banners.push(`<div class="banner levelup">📚 Collection complete! Permanent +${pct(COLLECTION_COMPLETE_XP_BOOST)} ${s.name} XP</div>`);
-  for (const id of r.newBadges) banners.push(`<div class="banner bonus">🏅 Badge earned: ${BADGE_COUNT}× ${esc(ITEM[id].name)}</div>`);
-  for (const q of progress.quests) banners.push(`<div class="banner quest">✅ Quest done: ${esc(q.text)}<span>+${rewardText(q.reward)}</span></div>`);
-  for (const a of progress.achievements) banners.push(`<div class="banner achieve">${a.icon} Achievement: <b>${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`);
+  if (r.completedCollection) banners.push(`<div class="banner levelup">${ic('chest', 'ban-ic')} Collection complete! Permanent +${pct(COLLECTION_COMPLETE_XP_BOOST)} ${s.name} XP</div>`);
+  for (const id of r.newBadges) banners.push(`<div class="banner bonus">${ic('medal', 'ban-ic')} Badge earned: ${BADGE_COUNT}× ${esc(ITEM[id].name)}</div>`);
+  for (const q of progress.quests) banners.push(`<div class="banner quest">${ic('check', 'ban-ic')} Quest done: ${esc(q.text)}<span>+${rewardText(q.reward)}</span></div>`);
+  for (const a of progress.achievements) banners.push(`<div class="banner achieve">${achBadge(a)} Achievement: <b>${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`);
   for (const ti of progress.titles) {
     const note = state.title === ti.id ? '<span>Now showing under your name</span>' : '<span>Pick it on your Character screen</span>';
-    banners.push(`<div class="banner title-unlock">🎖️ New title: <b>${esc(state.name)} ${esc(ti.label)}</b>${note}</div>`);
+    banners.push(`<div class="banner title-unlock">${ic('title', 'ban-ic')} New title: <b>${esc(state.name)} ${esc(ti.label)}</b>${note}</div>`);
   }
 
   let levelBanner = '';
   if (levelled) {
     levelBanner = milestone
-      ? `<div class="banner levelup milestone"><small>Tier unlocked · ${MILESTONES[milestone]}</small>LEVEL ${r.levelAfter} ${s.name.toUpperCase()}</div>`
+      ? `<div class="banner levelup milestone"><small>Tier unlocked · ${MILESTONES[milestone]}</small><span class="tier-up"><img class="skill-ic old" src="${tieredIcon(s.id, r.levelBefore, 3)}" alt=""><b>→</b><img class="skill-ic new" src="${tieredIcon(s.id, r.levelAfter, 3)}" alt=""></span>LEVEL ${r.levelAfter} ${s.name.toUpperCase()}</div>`
       : `<div class="banner levelup">LEVEL UP! ${s.name} ${r.levelBefore} → ${r.levelAfter}</div>`;
   }
 
@@ -581,12 +598,12 @@ function showResult(r, progress = { quests: [], achievements: [], titles: [] }) 
   const levelLine = p.level < MAX_LEVEL ? ` · ${fmt(p.into)} / ${fmt(p.needed)} XP` : ' · MAX';
   openModal(`
     <div class="roll-stage" id="roll-stage">
-      <div class="roller"><div class="die">${s.icon}</div><div class="muted">Rolling ${r.rolls}× the ${s.name} table…</div></div>
+      <div class="roller"><div class="die">${skillIc(s.id)}</div><div class="muted">Rolling ${r.rolls}× the ${s.name} table…</div></div>
     </div>
     <div class="result hidden" id="result">
       <h2>${s.name} · ${fmtDuration(r.minutes)}</h2>
       ${timeline.some((x) => x.ri >= 3) ? '<div class="skip-hint" id="skip-hint">Tap to skip</div>' : ''}
-      ${r.streak >= 2 ? `<div class="streak-line">🔥 ${r.streak}-day streak</div>` : ''}
+      ${r.streak >= 2 ? `<div class="streak-line">${ic('flame', 'tiny')} ${r.streak}-day streak</div>` : ''}
       ${r.bonusRoll ? '<div class="banner bonus">✦ Pet bonus roll! ✦</div>' : ''}
       ${r.questRolls ? `<div class="banner quest">✦ ${r.questRolls} quest bonus roll${r.questRolls > 1 ? 's' : ''} used ✦</div>` : ''}
       <div class="gains">
@@ -691,7 +708,7 @@ function showItem(id) {
       <p class="muted">${it.type === 'pet' && state.everOwned[id]
         ? 'Pet owned — it no longer drops.'
         : `Drop chance: <b>${fmtChance(effectiveDropChance(state, id))}</b> per roll (1 roll = ${fmtDuration(SKILL[it.skill].unit)} of ${SKILL[it.skill].name})`}</p>
-      ${it.type !== 'pet' ? `<p class="muted">Owned: <b>${fmt(n)}</b> · Sells for ${fmt(price)} coins each${n >= BADGE_COUNT ? ' · 🏅 badge earned' : ` · ${BADGE_COUNT} for a badge`}</p>` : ''}
+      ${it.type !== 'pet' ? `<p class="muted">Owned: <b>${fmt(n)}</b> · Sells for ${fmt(price)} coins each${n >= BADGE_COUNT ? ` · ${ic('medal', 'tiny')} badge earned` : ` · ${BADGE_COUNT} for a badge`}</p>` : ''}
     </div>
     <div class="btn-col">
       ${it.slot && n > 0 ? `<button class="btn primary" data-action="equip" data-id="${id}">${isEq ? 'Unequip' : `Equip (${SLOT_LABEL[it.slot]})`}</button>` : ''}
@@ -726,7 +743,7 @@ function gearSection(skillId) {
     const status = !id ? '<span class="muted">Empty</span>'
       : matches ? '<span class="boost">✓ boosting</span>'
       : '<span class="muted">no boost here</span>';
-    const icon = id ? itemImg(id) : `<span class="slot-empty">${SLOT_EMPTY_ICON[type]}</span>`;
+    const icon = id ? itemImg(id) : `<span class="slot-empty">${ic(SLOT_EMPTY_ICON[type])}</span>`;
     return `<button class="gear-slot ${matches ? 'match' : ''}" data-action="gear-pick" data-type="${type}" data-skill="${skillId}">
       <span class="gear-icon">${icon}</span>
       <span class="gear-text"><span class="slot-label">${SLOT_LABEL[type]}</span>
@@ -888,7 +905,7 @@ document.addEventListener('click', (e) => {
       const got = sell(state, el.dataset.id, Number(el.dataset.qty));
       const prog = checkProgress(state);
       persist(); render(); toast(`+${fmt(got)} coins`);
-      for (const ach of prog.achievements) setTimeout(() => { sfx.chime(); toast(`${ach.icon} Achievement: ${ach.name}`); }, 900);
+      for (const ach of prog.achievements) setTimeout(() => { sfx.chime(); toast(`Achievement: ${ach.name}`); }, 900);
       if (state.items[el.dataset.id] > 0) showItem(el.dataset.id); else closeModal();
       break;
     }
@@ -971,6 +988,12 @@ function hideSplash() {
 
 // Re-render when the install state changes (Android/desktop install prompt becomes available, or app installed).
 onInstallChange(() => { if (state.onboarded && !$modal.classList.contains('open')) render(); });
+
+// Pixel-art icons for the static parts of the page (tab bar, top bar).
+const TAB_ICONS = { home: 'helmet', skills: 'swords', quests: 'scroll', collection: 'chest', settings: 'gear' };
+document.querySelectorAll('.tabbar button').forEach((b) => { const sp = b.querySelector('span'); if (sp) sp.innerHTML = ic(TAB_ICONS[b.dataset.view], 'tab-ic'); });
+document.getElementById('streak-ic').innerHTML = ic('flame', 'pill-ic');
+document.querySelector('.coin-icon').outerHTML = ic('coin', 'pill-ic');
 
 render();
 hideSplash().then(() => { if (!state.onboarded) welcome(); });

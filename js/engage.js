@@ -41,13 +41,13 @@ export function questsFor(state, now = new Date()) {
   const weekSkills = new Set(week.flatMap((d) => Object.keys(d.skills)));
   const weekKey = dayKey(weekStart(now));
   const daily = [
-    { id: 'skill', text: `Log ${fmtMin(target)} of ${skill.name}`, icon: skill.icon, progress: day.skills[skill.id] || 0, goal: target, unit: 'min', reward: { rolls: 1 } },
-    { id: 'variety', text: 'Log 2 different skills', icon: '🎯', progress: Object.keys(day.skills).length, goal: 2, reward: { coins: 40 } },
-    { id: 'total', text: 'Log 1 hour in total', icon: '⏳', progress: day.min, goal: 60, unit: 'min', reward: { coins: 30 } },
+    { id: 'skill', text: `Log ${fmtMin(target)} of ${skill.name}`, icon: `skill:${skill.id}`, progress: day.skills[skill.id] || 0, goal: target, unit: 'min', reward: { rolls: 1 } },
+    { id: 'variety', text: 'Log 2 different skills', icon: 'target', progress: Object.keys(day.skills).length, goal: 2, reward: { coins: 40 } },
+    { id: 'total', text: 'Log 1 hour in total', icon: 'hourglass', progress: day.min, goal: 60, unit: 'min', reward: { coins: 30 } },
   ].map((q) => ({ ...q, key: `${today}#${q.id}`, period: 'daily' }));
   const weekly = [
-    { id: 'w-variety', text: 'Log 3 different skills this week', icon: '🧭', progress: weekSkills.size, goal: 3, reward: { rolls: 2 } },
-    { id: 'w-days', text: 'Log on 4 different days this week', icon: '📅', progress: week.length, goal: 4, reward: { coins: 200 } },
+    { id: 'w-variety', text: 'Log 3 different skills this week', icon: 'compass', progress: weekSkills.size, goal: 3, reward: { rolls: 2 } },
+    { id: 'w-days', text: 'Log on 4 different days this week', icon: 'calendar', progress: week.length, goal: 4, reward: { coins: 200 } },
   ].map((q) => ({ ...q, key: `${weekKey}#${q.id}`, period: 'weekly' }));
   return [...daily, ...weekly].map((q) => ({ ...q, done: q.progress >= q.goal, claimed: !!state.quests.claimed[q.key] }));
 }
@@ -96,6 +96,16 @@ export const ACHIEVEMENTS = [
   { id: 'hoarder', icon: '🏅', name: 'Hoarder', desc: `Own ${BADGE_COUNT} of one item`, have: (s) => [Math.min(BADGE_COUNT, Math.max(0, ...Object.values(s.items))), BADGE_COUNT] },
   { id: 'rich', icon: '💰', name: 'Moneybags', desc: 'Hold 10,000 coins', have: (s) => [Math.min(10000, s.coins), 10000] },
 ];
+
+// Badge art for each achievement: [symbol, frame tier (1 bronze ... 4 legendary), colour].
+export const ACH_BADGE = {
+  'first-log': ['boot', 1, '#8ab83a'], 'first-rare': ['gem', 1, '#4a90e2'], 'first-epic': ['gem', 2, '#a35ae0'], 'first-legendary': ['star', 3, '#f0a020'],
+  'first-mythic': ['flame', 4, '#e8435a'], 'first-divine': ['crown', 4, '#fff1a8'], 'lvl-15': ['medal', 1, '#c8963a'], 'lvl-30': ['medal', 2, '#9aa3b8'],
+  'lvl-45': ['medal', 3, '#ffc94a'], 'lvl-60': ['trophy', 4, '#ffc94a'], 'total-100': ['trophy', 2, '#4a7ae0'], 'all-skills': ['compass', 2, '#3ac0b0'],
+  'hours-10': ['hourglass', 1, '#e0a030'], 'hours-100': ['hourglass', 3, '#e0a030'], 'fitness-100': ['skill:fitness', 3, '#e0603a'], 'streak-7': ['flame', 2, '#ff8a2e'],
+  'streak-30': ['flame', 3, '#ff6a3a'], 'pets-10': ['paw', 2, '#c89a6a'], 'common-pets': ['paw', 3, '#8ab83a'], 'collection': ['chest', 3, '#a87a4a'],
+  'hoarder': ['chest', 2, '#c8963a'], 'rich': ['coin', 3, '#ffc94a'],
+};
 
 // ---------- titles ----------
 const L60 = {

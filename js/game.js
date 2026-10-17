@@ -188,7 +188,7 @@ export function boostsFor(state, skillId) {
   const sb = streakBonus(streak);
   if (sb) {
     b.xp += sb;
-    b.sources.push(`🔥 ${streak}-day streak: +${pct(sb)} XP`);
+    b.sources.push(`${streak}-day streak: +${pct(sb)} XP`);
   }
   return b;
 }
