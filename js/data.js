@@ -9,9 +9,9 @@ export const RARITIES = [
   { id: 'uncommon',  name: 'Uncommon',  chance: 0.125,  color: '#5fbf5a', sell: 15 },
   { id: 'rare',      name: 'Rare',      chance: 0.08,   color: '#4a90e2', sell: 50 },
   { id: 'epic',      name: 'Epic',      chance: 0.04,   color: '#a35ae0', sell: 150 },
-  { id: 'legendary', name: 'Legendary', chance: 0.01,   color: '#f0a020', sell: 500 },
-  { id: 'mythic',    name: 'Mythic',    chance: 0.0025, color: '#e8435a', sell: 2000 },
-  { id: 'divine',    name: 'Divine',    chance: 0.00025, color: '#fff1a8', sell: 10000 },
+  { id: 'legendary', name: 'Legendary', chance: 0.02,   color: '#f0a020', sell: 500 },
+  { id: 'mythic',    name: 'Mythic',    chance: 0.01,   color: '#e8435a', sell: 2000 },
+  { id: 'divine',    name: 'Divine',    chance: 0.0025, color: '#fff1a8', sell: 10000 },
 ];
 export const RARITY = Object.fromEntries(RARITIES.map((r, i) => [r.id, { ...r, index: i }]));
 
