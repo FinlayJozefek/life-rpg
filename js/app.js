@@ -271,7 +271,21 @@ function setupChipScroller() {
 // ---------- Modals ----------
 function openModal(html, { cls = '', locked = false } = {}) {
   $modal.dataset.locked = locked ? '1' : '';
-  $modal.innerHTML = `<div class="backdrop" ${locked ? '' : 'data-action="close"'}></div><div class="sheet ${cls}" role="dialog" aria-modal="true">${html}</div>`;
+  const existing = $modal.classList.contains('open') && $modal.querySelector('.sheet');
+  if (existing) {
+    // A sheet is already showing: swap its contents in place so it doesn't
+    // re-play the open animation (no flash when e.g. tapping +15m).
+    const scroll = existing.scrollTop;
+    const sameSheet = existing.dataset.cls === cls;
+    existing.className = `sheet ${cls} no-anim`;
+    existing.dataset.cls = cls;
+    existing.innerHTML = html;
+    if (sameSheet) existing.scrollTop = scroll;
+    const backdrop = $modal.querySelector('.backdrop');
+    if (locked) backdrop.removeAttribute('data-action'); else backdrop.dataset.action = 'close';
+    return;
+  }
+  $modal.innerHTML = `<div class="backdrop" ${locked ? '' : 'data-action="close"'}></div><div class="sheet ${cls}" data-cls="${cls}" role="dialog" aria-modal="true">${html}</div>`;
   $modal.classList.add('open');
 }
 function closeModal() {
