@@ -198,6 +198,7 @@ export const SIGNATURES = {
 // ---------- gear ----------
 // Item spec shorthand: [rarity, slot, name, kind/weaponType, extras]
 // slot: weapon | helmet | chest | legs | boots | offhand
+// grindDrop: fixed chance per normal-enemy kill instead of the usual rarity roll (final-boss weapons).
 // extras: crit, dodge, slayer:{family,bonus}, sig:[...], passive fields (see engine), set: setId, dtype override
 const SETS = {
   'goblin-warlord': { name: 'Goblin Warlord', section: 1, bonus: { crit: 0.1 }, text: '+10% crit chance' },
@@ -271,7 +272,7 @@ const G = {
     ['epic', 'boots', 'Rimeguard Boots', null, { set: 'rimeguard' }], ['epic', 'offhand', 'Rimeguard Shield', 'shield'],
     ['legendary', 'helmet', 'Wyrmscale Helm', null, { freezeImmune: true, crit: 0.2 }],
     ['legendary', 'weapon', 'Wyrmfang Bow', 'bow', { sig: ['Frost Volley', 'Piercing Gale'] }],
-    ['mythic', 'weapon', 'Blizzard Staff', 'staff', { dtype: 'frost', blizzard: 0.25, sig: ['Whiteout', 'Avalanche'] }],
+    ['mythic', 'weapon', 'Blizzard Staff', 'staff', { grindDrop: 1 / 2000, dtype: 'frost', blizzard: 0.25, sig: ['Whiteout', 'Avalanche'] }],
     // Blacksmith exclusives
     ['legendary', 'boots', 'Windrunner Boots', null, { shopOnly: true, dodge: 0.12, firstStrike: true }],
     ['legendary', 'offhand', 'Everfrost Lantern', 'lantern', { shopOnly: true, dodge: 0.1, freezeImmune: true, slowOnHit: 0.3 }],
@@ -285,13 +286,13 @@ const G = {
     ['rare', 'weapon', 'Soulfire Dagger', 'dagger', { lifesteal: 0.1, sig: ['Soul Drink'] }], ['rare', 'helmet', 'Demonhorn Helm'],
     ['rare', 'chest', 'Demonhide Vest'], ['rare', 'legs', 'Demonhide Leggings'], ['rare', 'boots', 'Demonhide Boots'],
     ['rare', 'offhand', 'Infernal Tome', 'tome', { dtype: 'fire' }],
-    ['rare', 'weapon', 'Demonbane Blade', 'sword', { dtype: 'holy', slayer: { family: 'demon', bonus: 0.4 }, sig: ['Demonbane Strike'] }],
+    ['mythic', 'weapon', 'Demonbane Blade', 'sword', { grindDrop: 1 / 2000, dtype: 'holy', slayer: { family: 'demon', bonus: 0.4 }, sig: ['Demonbane Strike'] }],
     ['epic', 'weapon', 'Infernal Greatsword', 'sword', { burnOnHit: 0.3, sig: ['Hellfire'] }], ['epic', 'helmet', 'Dread Helm', null, { set: 'dread' }],
     ['epic', 'chest', 'Dread Plate', null, { set: 'dread' }], ['epic', 'legs', 'Dread Greaves', null, { set: 'dread' }],
     ['epic', 'boots', 'Dread Sabatons', null, { set: 'dread' }], ['epic', 'offhand', 'Dread Aegis', 'shield'],
     ['legendary', 'helmet', 'Hellfire Crown', null, { dmgPct: 0.25, burnAttackers: 0.5 }],
     ['legendary', 'weapon', "Demon Lord's Trident", 'spear', { dtype: 'fire', sig: ['Infernal Impale', 'Brimstone Rain'] }],
-    ['mythic', 'weapon', 'Ashbringer', 'sword', { dtype: 'holy', killHeal: 1, sig: ['Dawnbreak', 'Purify'] }],
+    ['mythic', 'weapon', 'Ashbringer', 'sword', { grindDrop: 1 / 2000, dtype: 'holy', killHeal: 1, sig: ['Dawnbreak', 'Purify'] }],
     ['divine', 'offhand', 'Wings of the Seraph', 'relic', { allStats: 0.3, cheatDeath: true }],
     // Blacksmith exclusives
     ['legendary', 'legs', 'Cinderwalker Greaves', null, { shopOnly: true, dmgPct: 0.1, burnAttackers: 0.5 }],

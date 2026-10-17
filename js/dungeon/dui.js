@@ -257,6 +257,7 @@ function showItem(id) {
       <h2>${itemName(id)}</h2>
       <div>${rarTag(it.rarity)} <span class="muted">${SLOT_NAME_D[it.slot]}${it.weaponType ? ` · ${esc(it.weaponType)}` : ''}${it.section ? ` · ${esc(SECTIONS[it.section - 1].name)}` : ''}</span></div>
       <p>${statLine(id)}</p>
+      ${it.grindDrop ? `<p class="small d-gold">Ultra-rare: 1 in ${fmt(Math.round(1 / it.grindDrop))} kills from ${esc(SECTIONS[it.section - 1].name)} enemies (floors ${(it.section - 1) * 10 + 1}–${it.section * 10 - 1}), or a lucky boss drop.</p>` : ''}
       ${oddsLine}
       ${passive.length ? `<p class="boost small">${passive.map(esc).join('<br>')}</p>` : ''}
       ${it.set ? `<p class="small muted">Part of the ${esc(SETS[it.set].name)} set (4 pieces: ${esc(SETS[it.set].text)})</p>` : ''}

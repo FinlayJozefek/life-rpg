@@ -200,7 +200,7 @@ const DROP = { common: 0.09, uncommon: 0.045, rare: 0.016, epic: 0.005, mythic: 
 export function rollEnemyDrops(e, rng = Math.random, luck = 1) {
   const drops = [];
   const height = 0.7 + 0.06 * e.fis;
-  const pool = DITEMS_BY_SECTION[e.section].filter((i) => !i.bossOnly && !i.shopOnly);
+  const pool = DITEMS_BY_SECTION[e.section].filter((i) => !i.bossOnly && !i.shopOnly && !i.grindDrop);
   for (const r of ['common', 'uncommon', 'rare', 'epic', 'mythic']) {
     if (r === 'mythic' && e.section < 3) continue;
     if (rng() < DROP[r] * height * (r === 'common' ? 1 : luck)) {
@@ -208,6 +208,8 @@ export function rollEnemyDrops(e, rng = Math.random, luck = 1) {
       if (opts.length) drops.push(opts[Math.floor(rng() * opts.length)].id);
     }
   }
+  // final-boss weapons: their own tiny chance, 1 in 2,000 kills
+  for (const it of DITEMS_BY_SECTION[e.section]) if (it.grindDrop && rng() < it.grindDrop * luck) drops.push(it.id);
   return drops;
 }
 // Bosses: two rolls; Legendaries only come from bosses.
