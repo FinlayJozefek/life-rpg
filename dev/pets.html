@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pet gallery</title>
+<!-- Dev-only page: every pet's art, animated, grouped by skill. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding-bottom: 40px; }
+  main { max-width: 1000px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .pet-group { margin-bottom: 18px; }
+  .pet-group h3 { margin: 0 0 8px; color: var(--gold); }
+  .pets { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px; }
+  .pet { background: var(--panel-2); border: 2px solid var(--line); padding: 4px 2px 6px; text-align: center; cursor: pointer; min-width: 0; }
+  .pet canvas { width: 100%; max-width: 110px; aspect-ratio: 1; image-rendering: pixelated; display: block; margin: 0 auto; }
+  main { padding-left: 8px; padding-right: 8px; }
+  .panel { padding: 10px; }
+  .pet .nm { font-size: 12px; margin-top: 2px; line-height: 1.2; }
+  .big { text-align: center; }
+  .big canvas { width: min(70vw, 300px); height: auto; image-rendering: pixelated; }
+  .big p { margin: 6px 0; }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="brand">Pet gallery</div><div class="muted small">72 pets · tap one to see it big</div></header>
+<main>
+  <section class="panel">
+    <div class="controls" id="filters"></div>
+    <div id="list"></div>
+  </section>
+</main>
+<div id="modal-root"></div>
+<script type="module">
+import { SKILLS, ITEMS, RARITY, PET_BOOST } from '../js/data.js';
+import { mountPet } from '../js/sprites2.js';
+
+const pets = ITEMS.filter((i) => i.type === 'pet');
+const pct = (v) => `${Math.round(v * 100)}%`;
+const effect = (p) => {
+  const b = PET_BOOST[p.rarity];
+  const parts = [`+${pct(b.xp)} XP`];
+  if (b.coins) parts.push(`+${pct(b.coins)} coins`);
+  if (b.luck) parts.push(`+${pct(b.luck)} luck`);
+  if (b.bonusRollChance === 1) parts.push('bonus roll every log');
+  else if (b.bonusRollChance) parts.push(`${pct(b.bonusRollChance)} bonus roll`);
+  return parts.join(' · ');
+};
+
+let stops = [];
+let filter = 'all';
+
+function draw() {
+  stops.forEach((s) => s()); stops = [];
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  for (const skill of SKILLS) {
+    const mine = pets.filter((p) => p.skill === skill.id && (filter === 'all' || p.rarity === filter));
+    if (!mine.length) continue;
+    const row = document.createElement('div'); row.className = 'pet-group';
+    row.innerHTML = `<h3>${skill.icon} ${skill.name}</h3><div class="pets"></div>`;
+    const grid = row.querySelector('.pets');
+    for (const p of mine) {
+      const card = document.createElement('div'); card.className = `pet r-border-${p.rarity}`;
+      const cv = document.createElement('canvas');
+      card.appendChild(cv);
+      card.insertAdjacentHTML('beforeend', `<div class="nm">${p.name}<br><span class="rtag r-${p.rarity}">${RARITY[p.rarity].name}</span></div>`);
+      card.onclick = () => openBig(p);
+      grid.appendChild(card);
+      stops.push(mountPet(cv, p.id, { scale: 4 }));
+    }
+    list.appendChild(row);
+  }
+}
+
+const root = document.getElementById('modal-root');
+let stopBig = null;
+function openBig(p) {
+  root.innerHTML = `<div class="backdrop"></div><div class="sheet small big">
+    <canvas></canvas>
+    <h2>${p.name}</h2>
+    <p><span class="rtag r-${p.rarity}">${RARITY[p.rarity].name}</span> <span class="muted">${SKILLS.find((s) => s.id === p.skill).name}</span></p>
+    <p class="muted small">${effect(p)}</p>
+    <button class="btn wide">Close</button></div>`;
+  root.classList.add('open');
+  stopBig = mountPet(root.querySelector('canvas'), p.id, { scale: 12 });
+  const close = () => { stopBig?.(); root.classList.remove('open'); root.innerHTML = ''; };
+  root.querySelector('.backdrop').onclick = close;
+  root.querySelector('.btn').onclick = close;
+}
+
+const filters = document.getElementById('filters');
+for (const f of ['all', 'common', 'uncommon', 'rare', 'epic', 'legendary', 'divine']) {
+  const b = document.createElement('button');
+  b.className = `chip ${f === filter ? 'on' : ''}`;
+  b.textContent = f === 'all' ? 'All' : RARITY[f].name;
+  b.onclick = () => { filter = f; filters.querySelectorAll('.chip').forEach((x) => x.classList.toggle('on', x === b)); draw(); };
+  filters.appendChild(b);
+}
+draw();
+</script>
+</body>
+</html>
