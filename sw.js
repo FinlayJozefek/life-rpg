@@ -1,10 +1,10 @@
 // Offline support: network-first so updates show up straight away, falling back
 // to the cache when offline. Bump VERSION if you add/rename shell files.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `life-rpg-${VERSION}`;
 const SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest',
-  './js/app.js', './js/game.js', './js/data.js', './js/sprites.js', './js/install.js',
+  './js/app.js', './js/game.js', './js/data.js', './js/sprites.js', './js/install.js', './js/updates.js',
   './fonts/cinzel-latin.woff2',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png',
 ];
@@ -23,8 +23,14 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  const sameOrigin = url.origin === self.location.origin;
+  if (sameOrigin && url.pathname.endsWith('/version.json')) return; // always straight to network
+  // Same-origin files: ask the server whether they changed (cheap ETag check)
+  // instead of trusting the browser's HTTP cache, so new code arrives immediately.
+  const req = sameOrigin ? new Request(url.href, { cache: 'no-cache', credentials: 'same-origin' }) : e.request;
   e.respondWith(
-    fetch(e.request)
+    fetch(req)
       .then((res) => {
         if (res.ok && (res.type === 'basic' || res.type === 'cors')) {
           const copy = res.clone();

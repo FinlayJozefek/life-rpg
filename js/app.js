@@ -5,6 +5,7 @@ import {
   MAX_LEVEL,
 } from './game.js';
 import { itemSprite, avatarSprite } from './sprites.js';
+import { startAutoUpdate } from './updates.js';
 import { isInstalled, isIOS, inAppBrowser, installInstructions, promptInstall, onInstallChange, canPromptInstall } from './install.js';
 
 let state = load();
@@ -617,3 +618,4 @@ onInstallChange(() => { if (state.onboarded && !$modal.classList.contains('open'
 
 render();
 if (!state.onboarded) welcome();
+startAutoUpdate({ isBusy: () => $modal.classList.contains('open') && state.onboarded });
