@@ -1,4 +1,4 @@
-// TRIAL: more detailed pixel art. Avatar outfits change shape (robes, armour,
+// TRIAL v2: more detailed pixel art (v1 is saved in sprites-v1.js). Avatar outfits change shape (robes, armour,
 // suits, hats...) and scale up with rarity: trim -> gems -> capes -> aura ->
 // animated mythic effects. Not used by the game yet; see dev/art.html.
 import { ITEM, RARITY, SKILL } from './data.js';
@@ -432,6 +432,216 @@ const ARCH = {
   feet(g, L) { baseClothes(g, { shoes: false }); drawFeetItem(g, L); },
 };
 
+// ---------- v2 detail pass (Common to Legendary; Mythics keep the v1 look) ----------
+const MATERIALS = [
+  [/denim|jean/, 'denim'], [/cardigan|beanie|woolly|scarf|sweatband/, 'knit'], [/tweed/, 'tweed'],
+  [/velvet|tuxedo/, 'velvet'], [/farmer|dungaree|harvest/, 'plaid'], [/fleece|hoodie|jogger|comfy|track|olympian/, 'fleece'],
+  [/linen|robe|gown|smock|monk|lotus|cloak/, 'linen'], [/leather|wax|waterproof/, 'leather'], [/hi-vis|hydration|vest/, 'mesh'],
+];
+const materialFor = (name) => { const n = name.toLowerCase(); return (MATERIALS.find(([re]) => re.test(n)) || [null, 'cloth'])[1]; };
+
+function get(g, x, y) { const yy = y + (g.oy || 0); return yy >= 0 && yy < g.h && x >= 0 && x < g.w ? g.c[yy][x] : null; }
+function isOf(g, x, y, base) { const r = ramp(base); const c = get(g, x, y); return c === r.base || c === r.hi || c === r.lo; }
+function onMain(g, L, pts, col) { if (!col) return; for (const [x, y] of pts) if (isOf(g, x, y, L.main)) g.px(x, y, col); }
+
+// Fabric texture over the garment's own colour only (trims, skin and gems are left alone).
+function texture(g, base, kind, seed) {
+  const r = ramp(base);
+  const own = new Set([r.base, r.hi]);
+  const rnd = rng32(hashStr(seed));
+  // Low-contrast, ordered patterns read as fabric; random speckle reads as stains.
+  const dark = adj(base, -0.045, 0, 4), light = adj(base, 0.05, 0, -3), sheen = adj(base, 0.11, 0.04, -5);
+  for (let y = -OY; y < AH - OY; y++) for (let x = 0; x < AW; x++) {
+    if (!own.has(get(g, x, y))) continue;
+    let out = null;
+    switch (kind) {
+      case 'knit': out = y % 2 === 0 ? (x % 2 === 0 ? dark : null) : (x % 2 === 1 ? light : null); break;
+      case 'denim': out = (x + y) % 3 === 0 ? dark : null; break;
+      case 'tweed': out = (x * 7 + y * 3) % 5 === 0 ? dark : (x * 3 + y * 5) % 7 === 0 ? light : null; break;
+      case 'velvet': out = (x + y) % 7 === 0 ? sheen : (x + y) % 7 === 1 ? light : null; break;
+      case 'plaid': out = x % 4 === 0 && y % 4 === 0 ? adj(base, -0.12) : x % 4 === 0 || y % 4 === 0 ? adj(base, -0.07) : null; break;
+      case 'fleece': out = (x * 3 + y * 5) % 7 === 0 ? light : null; break;
+      case 'linen': out = y % 3 === 0 && (x + y) % 2 === 0 ? light : null; break;
+      case 'leather': out = (x * 5 + y * 3) % 11 === 0 ? sheen : null; break;
+      case 'mesh': out = x % 2 === 0 && y % 2 === 0 ? dark : null; break;
+      default: out = (x + 2 * y) % 6 === 0 ? light : null;
+    }
+    if (out) g.px(x, y, out);
+  }
+}
+
+// Fabric folds/creases: shadows at elbows, waist and behind knees; light on kneecaps.
+function folds(g, L) {
+  // (Loose fold pixels on the chest read as stains, so only elbows, waist and knees get them.)
+  const lo = adj(L.main, -0.09, 0.02, 0), hi = adj(L.main, 0.09, 0, 0);
+  onMain(g, L, [[8, 24], [8, 25], [23, 24], [23, 25]], lo);
+  for (let x = 11; x <= 20; x++) onMain(g, L, [[x, 28]], (x % 3 === 0) ? lo : null);   // gathered hem
+  onMain(g, L, [[12, 35], [13, 35], [17, 35], [18, 35]], hi);
+  onMain(g, L, [[13, 33], [18, 33], [12, 38], [19, 38], [14, 39], [17, 39]], lo);
+}
+
+// Dashed stitching along a hem.
+function stitch(g, L, x0, x1, y, col) { for (let x = x0; x <= x1; x += 2) if (isOf(g, x, y, L.main)) g.px(x, y, col); }
+
+function chestEmblem(g, L, cx = 13, cy = 21) {
+  if (!isOf(g, cx, cy, L.main)) return;
+  g.px(cx, cy - 1, L.trim); g.px(cx - 1, cy, L.trim); g.px(cx + 1, cy, L.trim); g.px(cx, cy + 1, L.trim);
+  g.px(cx, cy, L.gem);
+}
+
+function epaulettes(g, L) {
+  for (const [x0, x1] of [[7, 10], [21, 24]]) {
+    g.rect(x0, 18, x1, 19, L.trim); g.rect(x0, 18, x1, 18, adj(L.trim, 0.12));
+    for (let x = x0; x <= x1; x += 2) g.px(x, 20, adj(L.trim, -0.12));   // fringe
+  }
+}
+
+function buttonsDown(g, x, y0, y1, col, step = 2) { for (let y = y0; y <= y1; y += step) { g.px(x, y, col); } }
+
+function shoeDetail(g, L, kind) {
+  // laces + light soles on trainers, shine on dress shoes, buckles on boots
+  for (const [x0, x1] of [[10, 15], [16, 21]]) {
+    if (kind === 'trainer') { g.px(x0 + 2, 41, '#f4f1ea'); g.px(x0 + 4, 41, '#f4f1ea'); g.rect(x0, 42, x1, 42, '#e6e0d4'); g.px(x1, 42, '#b8b0a2'); }
+    else if (kind === 'dress') { g.px(x0 + 1, 41, '#9aa0b8'); g.px(x0 + 2, 41, '#c8ccdd'); }
+    else if (kind === 'boot') { g.px(x0 + 2, 38, L.tier >= 2 ? L.trim : '#c9ccd6'); g.rect(x0, 42, x1, 42, '#2a221c'); }
+  }
+}
+
+function hatDetail(g, L) {
+  const n = L.name.toLowerCase();
+  const r = ramp(L.main);
+  if (/crown/.test(n)) {          // filigree band
+    for (let x = 11; x <= 20; x += 2) g.px(x, 3, '#fff1a8');
+    g.px(12, 1, '#ff4a6a'); g.px(19, 1, '#4ab0ff');
+    return;
+  }
+  if (/beanie|woolly/.test(n)) { texture(g, L.main, 'knit', L.name); g.rect(15, -1, 16, 0, '#f4f1ea'); g.rect(11, 5, 20, 5, adj(L.main, -0.1)); return; }
+  if (/straw/.test(n)) { for (let x = 7; x <= 24; x += 2) g.px(x, 5, '#f2d98a'); g.rect(11, 4, 20, 4, L.sec); return; }
+  if (/cap$/.test(n) && !/graduation/.test(n)) { g.px(15, 0, r.hi); g.px(16, 0, r.hi); g.rect(15, 1, 15, 4, r.lo); g.rect(18, 1, 18, 4, r.lo); g.rect(17, 5, 23, 5, adj(L.main, 0.08)); return; }
+  if (/chef/.test(n)) { g.rect(13, -2, 13, 3, '#e2dccd'); g.rect(17, -2, 17, 3, '#e2dccd'); g.rect(11, 4, 20, 4, '#cfc7b6'); return; }
+  if (/ranger/.test(n)) { g.rect(11, 4, 20, 4, ramp(L.sec).dk); g.px(19, 3, L.gem); return; }
+  if (/graduation/.test(n)) { g.px(23, 7, L.trim); g.px(22, 7, L.trim); return; }
+  if (/hard hat/.test(n)) { g.rect(12, 2, 13, 4, '#ffe37a'); g.rect(10, 6, 21, 6, '#b88a14'); return; }
+  if (/beret/.test(n)) { g.px(17, 0, r.lo); g.px(18, 0, r.lo); return; }
+}
+
+function detailPass(g, L) {
+  const n = L.name.toLowerCase();
+  const mat = materialFor(L.name);
+  const piping = L.tier >= 3 ? L.trim : L.tier >= 1 ? adj(L.sec, 0.08) : adj(L.main, -0.14);
+  const lo = adj(L.main, -0.15, 0.02, 8);
+
+  if (!['head', 'feet'].includes(L.arch)) { texture(g, L.main, mat, L.name); folds(g, L); }
+
+  switch (L.arch) {
+    case 'top': {
+      const short = /tee|t-shirt|polo|vest/.test(n);
+      if (/tee|t-shirt/.test(n)) { g.rect(14, 18, 17, 18, ramp(SKIN).lo); g.rect(13, 18, 13, 18, lo); g.rect(18, 18, 18, 18, lo); if (/band/.test(n)) { g.rect(13, 22, 18, 25, ramp(L.sec).lo); g.px(14, 23, '#f4f1ea'); g.px(16, 24, '#f4f1ea'); g.px(17, 23, '#f4f1ea'); } }
+      if (/polo/.test(n)) { g.rect(13, 18, 18, 19, L.sec); g.px(15, 20, '#f4f1ea'); g.px(15, 22, '#f4f1ea'); }
+      if (/jacket|fleece|cardigan/.test(n)) {
+        g.px(15, 20, '#c9ccd6'); g.px(16, 20, '#c9ccd6'); g.px(16, 21, '#9aa0b8');                          // zip pull
+        g.rect(11, 25, 13, 25, lo); g.rect(18, 25, 20, 25, lo);                                               // pocket flaps
+        g.rect(7, 28, 9, 29, adj(L.main, -0.1)); g.rect(22, 28, 24, 29, adj(L.main, -0.1));                   // cuffs
+        g.rect(12, 17, 19, 17, L.sec); g.px(12, 18, L.sec); g.px(19, 18, L.sec);                            // raised collar
+        if (/cardigan/.test(n)) { g.rect(15, 18, 16, 22, BASE.top); buttonsDown(g, 15, 23, 28, L.tier >= 2 ? L.trim : '#c9b48a'); }
+        if (/chef/.test(n)) { buttonsDown(g, 13, 20, 28, '#f4f1ea'); buttonsDown(g, 18, 20, 28, '#f4f1ea'); }
+      }
+      if (/hoodie/.test(n)) { g.rect(11, 15, 20, 17, adj(L.main, -0.12)); g.px(14, 19, '#f4f1ea'); g.px(14, 20, '#f4f1ea'); g.px(17, 19, '#f4f1ea'); g.px(17, 20, '#f4f1ea'); g.rect(12, 24, 19, 24, lo); }
+      if (/hi-vis/.test(n)) { g.rect(10, 22, 21, 22, '#e8eef4'); g.rect(10, 26, 21, 26, '#e8eef4'); g.rect(12, 18, 12, 29, '#e8eef4'); g.rect(19, 18, 19, 29, '#e8eef4'); }
+      if (/hydration/.test(n)) { g.rect(11, 20, 12, 24, '#7fc4f0'); g.rect(19, 20, 20, 24, '#7fc4f0'); g.px(11, 20, '#e8eef4'); g.px(20, 20, '#e8eef4'); }
+      if (/scarf/.test(n)) { g.rect(11, 17, 20, 19, L.sec); g.rect(17, 20, 18, 26, L.sec); g.px(17, 27, L.trim); g.px(18, 27, L.trim); texture(g, L.sec, 'knit', 'scarf'); }
+      if (/paint/.test(n)) { g.px(12, 21, '#e8435a'); g.px(18, 24, '#4a90e2'); g.px(14, 27, '#f0c020'); g.px(20, 22, '#5fbf5a'); }
+      stitch(g, L, 10, 21, 29, piping);
+      if (!short) { stitch(g, L, 7, 9, 29, piping); stitch(g, L, 22, 24, 29, piping); }
+      if (L.tier >= 2) chestEmblem(g, L);
+      if (L.tier >= 3) { epaulettes(g, L); g.rect(12, 18, 19, 18, L.trim); }
+      shoeDetail(g, L, 'trainer');
+      break;
+    }
+    case 'outfit': {
+      g.px(15, 19, '#c9ccd6'); g.px(16, 19, '#c9ccd6'); g.px(16, 20, '#9aa0b8');
+      g.rect(7, 28, 9, 29, adj(L.main, -0.12)); g.rect(22, 28, 24, 29, adj(L.main, -0.12));    // elastic cuffs
+      g.rect(11, 40, 15, 40, adj(L.main, -0.12)); g.rect(16, 40, 20, 40, adj(L.main, -0.12));
+      if (L.tier >= 1) { const s2 = adj(L.sec, 0.12); g.rect(12, 32, 12, 39, s2); g.rect(19, 32, 19, 39, s2); }   // second leg stripe
+      if (/explorer|trail|kit/.test(n)) {                                     // bandolier + pouches
+        for (let i = 0; i < 10; i++) g.px(11 + i, 19 + i, ramp(L.sec).dk);
+        g.rect(11, 30, 13, 32, ramp(L.sec).base); g.rect(18, 30, 20, 32, ramp(L.sec).base); g.px(12, 30, L.trim); g.px(19, 30, L.trim);
+      }
+      if (/harvest/.test(n)) { g.rect(10, 18, 21, 19, '#e8c06a'); for (let x = 10; x <= 21; x += 3) g.px(x, 20, '#c8401a'); }
+      if (/maid/.test(n)) { g.rect(12, 22, 19, 35, '#f4f1ea'); g.rect(12, 22, 19, 22, '#ffffff'); g.rect(11, 35, 20, 35, '#ffffff'); }
+      if (/rockstar|gallery/.test(n)) { buttonsDown(g, 13, 20, 28, L.tier >= 2 ? L.trim : '#c9ccd6', 3); g.px(19, 21, L.gem); g.px(20, 22, L.gem); }
+      if (/linen/.test(n)) { g.rect(14, 18, 17, 19, ramp(SKIN).lo); g.rect(10, 29, 21, 29, adj(L.sec, 0.1)); }
+      if (L.tier >= 2) chestEmblem(g, L, 18, 22);
+      if (L.tier >= 3) { epaulettes(g, L); stitch(g, L, 10, 21, 29, L.trim); }
+      shoeDetail(g, L, 'trainer');
+      break;
+    }
+    case 'robe': {
+      // stole draped over the shoulders, lining showing at the front, extra skirt folds
+      const stole = L.tier >= 1 ? L.sec : adj(L.main, -0.1);
+      g.rect(12, 18, 13, 27, stole); g.rect(18, 18, 19, 27, stole);
+      if (L.tier >= 2) { g.px(12, 27, L.trim); g.px(13, 27, L.trim); g.px(18, 27, L.trim); g.px(19, 27, L.trim); }
+      for (let y = 31; y <= 40; y++) { g.px(15, y, ramp(L.sec).lo); g.px(16, y, ramp(L.sec).base); }
+      for (let y = 32; y <= 40; y += 2) { g.px(12, y, lo); g.px(19, y, lo); g.px(10, y + 1, lo); g.px(21, y + 1, lo); }
+      g.rect(13, 17, 18, 17, adj(L.main, -0.12));                                          // collar
+      if (L.tier >= 2) { for (let x = 10; x <= 21; x += 2) g.px(x, 39, L.trim); g.px(15, 18, L.gem); }  // embroidered hem + clasp
+      if (L.tier >= 3) { g.rect(12, 18, 12, 27, L.trim); g.rect(19, 18, 19, 27, L.trim); for (let x = 9; x <= 22; x += 2) { g.px(x, 37, L.gem); } }
+      if (/artisan|artist/.test(n)) { g.px(12, 32, '#e8435a'); g.px(19, 35, '#4a90e2'); g.px(14, 37, '#f0c020'); }
+      break;
+    }
+    case 'suit': {
+      g.rect(11, 25, 13, 25, lo); g.rect(18, 25, 20, 25, lo);                                // pocket flaps
+      const btn = L.tier >= 3 ? L.trim : L.tier >= 2 ? '#c9ccd6' : adj(L.main, -0.2);
+      g.px(15, 26, btn); g.px(15, 28, btn);
+      g.rect(7, 29, 9, 29, '#eceff4'); g.rect(22, 29, 24, 29, '#eceff4');                     // shirt cuffs
+      g.rect(13, 32, 13, 40, adj(ramp(L.main).lo, 0.06)); g.rect(18, 32, 18, 40, adj(ramp(L.main).lo, 0.06)); // creases
+      if (/tailcoat/.test(n)) { g.shaded(11, 30, 13, 37, L.main); g.shaded(18, 30, 20, 37, L.main); }
+      if (/butler/.test(n)) { g.rect(13, 22, 18, 28, '#3a3a44'); g.px(15, 24, L.trim); g.px(15, 26, L.trim); }
+      if (L.tier >= 3) { for (const [x, y] of [[11, 27], [12, 28], [13, 28], [14, 27]]) g.px(x, y, L.trim); g.px(19, 20, L.gem); epaulettes(g, L); }  // watch chain, lapel pin
+      shoeDetail(g, L, 'dress');
+      break;
+    }
+    case 'uniform': {
+      g.rect(12, 17, 19, 17, adj(L.main, -0.08));                                            // collar band
+      if (/chef|michelin/.test(n)) { g.rect(13, 18, 18, 19, L.sec); g.px(15, 20, L.sec); g.px(16, 20, L.sec); }  // neckerchief
+      g.px(19, 21, '#4a90e2'); g.px(19, 22, '#c9ccd6');                                      // pen in pocket
+      g.rect(18, 23, 20, 23, lo);
+      if (L.tier >= 3) { chestEmblem(g, L, 12, 22); for (let x = 10; x <= 21; x += 2) g.px(x, 29, L.trim); }
+      shoeDetail(g, L, 'dress');
+      break;
+    }
+    case 'overalls': {
+      texture(g, L.sec, /farmer/.test(n) ? 'plaid' : 'cloth', L.name + 'shirt');
+      g.rect(13, 22, 18, 22, lo); stitch(g, L, 13, 18, 25, adj(L.main, 0.15));                // bib pocket + stitching
+      g.rect(12, 35, 14, 37, ramp(L.sec).base); g.px(12, 35, adj(L.sec, 0.15));               // knee patch
+      g.px(20, 31, '#c9ccd6'); g.px(20, 32, '#8a8f9c');                                      // tool loop / hammer
+      if (L.tier >= 2) chestEmblem(g, L, 15, 23);
+      shoeDetail(g, L, 'boot');
+      break;
+    }
+    case 'apron': {
+      g.px(10, 26, L.sec); g.px(9, 27, L.sec); g.px(22, 26, L.sec); g.px(22, 27, L.sec);      // ties
+      g.px(14, 26, '#c9b48a'); g.px(14, 25, '#c9b48a'); g.px(17, 26, '#8a8f9c'); g.px(17, 25, '#5a5f6c');  // pencil + tool in pocket
+      stitch(g, L, 11, 20, 33, adj(L.main, 0.15));
+      if (L.tier >= 1) { g.px(12, 21, L.trim); g.px(19, 21, L.trim); }
+      shoeDetail(g, L, 'boot');
+      break;
+    }
+    case 'shorts': case 'legs': {
+      g.rect(11, 30, 20, 30, adj(L.main, -0.14)); g.px(15, 31, '#f4f1ea'); g.px(16, 31, '#f4f1ea');  // waistband + drawstring
+      g.rect(11, 32, 11, L.arch === 'shorts' ? 34 : 40, adj(L.sec, 0.1)); g.rect(20, 32, 20, L.arch === 'shorts' ? 34 : 40, adj(L.sec, 0.1));
+      shoeDetail(g, L, 'trainer');
+      break;
+    }
+    case 'feet': {
+      shoeDetail(g, L, /boot|welli/.test(n) ? 'boot' : /loafer|clog|slipper/.test(n) ? 'dress' : /sandal/.test(n) ? 'none' : 'trainer');
+      if (/sock/.test(n)) { for (const x0 of [11, 16]) g.rect(x0, 38, x0 + 4, 40, L.main); }
+      break;
+    }
+    default: break;
+  }
+}
+
 // Build the avatar as a static grid. Returns { grid, look }.
 export function buildAvatar(outfitId) {
   const g = new Grid(AW, AH);
@@ -442,9 +652,10 @@ export function buildAvatar(outfitId) {
     drawHead(g, null, false);
   } else {
     ARCH[L.arch](g, L);
+    if (L.tier < 5) detailPass(g, L);
     const hat = L.arch === 'head';
     drawHead(g, L.tier >= 5 ? L : null, hat);
-    if (hat) drawHat(g, L);
+    if (hat) { drawHat(g, L); if (L.tier < 5) hatDetail(g, L); }
   }
   g.oy = 0;
   g.outline();

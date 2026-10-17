@@ -27,7 +27,7 @@
 <main>
   <section class="panel">
     <h2>Outfits by rarity</h2>
-    <p class="muted">Each row is one skill's outfits, Common → Mythic. The small figure is what that outfit looks like in the game right now.</p>
+    <p class="muted">Each row is one skill's outfits, Common → Mythic. Each card shows the saved <b>v1</b> next to the more detailed <b>v2</b>. Mythics are unchanged in v2.</p>
     <div id="progression"></div>
   </section>
   <section class="panel">
@@ -50,6 +50,7 @@
 import { ITEMS, ITEM, RARITY } from '../js/data.js';
 import { itemSprite, avatarSprite } from '../js/sprites.js';
 import { mountAvatar, mountPet, outfitIcon, DETAILED_PETS } from '../js/sprites2.js';
+import * as v1 from '../js/sprites-v1.js';
 
 const byName = (n) => ITEMS.find((i) => i.name === n)?.id;
 const rows = {
@@ -59,6 +60,9 @@ const rows = {
   Charisma: ['Polo Shirt', 'Smart Blazer', 'Tailored Suit', 'Velvet Tuxedo', 'Golden Crown', 'Silver-Tongued Regalia'],
   Mindfulness: ['Hoodie', 'Linen Set', "Monk's Robes", 'Lotus Robes', null, 'Ascendant Robes'],
   Labour: ['Hi-Vis Vest', 'Steel Toe Boots', "Foreman's Outfit", 'Executive Suit', null, "Titan's Workwear"],
+  Farming: ['Dungarees', 'Wax Jacket', "Farmer's Overalls", 'Harvest Festival Outfit', null, 'Verdant Druid Robes'],
+  Music: ['Denim Jacket', 'Leather Jacket', 'Rockstar Outfit', "Conductor's Tailcoat", null, "Siren's Stage Outfit"],
+  Housekeeping: ['Dressing Gown', "Housekeeper's Uniform", "Butler's Suit", 'Victorian Maid Outfit', null, 'Pristine Regalia'],
 };
 const tag = (r) => `<span class="rtag r-${r}">${RARITY[r].name}</span>`;
 
@@ -70,11 +74,18 @@ function avatarCard(id, scale = 4, showOld = true) {
   cv.style.width = `${32 * scale}px`;
   const vs = document.createElement('div'); vs.className = 'vs';
   if (showOld) {
-    const old = document.createElement('div');
-    old.innerHTML = `<img src="${avatarSprite(id, 2)}" style="width:32px"><small>now</small>`;
-    vs.appendChild(old);
+    // saved v1 next to the new v2
+    card.style.width = '250px';
+    const a = document.createElement('div');
+    const c1 = document.createElement('canvas'); c1.style.width = `${32 * scale}px`;
+    a.appendChild(c1); a.insertAdjacentHTML('beforeend', '<small>v1 (saved)</small>');
+    vs.appendChild(a);
+    v1.mountAvatar(c1, id, { scale });
   }
-  vs.appendChild(cv);
+  const b = document.createElement('div');
+  b.appendChild(cv);
+  if (showOld) b.insertAdjacentHTML('beforeend', '<small style="color:var(--accent)">v2 (new)</small>');
+  vs.appendChild(b);
   card.appendChild(vs);
   card.insertAdjacentHTML('beforeend', `<div class="nm">${it.name}<br>${tag(it.rarity)}</div>`);
   mountAvatar(cv, id, { scale });
