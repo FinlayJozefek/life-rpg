@@ -72,6 +72,35 @@ export function dropSound(rarityIndex) {
   }
 }
 
+// Build-up before an Epic+ reveal: a rising sweep with ticks that speed up.
+// Higher tiers start lower, rise further and add a swelling choir.
+export function charge(rarityIndex, ms) {
+  if (!ctx || muted) return;
+  const dur = ms / 1000;
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = rarityIndex >= 5 ? 'sawtooth' : 'triangle';
+  const from = [0, 0, 0, 220, 160, 90, 70][rarityIndex];
+  const to = [0, 0, 0, 660, 880, 1100, 1320][rarityIndex];
+  o.frequency.setValueAtTime(from, t);
+  o.frequency.exponentialRampToValueAtTime(to, t + dur);
+  const peak = [0, 0, 0, 0.03, 0.04, 0.05, 0.05][rarityIndex];
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + dur * 0.9);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const f = ctx.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.setValueAtTime(400, t);
+  f.frequency.exponentialRampToValueAtTime(4000, t + dur);
+  o.connect(f).connect(g).connect(ctx.destination);
+  o.start(t); o.stop(t + dur + 0.05);
+  // accelerating ticks (like a heartbeat speeding up)
+  let at = 0, gap = 0.32;
+  while (at < dur - 0.08) { note(N(15 + rarityIndex), { at, dur: 0.05, vol: 0.05, type: 'square' }); at += gap; gap = Math.max(0.06, gap * 0.8); }
+  if (rarityIndex >= 6) [-9, -5, -2, 3].forEach((s) => note(N(s), { at: dur * 0.3, dur: dur * 0.75, vol: 0.035, type: 'sine' }));
+}
+
 export function levelUpSound(milestone = false) {
   const steps = milestone ? [0, 4, 7, 12, 16, 19, 24] : [0, 4, 7, 12];
   steps.forEach((s, i) => note(N(s + 3), { at: i * 0.09, dur: 0.25, vol: 0.1, type: 'square' }));

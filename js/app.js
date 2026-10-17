@@ -510,6 +510,8 @@ function doLog() {
 }
 
 const MILESTONES = { 15: 'Apprentice', 30: 'Adept', 45: 'Master', 60: 'Maxed out' };
+// Build-up (charge) and linger (after) times for Epic(3), Legendary(4), Mythic(5), Divine(6).
+const DRAMA = { 3: { charge: 1000, after: 500 }, 4: { charge: 1500, after: 750 }, 5: { charge: 2100, after: 1000 }, 6: { charge: 3000, after: 1400 } };
 
 // The result screen. Everything is revealed on a timeline: XP and coins, then each
 // drop (rarer ones later, louder and flashier), then level-ups, then quests,
@@ -521,14 +523,20 @@ function showResult(r, progress = { quests: [], achievements: [], titles: [] }) 
   const levelled = r.levelAfter > r.levelBefore;
   const milestone = [60, 45, 30, 15].find((m) => r.levelBefore < m && r.levelAfter >= m);
 
-  // reveal times (ms after the roll finishes)
-  let t = 350;
-  const dropTimes = drops.map(([id]) => {
+  // Reveal timeline (ms after the roll finishes). Common/Uncommon/Rare just pop in.
+  // Epic and up appear as a glowing mystery card that charges up, then bursts open;
+  // each tier charges longer and lingers longer than the one before.
+  let t = 300;
+  const timeline = drops.map(([id]) => {
     const ri = RARITY[ITEM[id].rarity].index;
-    t += ri >= 5 ? 900 : ri >= 3 ? 520 : 170;           // dramatic pause before the big ones
-    return t;
+    if (ri < 3) { t += 140; return { appear: t, reveal: t, ri }; }
+    const { charge, after } = DRAMA[ri];
+    const appear = t + 400;
+    const reveal = appear + charge;
+    t = reveal + after;
+    return { appear, reveal, ri, charge };
   });
-  const levelAt = t + 450;
+  const levelAt = t + 400;
   const extrasAt = levelAt + (levelled ? (milestone ? 1600 : 900) : 0);
 
   const banners = [];
@@ -553,9 +561,20 @@ function showResult(r, progress = { quests: [], achievements: [], titles: [] }) 
     const isNew = r.newDiscoveries.includes(id);
     const count = n > 1 ? ` <b>x${n}</b>` : '';
     const tags = `${rarityTag(it.rarity)}${isNew ? '<span class="new">NEW</span>' : ''}${it.type === 'pet' ? '<span class="new pet">PET</span>' : ''}`;
-    return `<div class="drop rar-${it.rarity}" style="animation-delay:${dropTimes[i]}ms">
-      ${itemImg(id)}
-      <div class="drop-text"><div>${esc(it.name)}${count}</div><div>${tags}</div></div>
+    const tl = timeline[i];
+    if (tl.ri < 3) {
+      return `<div class="drop rar-${it.rarity}" style="animation-delay:${tl.appear}ms">
+        ${itemImg(id)}
+        <div class="drop-text"><div>${esc(it.name)}${count}</div><div>${tags}</div></div>
+      </div>`;
+    }
+    return `<div class="drop big-drop rar-${it.rarity} pending" id="bigdrop-${i}" style="--charge:${tl.charge}ms">
+      ${tl.ri >= 4 ? '<div class="rays"></div>' : ''}
+      <div class="mystery-orb"><span>?</span></div>
+      <div class="drop-inner">
+        ${itemImg(id)}
+        <div class="drop-text"><div>${esc(it.name)}${count}</div><div>${tags}</div></div>
+      </div>
     </div>`;
   }).join('');
 
@@ -566,6 +585,7 @@ function showResult(r, progress = { quests: [], achievements: [], titles: [] }) 
     </div>
     <div class="result hidden" id="result">
       <h2>${s.name} · ${fmtDuration(r.minutes)}</h2>
+      ${timeline.some((x) => x.ri >= 3) ? '<div class="skip-hint" id="skip-hint">Tap to skip</div>' : ''}
       ${r.streak >= 2 ? `<div class="streak-line">🔥 ${r.streak}-day streak</div>` : ''}
       ${r.bonusRoll ? '<div class="banner bonus">✦ Pet bonus roll! ✦</div>' : ''}
       ${r.questRolls ? `<div class="banner quest">✦ ${r.questRolls} quest bonus roll${r.questRolls > 1 ? 's' : ''} used ✦</div>` : ''}
@@ -592,20 +612,53 @@ function showResult(r, progress = { quests: [], achievements: [], titles: [] }) 
       if (bar) bar.style.width = `${(p.pct * 100).toFixed(1)}%`;
     }, 50);
     const sheet = $modal;   // shake the whole pop-up layer (works however the sheet is positioned)
-    drops.forEach(([id], i) => setTimeout(() => {
-      const ri = RARITY[ITEM[id].rarity].index;
-      sfx.dropSound(ri);
-      if (ri >= 5) { shake(sheet, true); flash(`${RARITY[ITEM[id].rarity].color}aa`); vibrate([90, 50, 200]); }
-      else if (ri >= 4) { shake(sheet); vibrate([60, 40, 120]); }
-      else if (ri >= 3) vibrate(50);
-    }, dropTimes[i]));
-    if (levelled) setTimeout(() => {
+    const timers = [];
+    const at = (fn, ms) => timers.push(setTimeout(fn, ms));
+    drops.forEach(([id], i) => {
+      const { appear, reveal, ri, charge } = timeline[i];
+      if (ri < 3) { at(() => sfx.dropSound(ri), appear); return; }
+      const card = document.getElementById(`bigdrop-${i}`);
+      const color = RARITY[ITEM[id].rarity].color;
+      at(() => {                                           // mystery card appears and charges up
+        card?.classList.replace('pending', 'charging');
+        card?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        sfx.charge(ri, charge);
+        if (ri >= 5) vibrate([20, 200, 20, 150, 20, 100, 20, 60]);
+      }, appear);
+      at(() => {                                           // burst open
+        card?.classList.replace('charging', 'revealed');
+        sfx.dropSound(ri);
+        if (ri === 3) vibrate(60);
+        if (ri === 4) { shake(sheet); vibrate([60, 40, 140]); }
+        if (ri === 5) { shake(sheet, true); flash(`${color}bb`); vibrate([120, 50, 260]); }
+        if (ri >= 6) {
+          shake(sheet, true); flash('#fff6c8'); vibrate([150, 60, 150, 60, 400]);
+          confetti({ count: 160, duration: 3200, colors: ['#fff1a8', '#ffd84a', '#ffffff', '#ffc94a'] });
+        }
+      }, reveal);
+    });
+    if (levelled) at(() => {
       document.querySelector('.later.lvl')?.classList.add('show');
       sfx.levelUpSound(!!milestone);
       confetti(milestone ? { count: 220, duration: 3600, colors: ['#ffc94a', '#ffe680', '#fff4b0', '#3ee0a0'] } : {});
       if (milestone) { shake(sheet); vibrate([100, 60, 100, 60, 250]); }
     }, levelAt);
-    if (banners.length) setTimeout(() => { document.querySelector('.later.extras')?.classList.add('show'); sfx.chime(); }, extrasAt);
+    if (banners.length) at(() => { document.querySelector('.later.extras')?.classList.add('show'); sfx.chime(); }, extrasAt);
+
+    // Tap anywhere (except Continue) to skip straight to the end of the reveal.
+    const hint = document.getElementById('skip-hint');
+    at(() => hint?.remove(), Math.max(levelAt, extrasAt) + 200);
+    const result = document.getElementById('result');
+    const skip = (e) => {
+      if (e.target.closest('[data-action]')) return;
+      timers.forEach(clearTimeout);
+      result.classList.add('skipped');
+      result.querySelectorAll('.big-drop').forEach((c) => { c.classList.remove('pending', 'charging'); c.classList.add('revealed'); });
+      result.querySelectorAll('.later').forEach((el) => el.classList.add('show'));
+      hint?.remove();
+      result.removeEventListener('click', skip);
+    };
+    result?.addEventListener('click', skip);
   }, 1100);
 }
 

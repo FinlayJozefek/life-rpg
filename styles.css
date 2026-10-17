@@ -425,20 +425,85 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 .banner.milestone small { display: block; font-size: 13px; letter-spacing: 0.15em; color: #fff4b0; }
 @keyframes glowpulse { 50% { box-shadow: 0 0 40px rgba(255, 201, 74, 0.8); } }
 
-/* rarity effects on drops: each tier more dramatic */
-.drop { animation: drop-in 0.45s cubic-bezier(.2, 1.4, .4, 1) both; }
-.drop.rar-uncommon { box-shadow: 0 0 8px rgba(95, 191, 90, 0.35); border-color: #3c6e38; }
-.drop.rar-rare { animation-name: drop-in-fancy; animation-duration: 0.6s; box-shadow: 0 0 12px rgba(74, 144, 226, 0.5); border-color: #2f5b8f; }
-.drop.rar-epic { animation-name: drop-in-fancy; animation-duration: 0.7s; box-shadow: 0 0 16px rgba(163, 90, 224, 0.6); border-color: #6a3a93; background: linear-gradient(90deg, rgba(163, 90, 224, 0.15), var(--panel-2)); }
-.drop.rar-legendary { animation-name: drop-in-big; animation-duration: 0.8s; box-shadow: 0 0 22px rgba(240, 160, 32, 0.7); border-color: #f0a020; background: linear-gradient(90deg, rgba(240, 160, 32, 0.2), var(--panel-2)); }
-.drop.rar-mythic { animation-name: drop-in-big; animation-duration: 0.9s; box-shadow: 0 0 30px rgba(232, 67, 90, 0.85); border: 3px solid #e8435a; background: linear-gradient(90deg, rgba(232, 67, 90, 0.3), var(--panel-2)); }
-.drop.rar-divine { animation-name: drop-in-big; animation-duration: 1s; box-shadow: 0 0 36px rgba(255, 241, 168, 0.9); border: 3px solid #fff1a8; background: linear-gradient(90deg, rgba(255, 241, 168, 0.3), rgba(185, 139, 255, 0.15), var(--panel-2)); }
-.drop.rar-mythic .drop-text > div:first-child, .drop.rar-divine .drop-text > div:first-child { font-family: var(--display-font); font-weight: 700; font-size: 17px; }
-@keyframes drop-in-big {
-  0% { transform: scale(0.2) rotate(-12deg); opacity: 0; filter: brightness(3); }
-  55% { transform: scale(1.15) rotate(3deg); opacity: 1; filter: brightness(1.6); }
-  100% { filter: brightness(1); }
+/* ---------- drop reveal ----------
+   Common / Uncommon / Rare: quick, quiet pop-in.
+   Epic and up: a mystery card charges up in the rarity colour (for --charge),
+   then bursts open. Each tier is slower, brighter and bigger than the last. */
+.drop { animation: drop-in 0.4s cubic-bezier(.2, 1.4, .4, 1) both; }
+
+.big-drop { position: relative; overflow: hidden; animation: none; min-height: 66px; --c: #a35ae0; --c-rgb: 163, 90, 224; }
+.big-drop.rar-legendary { --c: #f0a020; --c-rgb: 240, 160, 32; }
+.big-drop.rar-mythic { --c: #e8435a; --c-rgb: 232, 67, 90; }
+.big-drop.rar-divine { --c: #fff1a8; --c-rgb: 255, 241, 168; }
+.big-drop.pending { display: none; }
+.drop-inner { display: flex; gap: 12px; align-items: center; position: relative; z-index: 2; width: 100%; }
+
+/* charging: the item is hidden, an orb of light grows and pulses faster and faster */
+.big-drop.charging { border-color: var(--c); background: #0b0d20; animation: card-appear 0.35s ease-out both, charge-shake var(--charge) ease-in both; }
+.big-drop.charging .drop-inner { visibility: hidden; }
+.mystery-orb { display: none; position: absolute; inset: 0; z-index: 3; place-items: center; pointer-events: none; }
+.big-drop.charging .mystery-orb { display: grid; }
+.mystery-orb span {
+  width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%;
+  font: 700 26px var(--display-font); color: #fff;
+  background: radial-gradient(circle, #fff 0%, var(--c) 45%, transparent 72%);
+  animation: orb-grow var(--charge) ease-in both, orb-pulse 0.5s ease-in-out infinite;
 }
+.big-drop.rar-legendary.charging .mystery-orb span { animation: orb-grow var(--charge) ease-in both, orb-pulse 0.35s ease-in-out infinite; }
+.big-drop.rar-mythic.charging .mystery-orb span,
+.big-drop.rar-divine.charging .mystery-orb span { animation: orb-grow var(--charge) ease-in both, orb-pulse 0.22s ease-in-out infinite; }
+/* Mythic and Divine darken everything around the card while charging */
+.big-drop.rar-mythic.charging, .big-drop.rar-divine.charging { overflow: visible; z-index: 4; box-shadow: 0 0 0 200vmax rgba(3, 4, 14, 0.72), 0 0 30px rgba(var(--c-rgb), 0.8); }
+.big-drop.rar-divine.charging { box-shadow: 0 0 0 200vmax rgba(3, 4, 14, 0.88), 0 0 50px rgba(var(--c-rgb), 0.9); }
+
+@keyframes card-appear { from { opacity: 0; transform: scale(0.85); } }
+@keyframes charge-shake {
+  0%, 60% { transform: translate(0, 0); }
+  70% { transform: translate(-1px, 1px); } 80% { transform: translate(2px, -1px); }
+  90% { transform: translate(-2px, 2px); } 100% { transform: translate(3px, -2px); }
+}
+@keyframes orb-grow { from { transform: scale(0.25); filter: brightness(0.7); } to { transform: scale(1.35); filter: brightness(1.8); } }
+@keyframes orb-pulse { 50% { opacity: 0.65; } }
+
+/* revealed: bursts open, keeps a glow; Legendary+ get rotating light rays behind */
+.big-drop.revealed { border: 3px solid var(--c); background: linear-gradient(90deg, rgba(var(--c-rgb), 0.25), var(--panel-2)); }
+.big-drop.rar-epic.revealed { animation: burst-epic 0.8s cubic-bezier(.2, 1.5, .4, 1) both, glow-epic 2.4s 0.8s ease-in-out infinite; }
+.big-drop.rar-legendary.revealed { animation: burst-big 1.1s cubic-bezier(.2, 1.5, .4, 1) both, glow-pulse 2s 1.1s ease-in-out infinite; }
+.big-drop.rar-mythic.revealed { animation: burst-big 1.4s cubic-bezier(.2, 1.5, .4, 1) both, glow-pulse 1.6s 1.4s ease-in-out infinite; }
+.big-drop.rar-divine.revealed { animation: burst-divine 1.9s cubic-bezier(.2, 1.4, .4, 1) both, glow-pulse 1.4s 1.9s ease-in-out infinite; }
+.big-drop.revealed .drop-text > div:first-child { font-family: var(--display-font); font-weight: 700; font-size: 16px; }
+.big-drop.rar-mythic.revealed .drop-text > div:first-child, .big-drop.rar-divine.revealed .drop-text > div:first-child { font-size: 18px; }
+/* a light sweep across Epic+ cards as they open */
+.big-drop.revealed::after {
+  content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+  background-size: 250% 100%; animation: sweep 1.1s 0.15s ease-out both;
+}
+.rays { display: none; position: absolute; left: 34px; top: 50%; width: 300px; height: 300px; margin: -150px 0 0 -150px; z-index: 0; pointer-events: none;
+  background: repeating-conic-gradient(rgba(var(--c-rgb), 0.38) 0deg 10deg, transparent 10deg 30deg);
+  -webkit-mask: radial-gradient(circle, #000 15%, transparent 68%); mask: radial-gradient(circle, #000 15%, transparent 68%); }
+.big-drop.revealed .rays { display: block; animation: rays-in 0.9s ease-out both, spin 9s linear infinite; }
+.big-drop.rar-divine.revealed .rays { width: 440px; height: 440px; margin: -220px 0 0 -220px; animation: rays-in 1.4s ease-out both, spin 6s linear infinite; }
+
+@keyframes burst-epic { 0% { transform: scale(0.6); filter: brightness(3); } 60% { transform: scale(1.08); } 100% { filter: brightness(1); } }
+@keyframes burst-big {
+  0% { transform: scale(0.3) rotate(-10deg); filter: brightness(4); }
+  50% { transform: scale(1.18) rotate(3deg); filter: brightness(1.8); }
+  75% { transform: scale(0.97) rotate(-1deg); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+@keyframes burst-divine {
+  0% { transform: scale(0.1); filter: brightness(6) saturate(0); }
+  35% { transform: scale(1.3); filter: brightness(3); }
+  60% { transform: scale(0.94); }
+  80% { transform: scale(1.04); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+@keyframes glow-epic { 50% { box-shadow: 0 0 18px rgba(var(--c-rgb), 0.6); } }
+@keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 18px rgba(var(--c-rgb), 0.55); } 50% { box-shadow: 0 0 38px rgba(var(--c-rgb), 0.95); } }
+@keyframes sweep { from { background-position: 150% 0; } to { background-position: -100% 0; } }
+@keyframes rays-in { from { opacity: 0; transform: scale(0.3); } }
+@keyframes spin { to { rotate: 360deg; } }
 
 .confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 70; }
 .flash { position: fixed; inset: 0; pointer-events: none; z-index: 65; animation: flashfade 1.1s ease-out forwards; }
@@ -447,3 +512,9 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 .shake-strong { animation: shake-strong 0.65s; }
 @keyframes shake { 20%, 60% { transform: translate(-4px, 2px); } 40%, 80% { transform: translate(4px, -2px); } }
 @keyframes shake-strong { 10%, 50%, 90% { transform: translate(-9px, 4px) rotate(-1deg); } 30%, 70% { transform: translate(9px, -4px) rotate(1deg); } }
+.skip-hint { position: sticky; top: 0; z-index: 6; text-align: center; font-size: 12px; color: var(--muted); margin: -8px 0 4px; animation: fade 0.4s 1.5s both; }
+.result.skipped .drop, .result.skipped .banner { animation-duration: 0.01ms !important; animation-delay: 0ms !important; }
+.result.skipped .big-drop.revealed { animation: none !important; box-shadow: 0 0 22px rgba(var(--c-rgb), 0.7); }
+.result.skipped .big-drop.revealed::after { display: none; }
+.result.skipped .big-drop.revealed .rays { animation: spin 9s linear infinite !important; }
+.drop-text { min-width: 0; overflow-wrap: anywhere; }
