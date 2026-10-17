@@ -1,7 +1,7 @@
 // TRIAL v2: more detailed pixel art (v1 is saved in sprites-v1.js). Avatar outfits change shape (robes, armour,
 // suits, hats...) and scale up with rarity: trim -> gems -> capes -> aura ->
 // animated mythic effects. Not used by the game yet; see dev/art.html.
-import { ITEM, RARITY, SKILL } from './data.js';
+import { ITEM, RARITY, SKILL, slotFor } from './data.js';
 
 export const AW = 32;           // avatar grid width
 export const AH = 52;           // avatar grid height
@@ -96,8 +96,8 @@ const MYTHIC_THEMES = {
 
 export function archetypeFor(name) {
   const n = name.toLowerCase();
-  if (/(sandals|trainers|runners|racers|boots|wellies|clogs|loafers|slippers|socks)$/.test(n)) return 'feet';
-  if (/crown|(hat|cap|beret|beanie|bandana|headscarf|sweatband)$/.test(n)) return 'head';
+  const slot = slotFor(name);
+  if (slot !== 'body') return slot;
   if (/armour|gear$|workwear/.test(n)) return 'armour';
   if (/overall|dungaree/.test(n)) return 'overalls';
   if (/apron/.test(n)) return 'apron';
@@ -279,7 +279,7 @@ function drawFeetItem(g, L) {
     return;
   }
   const r = ramp(L.main);
-  const high = /boot|welli/.test(n);
+  const high = /boot|welli/.test(n) && !L.underRobe;   // tall boots would poke through a robe
   for (const [x0, x1] of [[10, 15], [16, 21]]) {
     if (high) g.shaded(x0 + 1, 36, x1 - 1, 40, L.main);
     g.rect(x0, 41, x1, 41, r.base); g.rect(x0, 42, x1, 42, r.dk); g.px(x0, 41, r.hi);
@@ -634,32 +634,39 @@ function detailPass(g, L) {
       break;
     }
     case 'feet': {
-      shoeDetail(g, L, /boot|welli/.test(n) ? 'boot' : /loafer|clog|slipper/.test(n) ? 'dress' : /sandal/.test(n) ? 'none' : 'trainer');
-      if (/sock/.test(n)) { for (const x0 of [11, 16]) g.rect(x0, 38, x0 + 4, 40, L.main); }
+      shoeDetail(g, L, /boot|welli/.test(n) ? (L.underRobe ? 'dress' : 'boot') : /loafer|clog|slipper/.test(n) ? 'dress' : /sandal/.test(n) ? 'none' : 'trainer');
+      if (/sock/.test(n) && !L.underRobe) { for (const x0 of [11, 16]) g.rect(x0, 38, x0 + 4, 40, L.main); }
       break;
     }
     default: break;
   }
 }
 
-// Build the avatar as a static grid. Returns { grid, look }.
-export function buildAvatar(outfitId) {
+// `gear` is { head, body, feet } item ids (any may be missing), or a single item id.
+function normGear(gear) {
+  if (!gear) return {};
+  if (typeof gear === 'string') return { [ITEM[gear].slot]: gear };
+  return gear;
+}
+
+// Build the avatar as a static grid. Returns { grid, look } where `look` is the
+// highest-rarity piece worn (it drives the aura and Mythic effects).
+export function buildAvatar(gearIn) {
+  const gear = normGear(gearIn);
   const g = new Grid(AW, AH);
   g.oy = OY;
-  const L = outfitId ? outfitLook(outfitId) : null;
-  if (!L) {
-    baseClothes(g);
-    drawHead(g, null, false);
-  } else {
-    ARCH[L.arch](g, L);
-    if (L.tier < 5) detailPass(g, L);
-    const hat = L.arch === 'head';
-    drawHead(g, L.tier >= 5 ? L : null, hat);
-    if (hat) { drawHat(g, L); if (L.tier < 5) hatDetail(g, L); }
-  }
+  const Lb = gear.body ? outfitLook(gear.body) : null;
+  const Lf = gear.feet ? { ...outfitLook(gear.feet), underRobe: Lb?.arch === 'robe' } : null;
+  const Lh = gear.head ? outfitLook(gear.head) : null;
+  if (Lb) { ARCH[Lb.arch](g, Lb); if (Lb.tier < 5) detailPass(g, Lb); }
+  else baseClothes(g, { shoes: !Lf });
+  if (Lf) { drawFeetItem(g, Lf); if (Lf.tier < 5) detailPass(g, Lf); }
+  const looks = [Lb, Lf, Lh].filter(Boolean).sort((a, b) => b.tier - a.tier);
+  drawHead(g, looks.find((l) => l.tier >= 5 && l.eyes) || null, !!Lh);
+  if (Lh) { drawHat(g, Lh); if (Lh.tier < 5) hatDetail(g, Lh); }
   g.oy = 0;
   g.outline();
-  return { grid: g, look: L };
+  return { grid: g, look: looks[0] || null };
 }
 
 // ---------- animated rendering ----------
@@ -690,8 +697,9 @@ function makeParticle(fx, look, w, h, rnd) {
 }
 
 // Draw an animated avatar onto a canvas. Returns a stop() function.
-export function mountAvatar(canvas, outfitId, { scale = 6, animate = true } = {}) {
-  const { grid, look } = buildAvatar(outfitId);
+export function mountAvatar(canvas, gear, { scale = 6, animate = true } = {}) {
+  const { grid, look } = buildAvatar(gear);
+  const outfitId = JSON.stringify(normGear(gear));
   const tier = look ? look.tier : 0;
   const base = grid.toCanvas(0);
   const bright = grid.toCanvas(1);
@@ -755,7 +763,10 @@ export function mountAvatar(canvas, outfitId, { scale = 6, animate = true } = {}
 }
 
 // Static icon of an outfit item: the relevant part of the avatar wearing it.
-export function outfitIcon(outfitId, scale = 4) {
+const iconCache = new Map();
+export function outfitIcon(outfitId, { scale = 4, hidden = false } = {}) {
+  const key = `${outfitId}|${scale}|${hidden}`;
+  if (iconCache.has(key)) return iconCache.get(key);
   const { grid, look } = buildAvatar(outfitId);
   const crop = look.arch === 'head' ? [7, 0, 18, 22]
     : look.arch === 'feet' ? [5, 40, 22, 10]
@@ -766,7 +777,14 @@ export function outfitIcon(outfitId, scale = 4) {
   const cv = document.createElement('canvas'); cv.width = w * scale; cv.height = h * scale;
   const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
   ctx.drawImage(src, x, y, w, h, 0, 0, w * scale, h * scale);
-  return cv.toDataURL();
+  if (hidden) {                                      // undiscovered: flat silhouette
+    ctx.globalCompositeOperation = 'source-in';
+    ctx.fillStyle = '#2a2f55';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+  }
+  const url = cv.toDataURL();
+  iconCache.set(key, url);
+  return url;
 }
 
 // ---------- hand-drawn pets (front-facing, 16x16, left half mirrored) ----------

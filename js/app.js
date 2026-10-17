@@ -1,10 +1,11 @@
-import { SKILLS, SKILL, ITEM, ITEMS_BY_SKILL, RARITY, RARITIES, OUTFIT_XP_BOOST, PET_BOOST, BADGE_COUNT, COLLECTION_COMPLETE_XP_BOOST } from './data.js';
+import { SKILLS, SKILL, ITEM, ITEMS_BY_SKILL, RARITY, RARITIES, OUTFIT_XP_BOOST, PET_BOOST, BADGE_COUNT, COLLECTION_COMPLETE_XP_BOOST, GEAR_SLOTS, SLOT_LABEL } from './data.js';
 import {
   load, save, newState, validateImport, levelProgress, previewLog, logActivity,
-  boostsFor, pct, effectiveDropChance, sell, sellPrice, canSell, equip, totalLevel, discoveredCount, isCollectionComplete,
+  boostsFor, pct, effectiveDropChance, sell, sellPrice, canSell, equip, isEquipped, totalLevel, discoveredCount, isCollectionComplete,
   MAX_LEVEL,
 } from './game.js';
-import { itemSprite, avatarSprite } from './sprites.js';
+import { itemSprite } from './sprites.js';
+import { mountAvatar, mountPet, outfitIcon, DETAILED_PETS } from './sprites2.js';
 import { startAutoUpdate } from './updates.js';
 import { isInstalled, isIOS, inAppBrowser, installInstructions, promptInstall, onInstallChange, canPromptInstall } from './install.js';
 
@@ -92,11 +93,14 @@ function rarityTag(r) {
 
 function itemImg(id, { hidden = false, cls = '' } = {}) {
   const item = ITEM[id];
-  return `<img class="sprite ${cls} ${hidden ? '' : 'glow-' + item.rarity}" src="${itemSprite(id, { hidden })}" alt="${hidden ? 'Unknown item' : esc(item.name)}">`;
+  const src = item.type === 'outfit' ? outfitIcon(id, { hidden }) : itemSprite(id, { hidden });
+  return `<img class="sprite ${cls} ${item.type === 'outfit' ? 'outfit-icon' : ''} ${hidden ? '' : 'glow-' + item.rarity}" src="${src}" alt="${hidden ? 'Unknown item' : esc(item.name)}">`;
 }
 
+const SLOT_EMPTY_ICON = { head: '🎩', body: '👕', feet: '👢', pet: '🐾' };
+
 function itemEffect(item) {
-  if (item.type === 'outfit') return `Outfit · +${pct(OUTFIT_XP_BOOST[item.rarity])} ${SKILL[item.skill].name} XP when worn`;
+  if (item.type === 'outfit') return `${SLOT_LABEL[item.slot]} · +${pct(OUTFIT_XP_BOOST[item.rarity])} ${SKILL[item.skill].name} XP when worn`;
   if (item.type === 'pet') {
     const p = PET_BOOST[item.rarity];
     const parts = [`+${pct(p.xp)} XP`];
@@ -111,18 +115,19 @@ function itemEffect(item) {
 
 // ---------- Views ----------
 function viewHome() {
-  const pet = state.equipped.pet && ITEM[state.equipped.pet];
-  const outfit = state.equipped.outfit && ITEM[state.equipped.outfit];
   const totalDiscovered = SKILLS.reduce((n, s) => n + discoveredCount(state, s.id), 0);
-  const slot = (type, item) => `
+  const slot = (type) => {
+    const item = state.equipped[type] && ITEM[state.equipped[type]];
+    return `
     <button class="slot" data-action="pick-slot" data-type="${type}">
-      <div class="slot-icon">${item ? itemImg(item.id) : `<span class="slot-empty">${type === 'pet' ? '🐾' : '👕'}</span>`}</div>
+      <div class="slot-icon">${item ? itemImg(item.id) : `<span class="slot-empty">${SLOT_EMPTY_ICON[type]}</span>`}</div>
       <div class="slot-text">
-        <div class="slot-label">${type === 'pet' ? 'Pet' : 'Outfit'}</div>
+        <div class="slot-label">${SLOT_LABEL[type]}</div>
         <div class="slot-name">${item ? esc(item.name) : 'Empty'}</div>
         ${item ? `<div class="slot-sub">${rarityTag(item.rarity)} ${SKILL[item.skill].name}</div>` : '<div class="slot-sub muted">Tap to equip</div>'}
       </div>
     </button>`;
+  };
   const recent = state.log.slice(0, 8).map((e) => {
     const n = Object.values(e.drops).reduce((a, b) => a + b, 0);
     return `<li><span class="li-icon">${SKILL[e.skill].icon}</span>
@@ -133,9 +138,11 @@ function viewHome() {
   return `
     ${installBanner()}
     <section class="hero panel">
-      <div class="avatar-wrap ${outfit ? 'glow-' + outfit.rarity : ''}">
-        <img class="avatar" src="${avatarSprite(state.equipped.outfit)}" alt="Your character">
-        ${pet ? `<img class="avatar-pet" src="${itemSprite(pet.id)}" alt="${esc(pet.name)}">` : ''}
+      <div class="avatar-wrap">
+        <canvas class="avatar" id="avatar-canvas" role="img" aria-label="Your character"></canvas>
+        ${state.equipped.pet ? (DETAILED_PETS.includes(state.equipped.pet)
+          ? `<canvas class="avatar-pet detailed" id="pet-canvas" role="img" aria-label="${esc(ITEM[state.equipped.pet].name)}"></canvas>`
+          : `<img class="avatar-pet" src="${itemSprite(state.equipped.pet)}" alt="${esc(ITEM[state.equipped.pet].name)}">`) : ''}
       </div>
       <button class="name" data-action="rename">${esc(state.name)} <span class="muted">✎</span></button>
       <div class="stats">
@@ -146,8 +153,8 @@ function viewHome() {
     </section>
     <section class="panel">
       <h2>Equipped</h2>
-      <div class="slots">${slot('pet', pet)}${slot('outfit', outfit)}</div>
-      <p class="hint">Boosts only apply when logging the item's own skill.</p>
+      <div class="slots">${GEAR_SLOTS.map(slot).join('')}</div>
+      <p class="hint">Each piece only boosts its own skill, so wear a full matching set when you log. Anything else is just for looks.</p>
     </section>
     <section class="panel">
       <h2>Recent activity</h2>
@@ -179,7 +186,7 @@ function viewCollection() {
     const tiles = items.map((i) => {
       const seen = state.everOwned[i.id];
       const n = state.items[i.id] || 0;
-      const isEq = state.equipped.pet === i.id || state.equipped.outfit === i.id;
+      const isEq = isEquipped(state, i.id);
       return `<button class="tile ${seen ? 'r-border-' + i.rarity : 'unknown'}" data-action="item" data-id="${i.id}" ${seen ? '' : 'disabled'}>
         ${itemImg(i.id, { hidden: !seen })}
         <span class="tile-name">${seen ? esc(i.name) : '???'}</span>
@@ -247,11 +254,24 @@ function viewSettings() {
 
 const VIEWS = { home: viewHome, skills: viewSkills, collection: viewCollection, settings: viewSettings };
 
+let stopAnimations = [];
+
 function render() {
+  stopAnimations.forEach((stop) => stop());
+  stopAnimations = [];
   $main.innerHTML = VIEWS[view]();
   document.querySelectorAll('.tabbar button').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
   document.getElementById('coin-pill').textContent = fmt(state.coins);
   if (view === 'collection') setupChipScroller();
+  if (view === 'home') mountCharacter();
+}
+
+// The animated character (and pet, if it has detailed art) on the home screen.
+function mountCharacter() {
+  const cv = document.getElementById('avatar-canvas');
+  if (cv) stopAnimations.push(mountAvatar(cv, { head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, { scale: 6 }));
+  const pv = document.getElementById('pet-canvas');
+  if (pv) stopAnimations.push(mountPet(pv, state.equipped.pet, { scale: 4 }));
 }
 
 // The skill chip row re-renders on every tap, so restore its scroll position by
@@ -430,7 +450,7 @@ function countUp(id, target, prefix = '') {
 function showItem(id) {
   const it = ITEM[id];
   const n = state.items[id] || 0;
-  const isEq = state.equipped.pet === id || state.equipped.outfit === id;
+  const isEq = isEquipped(state, id);
   const price = sellPrice(id);
   const extras = n - 1;
   openModal(`
@@ -445,7 +465,7 @@ function showItem(id) {
       ${it.type !== 'pet' ? `<p class="muted">Owned: <b>${fmt(n)}</b> · Sells for ${fmt(price)} coins each${n >= BADGE_COUNT ? ' · 🏅 badge earned' : ` · ${BADGE_COUNT} for a badge`}</p>` : ''}
     </div>
     <div class="btn-col">
-      ${(it.type === 'pet' || it.type === 'outfit') && n > 0 ? `<button class="btn primary" data-action="equip" data-id="${id}">${isEq ? 'Unequip' : 'Equip'}</button>` : ''}
+      ${it.slot && n > 0 ? `<button class="btn primary" data-action="equip" data-id="${id}">${isEq ? 'Unequip' : `Equip (${SLOT_LABEL[it.slot]})`}</button>` : ''}
       ${canSell(id) && n > 0 ? `
         <button class="btn" data-action="sell" data-id="${id}" data-qty="1">Sell 1 (+${fmt(price)})</button>
         ${extras > 0 ? `<button class="btn" data-action="sell" data-id="${id}" data-qty="${extras}">Sell all but 1 (+${fmt(price * extras)})</button>` : ''}
@@ -454,73 +474,84 @@ function showItem(id) {
     </div>`);
 }
 
-// Best owned outfit/pet for a skill (highest rarity = biggest boost).
-function bestGear(skillId, type) {
+// Best owned piece for a slot and skill (highest rarity = biggest boost).
+function bestGear(skillId, slot) {
   return Object.keys(state.items)
-    .filter((id) => state.items[id] > 0 && ITEM[id].type === type && ITEM[id].skill === skillId)
+    .filter((id) => state.items[id] > 0 && ITEM[id].slot === slot && ITEM[id].skill === skillId)
     .sort((a, b) => RARITY[ITEM[b].rarity].index - RARITY[ITEM[a].rarity].index)[0] || null;
 }
 
-// "Gear" block on the log screen: what you're wearing, whether it boosts this
-// skill, and a one-tap swap to your best gear for it.
+// Is there something better for this skill than what's in the slot now?
+function canUpgrade(skillId, slot) {
+  const best = bestGear(skillId, slot), cur = state.equipped[slot];
+  return !!best && best !== cur && !(cur && ITEM[cur].skill === skillId && RARITY[ITEM[cur].rarity].index >= RARITY[ITEM[best].rarity].index);
+}
+
+// "Gear" block on the log screen: what you're wearing, whether each piece boosts
+// this skill, and a one-tap swap to your best set for it.
 function gearSection(skillId) {
   const skill = SKILL[skillId];
   const slot = (type) => {
     const id = state.equipped[type];
-    const best = bestGear(skillId, type);
     const matches = id && ITEM[id].skill === skillId;
-    const status = !id ? 'Nothing equipped'
-      : matches ? `<span class="boost">✓ boosting ${skill.name}</span>`
-      : `<span class="muted">${SKILL[ITEM[id].skill].name} gear: no boost here</span>`;
+    const status = !id ? '<span class="muted">Empty</span>'
+      : matches ? '<span class="boost">✓ boosting</span>'
+      : '<span class="muted">no boost here</span>';
+    const icon = id ? itemImg(id) : `<span class="slot-empty">${SLOT_EMPTY_ICON[type]}</span>`;
     return `<button class="gear-slot ${matches ? 'match' : ''}" data-action="gear-pick" data-type="${type}" data-skill="${skillId}">
-      <span class="gear-icon">${id ? itemImg(id) : `<span class="slot-empty">${type === 'pet' ? '🐾' : '👕'}</span>`}</span>
-      <span class="gear-text"><span class="slot-label">${type === 'pet' ? 'Pet' : 'Outfit'}</span>
+      <span class="gear-icon">${icon}</span>
+      <span class="gear-text"><span class="slot-label">${SLOT_LABEL[type]}</span>
         <span class="gear-name">${id ? esc(ITEM[id].name) : '—'}</span><span class="small">${status}</span></span>
-      ${best && best !== id && (!matches || RARITY[ITEM[best].rarity].index > RARITY[ITEM[id].rarity].index) ? '<span class="gear-up">▲</span>' : ''}
+      ${canUpgrade(skillId, type) ? '<span class="gear-up">▲</span>' : ''}
     </button>`;
   };
-  const upgrades = ['outfit', 'pet'].filter((t) => {
-    const best = bestGear(skillId, t), cur = state.equipped[t];
-    return best && best !== cur && !(cur && ITEM[cur].skill === skillId && RARITY[ITEM[cur].rarity].index >= RARITY[ITEM[best].rarity].index);
+  const upgrades = GEAR_SLOTS.filter((t) => canUpgrade(skillId, t));
+  const bestBtn = upgrades.length
+    ? `<button class="btn wide gear-best" data-action="equip-best" data-skill="${skillId}">Equip best ${skill.name} gear</button>`
+    : '';
+  return `<div class="gear"><div class="gear-slots">${GEAR_SLOTS.map(slot).join('')}</div>${bestBtn}</div>`;
+}
+
+// Owned items for a slot, as picker buttons. With a skill, that skill's gear comes first.
+function slotPickList(slot, action, skillId = null) {
+  const owned = Object.keys(state.items).filter((id) => state.items[id] > 0 && ITEM[id].slot === slot)
+    .sort((a, b) => (skillId ? (ITEM[b].skill === skillId) - (ITEM[a].skill === skillId) : 0)
+      || RARITY[ITEM[b].rarity].index - RARITY[ITEM[a].rarity].index);
+  const current = state.equipped[slot];
+  if (!owned.length) {
+    const what = slot === 'pet' ? 'pets' : `${SLOT_LABEL[slot].toLowerCase()} gear`;
+    return `<p class="muted">You don't have any ${what} yet. Log some activities to get drops.</p>`;
+  }
+  const rows = owned.map((id) => {
+    const it = ITEM[id];
+    let sub;
+    if (!skillId) sub = itemEffect(it).split(' · ')[1];
+    else if (it.skill === skillId) sub = `<span class="boost">boosts ${SKILL[skillId].name}</span>`;
+    else sub = `<span class="muted">${SKILL[it.skill].name}</span>`;
+    return `<button class="pick ${id === current ? 'on' : ''}" data-action="${action}" data-id="${id}">
+        ${itemImg(id)}<span><b>${esc(it.name)}</b><br><span class="small">${rarityTag(it.rarity)} ${sub}</span></span>
+      </button>`;
   });
-  return `<div class="gear">
-    <div class="gear-slots">${slot('outfit')}${slot('pet')}</div>
-    ${upgrades.length ? `<button class="btn wide gear-best" data-action="equip-best" data-skill="${skillId}">Equip best ${skill.name} gear</button>` : ''}
-  </div>`;
+  return `<div class="pick-list">${rows.join('')}</div>`;
 }
 
-// Picker opened from the log screen: this skill's gear first, then everything else.
-function gearPicker(type, skillId) {
-  const owned = Object.keys(state.items).filter((id) => state.items[id] > 0 && ITEM[id].type === type)
-    .sort((a, b) => (ITEM[b].skill === skillId) - (ITEM[a].skill === skillId) || RARITY[ITEM[b].rarity].index - RARITY[ITEM[a].rarity].index);
-  const current = state.equipped[type];
+// Picker opened from the log screen.
+function gearPicker(slot, skillId) {
+  const unequip = state.equipped[slot] ? `<button class="btn" data-action="gear-none" data-type="${slot}">Unequip</button>` : '';
   openModal(`
-    <h2>${type === 'pet' ? 'Pet' : 'Outfit'} for ${SKILL[skillId].name}</h2>
+    <h2>${SLOT_LABEL[slot]} for ${SKILL[skillId].name}</h2>
     <p class="muted small">Only ${SKILL[skillId].name} gear boosts this log. Anything else is just for looks.</p>
-    ${owned.length ? `<div class="pick-list">${owned.map((id) => `
-      <button class="pick ${id === current ? 'on' : ''}" data-action="gear-choose" data-id="${id}">
-        ${itemImg(id)}<span><b>${esc(ITEM[id].name)}</b><br><span class="small">${rarityTag(ITEM[id].rarity)} ${ITEM[id].skill === skillId ? `<span class="boost">boosts ${SKILL[skillId].name}</span>` : `<span class="muted">${SKILL[ITEM[id].skill].name}</span>`}</span></span>
-      </button>`).join('')}</div>` : `<p class="muted">You don't have any ${type === 'pet' ? 'pets' : 'outfits'} yet.</p>`}
-    <div class="btn-row">
-      ${current ? `<button class="btn" data-action="gear-none" data-type="${type}">Unequip</button>` : ''}
-      <button class="btn" data-action="back-to-log">Back</button>
-    </div>`);
+    ${slotPickList(slot, 'gear-choose', skillId)}
+    <div class="btn-row">${unequip}<button class="btn" data-action="back-to-log">Back</button></div>`);
 }
 
-function pickSlot(type) {
-  const owned = Object.keys(state.items).filter((id) => state.items[id] > 0 && ITEM[id].type === type)
-    .sort((a, b) => RARITY[ITEM[b].rarity].index - RARITY[ITEM[a].rarity].index);
-  const current = state.equipped[type];
+// Picker opened from the Equipped panel on the home screen.
+function pickSlot(slot) {
+  const unequip = state.equipped[slot] ? `<button class="btn" data-action="unequip-slot" data-type="${slot}">Unequip</button>` : '';
   openModal(`
-    <h2>Choose ${type === 'pet' ? 'a pet' : 'an outfit'}</h2>
-    ${owned.length ? `<div class="pick-list">${owned.map((id) => `
-      <button class="pick ${id === current ? 'on' : ''}" data-action="equip-pick" data-id="${id}">
-        ${itemImg(id)}<span><b>${esc(ITEM[id].name)}</b><br><span class="small">${rarityTag(ITEM[id].rarity)} ${itemEffect(ITEM[id]).split(' · ')[1]}</span></span>
-      </button>`).join('')}</div>` : `<p class="muted">You don't have any ${type === 'pet' ? 'pets' : 'outfits'} yet. Log some activities to get drops.</p>`}
-    <div class="btn-row">
-      ${current ? `<button class="btn" data-action="unequip-slot" data-type="${type}">Unequip</button>` : ''}
-      <button class="btn" data-action="close">Close</button>
-    </div>`);
+    <h2>Choose ${slot === 'pet' ? 'a pet' : `${SLOT_LABEL[slot].toLowerCase()} gear`}</h2>
+    ${slotPickList(slot, 'equip-pick')}
+    <div class="btn-row">${unequip}<button class="btn" data-action="close">Close</button></div>`);
 }
 
 function toast(msg) {
@@ -602,20 +633,16 @@ document.addEventListener('click', (e) => {
     case 'item': showItem(el.dataset.id); break;
     case 'equip': equip(state, el.dataset.id); persist(); render(); showItem(el.dataset.id); break;
     case 'equip-best': {
-      for (const t of ['outfit', 'pet']) {
-        const best = bestGear(el.dataset.skill, t);
-        const cur = state.equipped[t];
-        if (best && !(cur && ITEM[cur].skill === el.dataset.skill && RARITY[ITEM[cur].rarity].index >= RARITY[ITEM[best].rarity].index)) state.equipped[t] = best;
-      }
+      for (const t of GEAR_SLOTS) if (canUpgrade(el.dataset.skill, t)) state.equipped[t] = bestGear(el.dataset.skill, t);
       persist(); render(); renderLogSheet(); toast(`${SKILL[el.dataset.skill].name} gear equipped`);
       break;
     }
     case 'gear-pick': gearPicker(el.dataset.type, el.dataset.skill); break;
-    case 'gear-choose': state.equipped[ITEM[el.dataset.id].type] = el.dataset.id; persist(); render(); renderLogSheet(); break;
+    case 'gear-choose': state.equipped[ITEM[el.dataset.id].slot] = el.dataset.id; persist(); render(); renderLogSheet(); break;
     case 'gear-none': state.equipped[el.dataset.type] = null; persist(); render(); renderLogSheet(); break;
     case 'equip-pick': {
       const id = el.dataset.id;
-      if (state.equipped[ITEM[id].type] !== id) equip(state, id);
+      if (state.equipped[ITEM[id].slot] !== id) equip(state, id);
       persist(); closeModal(); render(); toast(`Equipped ${ITEM[id].name}`);
       break;
     }

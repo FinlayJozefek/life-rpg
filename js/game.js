@@ -61,7 +61,7 @@ export function newState() {
     skills: Object.fromEntries(SKILLS.map((s) => [s.id, { xp: 0, carryMin: 0, totalMin: 0 }])),
     items: {},        // itemId -> count currently held
     everOwned: {},    // itemId -> true (for collection completion / discovery)
-    equipped: { pet: null, outfit: null },
+    equipped: { head: null, body: null, feet: null, pet: null },
     log: [],          // recent log entries, newest first
   };
 }
@@ -96,6 +96,12 @@ function migrate(s) {
   if (s.onboarded === undefined) out.onboarded = true; // saves from before onboarding existed
   out.skills = { ...base.skills, ...(s.skills || {}) };
   out.equipped = { ...base.equipped, ...(s.equipped || {}) };
+  // Older saves had a single "outfit" slot: move that item into its proper slot.
+  if ('outfit' in out.equipped) {
+    const old = out.equipped.outfit;
+    delete out.equipped.outfit;
+    if (old && ITEM[old]?.slot) out.equipped[ITEM[old].slot] = old;
+  }
   return out;
 }
 
@@ -109,11 +115,14 @@ export function validateImport(obj) {
 // ---------- Boosts ----------
 export function boostsFor(state, skillId) {
   const b = { xp: 0, coins: 0, luck: 0, bonusRollChance: 0, sources: [] };
-  const outfit = state.equipped.outfit && ITEM[state.equipped.outfit];
-  if (outfit && outfit.skill === skillId) {
-    const v = OUTFIT_XP_BOOST[outfit.rarity];
-    b.xp += v;
-    b.sources.push(`${outfit.name}: +${pct(v)} XP`);
+  // Each worn piece boosts its own skill, so a full matching set stacks.
+  for (const slot of ['head', 'body', 'feet']) {
+    const piece = state.equipped[slot] && ITEM[state.equipped[slot]];
+    if (piece && piece.skill === skillId) {
+      const v = OUTFIT_XP_BOOST[piece.rarity];
+      b.xp += v;
+      b.sources.push(`${piece.name}: +${pct(v)} XP`);
+    }
   }
   const pet = state.equipped.pet && ITEM[state.equipped.pet];
   if (pet && pet.skill === skillId) {
@@ -273,7 +282,8 @@ export function sell(state, itemId, qty) {
   if (qty <= 0) return 0;
   state.items[itemId] = have - qty;
   // Keep at least one equipped copy: if you sell the last one, unequip it.
-  if (state.items[itemId] === 0 && state.equipped.outfit === itemId) state.equipped.outfit = null;
+  const slot = ITEM[itemId].slot;
+  if (state.items[itemId] === 0 && slot && state.equipped[slot] === itemId) state.equipped[slot] = null;
   const earned = qty * sellPrice(itemId);
   state.coins += earned;
   return earned;
@@ -282,9 +292,11 @@ export function sell(state, itemId, qty) {
 export function equip(state, itemId) {
   const item = ITEM[itemId];
   if (!(state.items[itemId] > 0)) throw new Error("You don't own that.");
-  if (item.type === 'pet') state.equipped.pet = state.equipped.pet === itemId ? null : itemId;
-  else if (item.type === 'outfit') state.equipped.outfit = state.equipped.outfit === itemId ? null : itemId;
+  if (!item.slot) return;
+  state.equipped[item.slot] = state.equipped[item.slot] === itemId ? null : itemId;
 }
+
+export const isEquipped = (state, itemId) => Object.values(state.equipped).includes(itemId);
 
 export function totalLevel(state) {
   return SKILLS.reduce((sum, s) => sum + levelForXp(state.skills[s.id].xp), 0);

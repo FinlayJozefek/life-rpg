@@ -181,8 +181,10 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 /* ---------- Home ---------- */
 .hero { text-align: center; }
 .avatar-wrap { position: relative; display: inline-block; padding: 8px 32px 0; }
-.avatar { width: 128px; image-rendering: pixelated; display: block; }
-.avatar-pet { position: absolute; right: -8px; bottom: 0; width: 64px; image-rendering: pixelated; animation: bob 2.4s ease-in-out infinite; }
+.avatar { width: 150px; image-rendering: pixelated; display: block; }
+.avatar-pet { position: absolute; right: -14px; bottom: 6px; width: 64px; image-rendering: pixelated; animation: bob 2.4s ease-in-out infinite; }
+.avatar-pet.detailed { width: 84px; animation: none; }   /* detailed pets animate themselves */
+.sprite.outfit-icon { aspect-ratio: 1; object-fit: contain; }
 @keyframes bob { 50% { transform: translateY(-5px); } }
 .name { display: block; margin-left: auto; margin-right: auto; background: none; border: 0; font-family: var(--display-font); font-size: 22px; margin-top: 8px; cursor: pointer; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }

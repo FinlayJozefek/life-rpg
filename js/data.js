@@ -162,6 +162,16 @@ const LISTS = {
   },
 };
 
+// Which equipment slot a wearable goes in, from its name.
+export const GEAR_SLOTS = ['head', 'body', 'feet', 'pet'];
+export function slotFor(name) {
+  const n = name.toLowerCase();
+  if (/(sandals|trainers|runners|racers|boots|wellies|clogs|loafers|slippers|socks)$/.test(n)) return 'feet';
+  if (/crown|(hat|cap|beret|beanie|bandana|headscarf|sweatband)$/.test(n)) return 'head';
+  return 'body';
+}
+export const SLOT_LABEL = { head: 'Head', body: 'Body', feet: 'Feet', pet: 'Pet' };
+
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 export const SKILLS = Object.entries(LISTS).map(([id, def]) => ({
@@ -177,7 +187,8 @@ for (const [skillId, def] of Object.entries(LISTS)) {
       let type = 'collection';
       if (name.endsWith(' (pet)')) { type = 'pet'; name = name.slice(0, -6); }
       else if (name.endsWith('*')) { type = 'outfit'; name = name.slice(0, -1); }
-      ITEMS.push({ id: `${skillId}.${slug(name)}`, name, skill: skillId, rarity: r.id, type });
+      const slot = type === 'pet' ? 'pet' : type === 'outfit' ? slotFor(name) : null;
+      ITEMS.push({ id: `${skillId}.${slug(name)}`, name, skill: skillId, rarity: r.id, type, slot });
     }
   }
 }
