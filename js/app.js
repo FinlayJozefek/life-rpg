@@ -721,12 +721,12 @@ function hideSplash() {
   if (!splash) return Promise.resolve();
   let quick = false;
   try { quick = sessionStorage.getItem('liferpg.quickStart') === '1'; sessionStorage.removeItem('liferpg.quickStart'); } catch {}
-  const minShow = quick ? 0 : 1300;
+  const minShow = quick ? 0 : 2400;
   const wait = Math.max(0, minShow - performance.now());
   return new Promise((resolve) => {
     setTimeout(() => {
       splash.classList.add('out');
-      setTimeout(() => { splash.remove(); resolve(); }, quick ? 0 : 560);
+      setTimeout(() => { splash.remove(); resolve(); }, quick ? 0 : 950);
     }, wait);
   });
 }
