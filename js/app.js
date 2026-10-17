@@ -6,11 +6,12 @@ import {
   MAX_LEVEL,
 } from './game.js';
 import { itemSprite } from './sprites.js';
-import { mountAvatar, mountPet, outfitIcon, petIcon } from './sprites2.js';
+import { mountAvatar, mountPet, outfitIcon, petIcon, avatarDataUrl } from './sprites2.js';
 import { startAutoUpdate } from './updates.js';
 import { checkProgress, questsFor, rewardText, ACH_BADGE, ACHIEVEMENTS, TITLES, TITLE, titleLabel, bestDrops } from './engage.js';
 import * as sfx from './sfx.js';
 import { drawCard } from './card.js';
+import * as dungeon from './dungeon/dui.js';
 import { uiIcon, symbolRows, symbolPal } from './uiicons.js';
 import { tieredIcon, mountSkillIcon, badgeIcon, skillSymbol, tierOf } from './skillicons.js';
 import { confetti, shake, flash, vibrate } from './celebrate.js';
@@ -383,7 +384,7 @@ async function shareCard() {
   toast('Card saved');
 }
 
-const VIEWS = { home: viewHome, skills: viewSkills, quests: viewQuests, collection: viewCollection, settings: viewSettings };
+const VIEWS = { home: viewHome, skills: viewSkills, quests: viewQuests, dungeon: () => dungeon.view(), collection: viewCollection, settings: viewSettings };
 
 let stopAnimations = [];
 
@@ -856,6 +857,7 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const a = el.dataset.action;
+  if (a.startsWith('d-') && dungeon.action(a, el)) return;
   switch (a) {
     case 'nav': e.preventDefault(); view = el.dataset.view; render(); window.scrollTo(0, 0); break;
     case 'close': closeModal(); break;
@@ -990,7 +992,13 @@ function hideSplash() {
 onInstallChange(() => { if (state.onboarded && !$modal.classList.contains('open')) render(); });
 
 // Pixel-art icons for the static parts of the page (tab bar, top bar).
-const TAB_ICONS = { home: 'helmet', skills: 'swords', quests: 'scroll', collection: 'chest', settings: 'gear' };
+const TAB_ICONS = { home: 'helmet', skills: 'swords', quests: 'scroll', dungeon: 'tower', collection: 'chest', settings: 'gear' };
+
+// The Dungeon game mode gets the shared helpers it needs.
+dungeon.init({
+  state: () => state, persist, render, openModal, closeModal, toast, esc, fmt, sfx, confetti, shake, flash, vibrate,
+  avatarImg: () => `<img class="d-faller-img" src="${avatarDataUrl({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, 4)}" alt="">`,
+});
 document.querySelectorAll('.tabbar button').forEach((b) => { const sp = b.querySelector('span'); if (sp) sp.innerHTML = ic(TAB_ICONS[b.dataset.view], 'tab-ic'); });
 document.getElementById('streak-ic').innerHTML = ic('flame', 'pill-ic');
 document.querySelector('.coin-icon').outerHTML = ic('coin', 'pill-ic');

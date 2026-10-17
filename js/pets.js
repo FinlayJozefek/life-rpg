@@ -5,7 +5,7 @@
 //   e = eye, w = eye shine (both get closed when blinking), n = nose/mouth.
 // `aura` sets the glow colour for Legendary/Divine pets (defaults to the rarity colour).
 
-const BASES = {
+export const BASES = {
   cat: ['........', '.b......', '.ab.....', '.adb....', '.adab...', '.aaaaaaa', 'baaaaaaa', 'aaewaaaa', 'aaeeaaaa', 'caaaaaaa',
     'cccaaaac', '.ccccccn', '..cccccc', '...aaacc', '...aaacc', '...bb.cc'],
   dog: ['........', '........', '...aaaaa', '..aaaaaa', 'bbaaaaaa', 'bbaaaaaa', 'bbaewaaa', 'bbaeeaaa', 'bbaaaaaa', '.baaaccc',

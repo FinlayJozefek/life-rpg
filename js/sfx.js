@@ -109,4 +109,10 @@ export function levelUpSound(milestone = false) {
   if (milestone) noise({ at: end, dur: 0.8, vol: 0.12, from: 3000, to: 300 });
 }
 
+// Combat hits: a short thud; crits ring higher; getting hit is lower.
+export function hit(crit = false, onPlayer = false) {
+  noise({ dur: 0.12, vol: onPlayer ? 0.18 : 0.12, from: onPlayer ? 600 : 1400, to: 120 });
+  if (crit) note(N(15), { dur: 0.12, vol: 0.06, type: 'square' });
+}
+
 export function chime() { [15, 22].forEach((s, i) => note(N(s), { at: i * 0.1, dur: 0.35, vol: 0.07, type: 'sine' })); }

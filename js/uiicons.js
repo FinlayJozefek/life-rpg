@@ -76,6 +76,9 @@ const S = {
     '................', '................', '...b......b.....', '.aaaaaaaaaaaaaa.', '.aaaaaaaaaaaaaa.', '.cccccccccccccc.',
     '.cdcdcdcdcdcdcc.', '.cccccccccccccc.', '.cdcdcdcdcdcdcc.', '.cccccccccccccc.', '.cdcdcdcecdcdcc.', '.cccccccccccccc.',
     '................', '................', '................', '................'] },
+  tower: { pal: { a: '#8a8a92', b: '#2a2a30', c: '#5a5a62', d: '#ff8a2e' }, half: [
+    '........', '..a.a.a.', '..aaaaaa', '...aaaaa', '...abaaa', '...aaaaa', '...aaaaa', '...aaada',
+    '...aaaaa', '...abaaa', '...aaaaa', '..aaaaaa', '..aaaabb', '..aaaabb', '.ccccccc', '........'] },
   // achievement symbols
   gem: { pal: { a: '#4ab0ff', b: '#1f5a9a', c: '#bff0ff' }, half: [
     '........', '........', '........', '...bbbbb', '..bccaaa', '.bcaaaaa', 'baaaaaaa', '.baaaaaa',

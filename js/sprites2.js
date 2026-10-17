@@ -764,6 +764,16 @@ export function mountAvatar(canvas, gear, { scale = 6, animate = true } = {}) {
 }
 
 // Static icon of an outfit item: the relevant part of the avatar wearing it.
+// Static picture of the character wearing `gear` (for the dungeon fall animation etc.).
+export function avatarDataUrl(gear, scale = 4) {
+  const { grid } = buildAvatar(gear);
+  const src = grid.toCanvas(0);
+  const cv = document.createElement('canvas'); cv.width = AW * scale; cv.height = AH * scale;
+  const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(src, 0, 0, AW * scale, AH * scale);
+  return cv.toDataURL();
+}
+
 const iconCache = new Map();
 export function outfitIcon(outfitId, { scale = 4, hidden = false } = {}) {
   const key = `${outfitId}|${scale}|${hidden}`;
@@ -792,13 +802,14 @@ export function outfitIcon(outfitId, { scale = 4, hidden = false } = {}) {
 // Outline is added automatically, and the right-hand side is shaded a touch darker.
 export const DETAILED_PETS = Object.keys(PET_ART);
 
-function buildPet(id) {
-  const P = petDrawing(id);
+// Build a 22x22 sprite grid from a drawing { half (or full rows), pal }.
+// Shared by pets and dungeon enemies. Full 16-char rows are used as-is; 8-char rows are mirrored.
+export function buildDrawing(P) {
   const g = new Grid(22, 22);
   const eyes = [];
   g.oy = 3;
   P.half.forEach((row, y) => {
-    const full = row + [...row].reverse().join('');
+    const full = row.length >= 16 ? row : row + [...row].reverse().join('');
     [...full].forEach((ch, x) => {
       const col = P.pal[ch];
       if (!col) return;
@@ -810,6 +821,18 @@ function buildPet(id) {
   g.oy = 0;
   g.outline();
   return { g, P, eyes };
+}
+function buildPet(id) { return buildDrawing(petDrawing(id)); }
+
+// Static icon for any drawing.
+export function drawingIcon(P, { scale = 4, hidden = false } = {}) {
+  const { g } = buildDrawing(P);
+  const src = g.toCanvas();
+  const cv = document.createElement('canvas'); cv.width = 22 * scale; cv.height = 22 * scale;
+  const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(src, 0, 0, 22 * scale, 22 * scale);
+  if (hidden) { ctx.globalCompositeOperation = 'source-in'; ctx.fillStyle = '#2a2f55'; ctx.fillRect(0, 0, cv.width, cv.height); }
+  return cv.toDataURL();
 }
 
 const petIconCache = new Map();
@@ -828,9 +851,13 @@ export function petIcon(id, { scale = 4, hidden = false } = {}) {
   return url;
 }
 
-export function mountPet(canvas, id, { scale = 6, animate = true } = {}) {
-  const { g, P, eyes } = buildPet(id);
-  const tier = RARITY[ITEM[id].rarity].index;
+export function mountPet(canvas, id, opts = {}) {
+  return mountDrawing(canvas, petDrawing(id), { tier: RARITY[ITEM[id].rarity].index, ...opts });
+}
+
+// Animated sprite (bob + blink; tier 4+ glows, tier 6 sparkles). Returns stop().
+export function mountDrawing(canvas, drawing, { scale = 6, animate = true, tier = 0, auraColor = null } = {}) {
+  const { g, P, eyes } = buildDrawing(drawing);
   const img = g.toCanvas();
   // blink frame: replace eye pixels with lid colour
   const blink = new Grid(22, 22);
@@ -840,7 +867,7 @@ export function mountPet(canvas, id, { scale = 6, animate = true } = {}) {
   const aura = tier >= 4 ? auraMask(g, tier >= 6 ? 3 : 2) : [];
   canvas.width = 22 * scale; canvas.height = 22 * scale;
   const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
-  const rnd = rng32(hashStr(id));
+  const rnd = rng32(hashStr(drawing.half.join("")));
   let t = 0, raf = 0, stopped = false;
   const sparkles = [];
   const frame = () => {
@@ -851,7 +878,7 @@ export function mountPet(canvas, id, { scale = 6, animate = true } = {}) {
       const pulse = 0.5 + 0.5 * Math.sin(t / 20);
       for (const [x, y, d] of aura) {
         ctx.globalAlpha = 0.35 * (1 - (d - 1) / 3) * (0.5 + 0.5 * pulse);
-        ctx.fillStyle = P.aura || RARITY[ITEM[id].rarity].color;
+        ctx.fillStyle = auraColor || P.aura || '#ffd84a';
         ctx.fillRect(x * scale, y * scale + hop, scale, scale);
       }
       ctx.globalAlpha = 1;
