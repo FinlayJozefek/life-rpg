@@ -20,7 +20,7 @@ const $modal = document.getElementById('modal-root');
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n) => Math.round(n).toLocaleString();
 // Drop chances: 1 decimal above 1%, 2 below so 0.25% doesn't show as 0.3%.
-const fmtChance = (p) => `${(p * 100).toFixed(p >= 0.01 ? 1 : 2)}%`;
+const fmtChance = (p) => `${(p * 100).toFixed(p >= 0.01 ? 1 : p >= 0.001 ? 2 : 3)}%`;
 let saveWarned = false;
 const persist = () => {
   if (!save(state) && !saveWarned) {
