@@ -1,0 +1,477 @@
+import { SKILLS, SKILL, ITEM, ITEMS_BY_SKILL, RARITY, RARITIES, OUTFIT_XP_BOOST, PET_BOOST, BADGE_COUNT, COLLECTION_COMPLETE_XP_BOOST } from './data.js';
+import {
+  load, save, newState, validateImport, levelProgress, previewLog, logActivity,
+  boostsFor, pct, sell, sellPrice, canSell, equip, totalLevel, discoveredCount, isCollectionComplete,
+  MAX_LEVEL,
+} from './game.js';
+import { itemSprite, avatarSprite } from './sprites.js';
+
+let state = load();
+let view = 'home';
+let collectionSkill = SKILLS[0].id;
+let logDraft = null; // { skill, hours, minutes }
+
+const $main = document.getElementById('main');
+const $modal = document.getElementById('modal-root');
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n) => Math.round(n).toLocaleString();
+const persist = () => save(state);
+
+function fmtDuration(min) {
+  const h = Math.floor(min / 60), m = Math.round(min % 60);
+  if (!h) return `${m} min`;
+  if (!m) return `${h} hr${h > 1 ? 's' : ''}`;
+  return `${h} hr${h > 1 ? 's' : ''} ${m} min`;
+}
+
+function timeAgo(ts) {
+  const s = (Date.now() - ts) / 1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+function rarityTag(r) {
+  return `<span class="rtag r-${r}">${RARITY[r].name}</span>`;
+}
+
+function itemImg(id, { hidden = false, cls = '' } = {}) {
+  const item = ITEM[id];
+  return `<img class="sprite ${cls} ${hidden ? '' : 'glow-' + item.rarity}" src="${itemSprite(id, { hidden })}" alt="${hidden ? 'Unknown item' : esc(item.name)}">`;
+}
+
+function itemEffect(item) {
+  if (item.type === 'outfit') return `Outfit · +${pct(OUTFIT_XP_BOOST[item.rarity])} ${SKILL[item.skill].name} XP when worn`;
+  if (item.type === 'pet') {
+    const p = PET_BOOST[item.rarity];
+    const parts = [`+${pct(p.xp)} XP`];
+    if (p.coins) parts.push(`+${pct(p.coins)} coins`);
+    if (p.luck) parts.push(`+${pct(p.luck)} luck`);
+    if (p.bonusRollChance === 1) parts.push('guaranteed bonus roll every log');
+    else if (p.bonusRollChance) parts.push(`${pct(p.bonusRollChance)} chance of a bonus roll`);
+    return `Pet · ${parts.join(', ')} to ${SKILL[item.skill].name}`;
+  }
+  return 'Collection item';
+}
+
+// ---------- Views ----------
+function viewHome() {
+  const pet = state.equipped.pet && ITEM[state.equipped.pet];
+  const outfit = state.equipped.outfit && ITEM[state.equipped.outfit];
+  const totalDiscovered = SKILLS.reduce((n, s) => n + discoveredCount(state, s.id), 0);
+  const slot = (type, item) => `
+    <button class="slot" data-action="pick-slot" data-type="${type}">
+      <div class="slot-icon">${item ? itemImg(item.id) : `<span class="slot-empty">${type === 'pet' ? '🐾' : '👕'}</span>`}</div>
+      <div class="slot-text">
+        <div class="slot-label">${type === 'pet' ? 'Pet' : 'Outfit'}</div>
+        <div class="slot-name">${item ? esc(item.name) : 'Empty'}</div>
+        ${item ? `<div class="slot-sub">${rarityTag(item.rarity)} ${SKILL[item.skill].name}</div>` : '<div class="slot-sub muted">Tap to equip</div>'}
+      </div>
+    </button>`;
+  const recent = state.log.slice(0, 8).map((e) => {
+    const n = Object.values(e.drops).reduce((a, b) => a + b, 0);
+    return `<li><span class="li-icon">${SKILL[e.skill].icon}</span>
+      <span class="li-main"><b>${SKILL[e.skill].name}</b> · ${fmtDuration(e.minutes)}<br>
+      <span class="muted">+${fmt(e.xp)} XP · +${fmt(e.coins)} coins · ${n} drop${n === 1 ? '' : 's'}</span></span>
+      <span class="li-time muted">${timeAgo(e.at)}</span></li>`;
+  }).join('');
+  return `
+    <section class="hero panel">
+      <div class="avatar-wrap ${outfit ? 'glow-' + outfit.rarity : ''}">
+        <img class="avatar" src="${avatarSprite(state.equipped.outfit)}" alt="Your character">
+        ${pet ? `<img class="avatar-pet" src="${itemSprite(pet.id)}" alt="${esc(pet.name)}">` : ''}
+      </div>
+      <button class="name" data-action="rename">${esc(state.name)} <span class="muted">✎</span></button>
+      <div class="stats">
+        <div><div class="stat-num">${totalLevel(state)}</div><div class="stat-label">Total level</div></div>
+        <div><div class="stat-num coin">${fmt(state.coins)}</div><div class="stat-label">Coins</div></div>
+        <div><div class="stat-num">${totalDiscovered}<span class="muted">/288</span></div><div class="stat-label">Items found</div></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Equipped</h2>
+      <div class="slots">${slot('pet', pet)}${slot('outfit', outfit)}</div>
+      <p class="hint">Boosts only apply when logging the item's own skill.</p>
+    </section>
+    <section class="panel">
+      <h2>Recent activity</h2>
+      ${recent ? `<ul class="list">${recent}</ul>` : `<p class="muted">Nothing logged yet. Head to <a href="#" data-action="nav" data-view="skills">Skills</a> and log your first session.</p>`}
+    </section>`;
+}
+
+function viewSkills() {
+  return `<section class="panel"><h2>Skills</h2><ul class="skill-list">${SKILLS.map((s) => {
+    const sk = state.skills[s.id];
+    const p = levelProgress(sk.xp);
+    const b = boostsFor(state, s.id);
+    return `<li><button class="skill-row" data-action="open-log" data-skill="${s.id}">
+      <span class="skill-icon">${s.icon}</span>
+      <span class="skill-body">
+        <span class="skill-top"><b>${s.name}</b><span class="lvl">Lv ${p.level}</span></span>
+        <span class="bar"><span style="width:${(p.pct * 100).toFixed(1)}%"></span></span>
+        <span class="skill-sub muted">${p.level >= MAX_LEVEL ? `MAX · ${fmt(sk.xp)} XP` : `${fmt(p.into)} / ${fmt(p.needed)} XP`} · 1 unit = ${fmtDuration(s.unit)}${b.xp ? ` · <span class="boost">+${pct(b.xp)}</span>` : ''}</span>
+      </span>
+    </button></li>`;
+  }).join('')}</ul></section>`;
+}
+
+function viewCollection() {
+  const sid = collectionSkill;
+  const chips = SKILLS.map((s) => `<button class="chip ${s.id === sid ? 'on' : ''}" data-action="coll-skill" data-skill="${s.id}">${s.icon} ${s.name}${isCollectionComplete(state, s.id) ? ' ★' : ''}</button>`).join('');
+  const groups = RARITIES.map((r) => {
+    const items = ITEMS_BY_SKILL[sid].filter((i) => i.rarity === r.id);
+    const tiles = items.map((i) => {
+      const seen = state.everOwned[i.id];
+      const n = state.items[i.id] || 0;
+      const isEq = state.equipped.pet === i.id || state.equipped.outfit === i.id;
+      return `<button class="tile ${seen ? 'r-border-' + i.rarity : 'unknown'}" data-action="item" data-id="${i.id}" ${seen ? '' : 'disabled'}>
+        ${itemImg(i.id, { hidden: !seen })}
+        <span class="tile-name">${seen ? esc(i.name) : '???'}</span>
+        ${seen && i.type !== 'pet' ? `<span class="count">x${fmt(n)}</span>` : ''}
+        ${n >= BADGE_COUNT ? '<span class="badge" title="100+ owned">🏅</span>' : ''}
+        ${isEq ? '<span class="eq">E</span>' : ''}
+        ${i.type === 'pet' && seen ? '<span class="type-dot">🐾</span>' : ''}
+      </button>`;
+    }).join('');
+    return `<h3 class="r-${r.id}">${r.name} <span class="muted">· ${pct(r.chance)} each per unit</span></h3><div class="grid">${tiles}</div>`;
+  }).join('');
+  const done = discoveredCount(state, sid);
+  return `<section class="panel">
+    <h2>Collection</h2>
+    <div class="chips">${chips}</div>
+    <div class="coll-head"><b>${SKILL[sid].name}</b> · ${done}/24 found
+      ${done === 24 ? `<span class="boost">Complete! +${pct(COLLECTION_COMPLETE_XP_BOOST)} XP</span>` : `<span class="muted">Find all 24 for +${pct(COLLECTION_COMPLETE_XP_BOOST)} ${SKILL[sid].name} XP</span>`}
+    </div>
+    ${groups}
+  </section>`;
+}
+
+function viewSettings() {
+  return `
+    <section class="panel">
+      <h2>Backup &amp; restore</h2>
+      <p>Your progress is saved on this device only. Clearing your browser data will wipe it, so download a backup now and then.</p>
+      <div class="btn-row">
+        <button class="btn primary" data-action="backup">Download backup</button>
+        <label class="btn">Restore from file<input type="file" accept="application/json,.json" id="restore-input" hidden></label>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>How it works</h2>
+      <ul class="rules">
+        <li>Each skill has a unit length. Every unit = <b>100 XP</b>, <b>10 coins</b> and <b>one drop roll</b>.</li>
+        <li>Partial units still give XP and coins. Leftover minutes carry over toward your next drop roll.</li>
+        <li>Every item in a skill's table is rolled separately on each roll, so you can get several drops at once.</li>
+        <li>Pets drop once; after that they leave the table. Everything else stacks.</li>
+        <li>Luck from pets boosts Rare drops and above.</li>
+        <li>Max level is ${MAX_LEVEL} (100,000 XP).</li>
+      </ul>
+    </section>
+    <section class="panel danger">
+      <h2>Danger zone</h2>
+      <button class="btn danger-btn" data-action="reset">Reset all progress</button>
+    </section>
+    <p class="muted center small">Life RPG v1 · solo edition</p>`;
+}
+
+const VIEWS = { home: viewHome, skills: viewSkills, collection: viewCollection, settings: viewSettings };
+
+function render() {
+  $main.innerHTML = VIEWS[view]();
+  document.querySelectorAll('.tabbar button').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
+  document.getElementById('coin-pill').textContent = fmt(state.coins);
+}
+
+// ---------- Modals ----------
+function openModal(html, { cls = '' } = {}) {
+  $modal.innerHTML = `<div class="backdrop" data-action="close"></div><div class="sheet ${cls}" role="dialog" aria-modal="true">${html}</div>`;
+  $modal.classList.add('open');
+}
+function closeModal() {
+  $modal.classList.remove('open');
+  $modal.innerHTML = '';
+}
+
+function renderLogSheet() {
+  const s = SKILL[logDraft.skill];
+  const minutes = (Number(logDraft.hours) || 0) * 60 + (Number(logDraft.minutes) || 0);
+  const sk = state.skills[s.id];
+  const p = levelProgress(sk.xp);
+  const prev = minutes > 0 ? previewLog(state, s.id, minutes) : null;
+  const b = boostsFor(state, s.id);
+  openModal(`
+    <div class="sheet-head"><span class="skill-icon big">${s.icon}</span><div><h2>${s.name}</h2>
+      <div class="muted">Level ${p.level} · 1 unit = ${fmtDuration(s.unit)}${sk.carryMin ? ` · ${fmtDuration(sk.carryMin)} carried over` : ''}</div></div></div>
+    <div class="time-inputs">
+      <label>Hours<input type="number" inputmode="numeric" min="0" max="24" id="in-hours" value="${logDraft.hours}"></label>
+      <label>Minutes<input type="number" inputmode="numeric" min="0" max="59" id="in-mins" value="${logDraft.minutes}"></label>
+    </div>
+    <div class="chips quick">
+      ${[15, 30, 60, 120].map((m) => `<button class="chip" data-action="add-time" data-min="${m}">+${m < 60 ? m + 'm' : m / 60 + 'h'}</button>`).join('')}
+      <button class="chip" data-action="add-time" data-min="${s.unit}">+1 unit</button>
+      <button class="chip" data-action="clear-time">Clear</button>
+    </div>
+    <div class="preview">${prev ? `
+      <div><b>+${fmt(prev.xp)}</b><span>XP</span></div>
+      <div><b class="coin">+${fmt(prev.coins)}</b><span>coins</span></div>
+      <div><b>${prev.rolls}</b><span>drop roll${prev.rolls === 1 ? '' : 's'}</span></div>` : '<p class="muted">Enter how long you spent.</p>'}
+    </div>
+    ${prev && prev.rolls === 0 ? `<p class="hint">Not a full unit yet, so no drop roll — the time carries over (${fmtDuration(prev.carryAfter)} of ${fmtDuration(s.unit)}).</p>` : ''}
+    ${b.sources.length ? `<div class="boost-list">${b.sources.map((x) => `<div>✦ ${esc(x)}</div>`).join('')}</div>` : ''}
+    <div class="btn-row">
+      <button class="btn" data-action="close">Cancel</button>
+      <button class="btn primary" data-action="confirm-log" ${minutes > 0 ? '' : 'disabled'}>Log it</button>
+    </div>`);
+  const sync = () => {
+    logDraft.hours = document.getElementById('in-hours').value;
+    logDraft.minutes = document.getElementById('in-mins').value;
+  };
+  const hours = document.getElementById('in-hours');
+  const mins = document.getElementById('in-mins');
+  for (const el of [hours, mins]) el.addEventListener('change', () => { sync(); normaliseDraft(); renderLogSheet(); });
+}
+
+function normaliseDraft() {
+  let total = Math.max(0, (Number(logDraft.hours) || 0) * 60 + (Number(logDraft.minutes) || 0));
+  total = Math.min(total, 24 * 60);
+  logDraft.hours = Math.floor(total / 60);
+  logDraft.minutes = total % 60;
+}
+
+function confirmLog() {
+  const minutes = logDraft.hours * 60 + logDraft.minutes;
+  const s = SKILL[logDraft.skill];
+  openModal(`
+    <h2>Are you sure?</h2>
+    <p class="big-q">Log <b>${fmtDuration(minutes)}</b> of <b>${s.name}</b>?</p>
+    <div class="btn-row">
+      <button class="btn" data-action="back-to-log">No</button>
+      <button class="btn primary" data-action="do-log">Yes</button>
+    </div>`, { cls: 'small' });
+}
+
+function doLog() {
+  const minutes = logDraft.hours * 60 + logDraft.minutes;
+  const result = logActivity(state, logDraft.skill, minutes);
+  persist();
+  logDraft = null;
+  showResult(result);
+  render();
+}
+
+function showResult(r) {
+  const s = SKILL[r.skill];
+  const drops = Object.entries(r.drops).sort(([a], [b]) => RARITY[ITEM[a].rarity].index - RARITY[ITEM[b].rarity].index);
+  const best = drops.length ? RARITY[ITEM[drops[drops.length - 1][0]].rarity].index : -1;
+  const p = levelProgress(state.skills[r.skill].xp);
+  openModal(`
+    <div class="roll-stage" id="roll-stage">
+      <div class="roller"><div class="die">${s.icon}</div><div class="muted">Rolling ${r.rolls}× the ${s.name} table…</div></div>
+    </div>
+    <div class="result hidden" id="result">
+      <h2>${s.name} · ${fmtDuration(r.minutes)}</h2>
+      ${r.bonusRoll ? '<div class="banner bonus">✦ Pet bonus roll! ✦</div>' : ''}
+      <div class="gains">
+        <div><b id="xp-count">+0</b><span>XP</span></div>
+        <div><b class="coin" id="coin-count">+0</b><span>coins</span></div>
+      </div>
+      <div class="bar big"><span id="xp-bar" style="width:0%"></span></div>
+      <div class="muted small center">Level ${p.level}${p.level < MAX_LEVEL ? ` · ${fmt(p.into)} / ${fmt(p.needed)} XP` : ' · MAX'}</div>
+      ${r.levelAfter > r.levelBefore ? `<div class="banner levelup">LEVEL UP! ${s.name} ${r.levelBefore} → ${r.levelAfter}</div>` : ''}
+      <h3>${drops.length ? 'Drops' : 'No drops this time'}</h3>
+      <div class="drops">${drops.map(([id, n], i) => {
+        const it = ITEM[id];
+        const isNew = r.newDiscoveries.includes(id);
+        return `<div class="drop r-border-${it.rarity} ${RARITY[it.rarity].index >= 2 ? 'fancy' : ''}" style="animation-delay:${200 + i * 160 + (RARITY[it.rarity].index >= 3 ? 400 : 0)}ms">
+          ${itemImg(id)}
+          <div class="drop-text"><div>${esc(it.name)}${n > 1 ? ` <b>x${n}</b>` : ''}</div>
+          <div>${rarityTag(it.rarity)}${isNew ? '<span class="new">NEW</span>' : ''}${it.type === 'pet' ? '<span class="new pet">PET</span>' : ''}</div></div>
+        </div>`;
+      }).join('')}</div>
+      ${r.completedCollection ? `<div class="banner levelup">Collection complete! Permanent +${pct(COLLECTION_COMPLETE_XP_BOOST)} ${s.name} XP</div>` : ''}
+      ${r.newBadges.map((id) => `<div class="banner bonus">🏅 Badge earned: ${BADGE_COUNT}× ${esc(ITEM[id].name)}</div>`).join('')}
+      <button class="btn primary wide" data-action="close">Continue</button>
+    </div>`, { cls: 'result-sheet' });
+
+  setTimeout(() => {
+    document.getElementById('roll-stage')?.remove();
+    document.getElementById('result')?.classList.remove('hidden');
+    countUp('xp-count', r.xp, '+');
+    countUp('coin-count', r.coins, '+');
+    setTimeout(() => {
+      const bar = document.getElementById('xp-bar');
+      if (bar) bar.style.width = `${(p.pct * 100).toFixed(1)}%`;
+    }, 50);
+    if (best >= 2 && navigator.vibrate) navigator.vibrate(best >= 4 ? [80, 60, 160] : 60);
+  }, 1100);
+}
+
+function countUp(id, target, prefix = '') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const start = performance.now(), dur = 900;
+  const step = (t) => {
+    const k = Math.min(1, (t - start) / dur);
+    el.textContent = prefix + fmt(target * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+  // rAF pauses in background tabs; make sure the final number always lands.
+  setTimeout(() => { el.textContent = prefix + fmt(target); }, dur + 100);
+}
+
+function showItem(id) {
+  const it = ITEM[id];
+  const n = state.items[id] || 0;
+  const isEq = state.equipped.pet === id || state.equipped.outfit === id;
+  const price = sellPrice(id);
+  const extras = n - 1;
+  openModal(`
+    <div class="item-detail">
+      ${itemImg(id, { cls: 'xl' })}
+      <h2>${esc(it.name)}</h2>
+      <div>${rarityTag(it.rarity)} <span class="muted">${SKILL[it.skill].name}</span></div>
+      <p>${itemEffect(it)}</p>
+      ${it.type !== 'pet' ? `<p class="muted">Owned: <b>${fmt(n)}</b> · Sells for ${fmt(price)} coins each${n >= BADGE_COUNT ? ' · 🏅 badge earned' : ` · ${BADGE_COUNT} for a badge`}</p>` : ''}
+    </div>
+    <div class="btn-col">
+      ${(it.type === 'pet' || it.type === 'outfit') && n > 0 ? `<button class="btn primary" data-action="equip" data-id="${id}">${isEq ? 'Unequip' : 'Equip'}</button>` : ''}
+      ${canSell(id) && n > 0 ? `
+        <button class="btn" data-action="sell" data-id="${id}" data-qty="1">Sell 1 (+${fmt(price)})</button>
+        ${extras > 0 ? `<button class="btn" data-action="sell" data-id="${id}" data-qty="${extras}">Sell all but 1 (+${fmt(price * extras)})</button>` : ''}
+        ${n > 1 ? `<button class="btn danger-btn" data-action="sell-all" data-id="${id}">Sell all ${fmt(n)} (+${fmt(price * n)})</button>` : ''}` : ''}
+      <button class="btn" data-action="close">Close</button>
+    </div>`);
+}
+
+function pickSlot(type) {
+  const owned = Object.keys(state.items).filter((id) => state.items[id] > 0 && ITEM[id].type === type)
+    .sort((a, b) => RARITY[ITEM[b].rarity].index - RARITY[ITEM[a].rarity].index);
+  const current = state.equipped[type];
+  openModal(`
+    <h2>Choose ${type === 'pet' ? 'a pet' : 'an outfit'}</h2>
+    ${owned.length ? `<div class="pick-list">${owned.map((id) => `
+      <button class="pick ${id === current ? 'on' : ''}" data-action="equip-pick" data-id="${id}">
+        ${itemImg(id)}<span><b>${esc(ITEM[id].name)}</b><br><span class="small">${rarityTag(ITEM[id].rarity)} ${itemEffect(ITEM[id]).split(' · ')[1]}</span></span>
+      </button>`).join('')}</div>` : `<p class="muted">You don't have any ${type === 'pet' ? 'pets' : 'outfits'} yet. Log some activities to get drops.</p>`}
+    <div class="btn-row">
+      ${current ? `<button class="btn" data-action="unequip-slot" data-type="${type}">Unequip</button>` : ''}
+      <button class="btn" data-action="close">Close</button>
+    </div>`);
+}
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2400);
+}
+
+// ---------- Backup ----------
+function backup() {
+  const blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `life-rpg-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Backup downloaded');
+}
+
+async function restore(file) {
+  try {
+    const next = validateImport(JSON.parse(await file.text()));
+    openModal(`
+      <h2>Restore backup?</h2>
+      <p>This replaces your current progress on this device with the backup from <b>${new Date(next.log[0]?.at || next.createdAt).toLocaleDateString()}</b> (${totalLevel(next)} total level, ${fmt(next.coins)} coins).</p>
+      <div class="btn-row"><button class="btn" data-action="close">Cancel</button><button class="btn primary" id="do-restore">Restore</button></div>`, { cls: 'small' });
+    document.getElementById('do-restore').onclick = () => {
+      state = next; persist(); closeModal(); view = 'home'; render(); toast('Backup restored');
+    };
+  } catch (e) {
+    toast(e.message || 'Could not read that file');
+  }
+}
+
+// ---------- Events ----------
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const a = el.dataset.action;
+  switch (a) {
+    case 'nav': e.preventDefault(); view = el.dataset.view; render(); window.scrollTo(0, 0); break;
+    case 'close': closeModal(); break;
+    case 'open-log': logDraft = { skill: el.dataset.skill, hours: SKILL[el.dataset.skill].unit >= 60 ? SKILL[el.dataset.skill].unit / 60 : 0, minutes: SKILL[el.dataset.skill].unit % 60 }; renderLogSheet(); break;
+    case 'add-time': logDraft.minutes = Number(logDraft.minutes) + Number(el.dataset.min); normaliseDraft(); renderLogSheet(); break;
+    case 'clear-time': logDraft.hours = 0; logDraft.minutes = 0; renderLogSheet(); break;
+    case 'confirm-log': {
+      logDraft.hours = document.getElementById('in-hours').value;
+      logDraft.minutes = document.getElementById('in-mins').value;
+      normaliseDraft();
+      if (logDraft.hours * 60 + logDraft.minutes > 0) confirmLog();
+      break;
+    }
+    case 'back-to-log': renderLogSheet(); break;
+    case 'do-log': doLog(); break;
+    case 'coll-skill': collectionSkill = el.dataset.skill; render(); break;
+    case 'item': showItem(el.dataset.id); break;
+    case 'equip': equip(state, el.dataset.id); persist(); render(); showItem(el.dataset.id); break;
+    case 'equip-pick': {
+      const id = el.dataset.id;
+      if (state.equipped[ITEM[id].type] !== id) equip(state, id);
+      persist(); closeModal(); render(); toast(`Equipped ${ITEM[id].name}`);
+      break;
+    }
+    case 'unequip-slot': state.equipped[el.dataset.type] = null; persist(); closeModal(); render(); break;
+    case 'pick-slot': pickSlot(el.dataset.type); break;
+    case 'sell': {
+      const got = sell(state, el.dataset.id, Number(el.dataset.qty));
+      persist(); render(); toast(`+${fmt(got)} coins`);
+      if (state.items[el.dataset.id] > 0) showItem(el.dataset.id); else closeModal();
+      break;
+    }
+    case 'sell-all': {
+      const id = el.dataset.id, n = state.items[id];
+      openModal(`<h2>Sell all?</h2><p>Sell all ${fmt(n)} × ${esc(ITEM[id].name)} for ${fmt(n * sellPrice(id))} coins?</p>
+        <div class="btn-row"><button class="btn" data-action="item" data-id="${id}">No</button>
+        <button class="btn primary" data-action="sell" data-id="${id}" data-qty="${n}">Yes, sell</button></div>`, { cls: 'small' });
+      break;
+    }
+    case 'rename': {
+      const name = prompt('Character name', state.name);
+      if (name && name.trim()) { state.name = name.trim().slice(0, 24); persist(); render(); }
+      break;
+    }
+    case 'backup': backup(); break;
+    case 'reset':
+      openModal(`<h2>Reset everything?</h2><p>This deletes all your XP, items and coins on this device. Download a backup first if you might want it back.</p>
+        <div class="btn-row"><button class="btn" data-action="close">Cancel</button><button class="btn danger-btn" data-action="reset-confirm">Delete progress</button></div>`, { cls: 'small' });
+      break;
+    case 'reset-confirm': state = newState(); persist(); closeModal(); view = 'home'; render(); toast('Progress reset'); break;
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'restore-input' && e.target.files[0]) {
+    restore(e.target.files[0]);
+    e.target.value = '';
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $modal.classList.contains('open')) closeModal();
+});
+
+// Ask the browser not to evict our storage (best effort).
+navigator.storage?.persist?.().catch(() => {});
+
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW registration failed', e));
+}
+
+render();
