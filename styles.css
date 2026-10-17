@@ -575,7 +575,7 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 .d-chip span { opacity: 0.6; }
 .d-chip.red { color: #ff7a6a; border-color: #6a2a2a; }
 /* hub: the tower */
-.d-tower-wrap { overflow-x: hidden; margin: 0 -16px; padding: 10px 0 96px; }
+.d-tower-wrap { overflow-x: hidden; margin: 0 -16px; padding: 10px 0 170px; }
 .d-tower { width: 236px; margin: 0 auto; display: flex; flex-direction: column; }
 .d-tower-hint { text-align: center; margin: 14px 24px 0; }
 .d-spire { height: 96px; position: relative; }
@@ -727,3 +727,21 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 .d-seg-toggle { display: flex; gap: 0; margin: 4px 0 2px; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; }
 .d-seg-toggle button { flex: 1; padding: 9px 0; background: var(--panel-2); border: 0; color: var(--muted); font: 700 14px var(--display-font); cursor: pointer; }
 .d-seg-toggle button.on { background: var(--gold-bg); color: var(--gold); }
+
+/* Dungeon: win chance */
+.d-good { color: var(--accent); }
+.d-odds { max-width: 616px; margin: 0 auto 6px; padding: 6px 10px; border-radius: 10px; background: var(--panel); border: 2px solid var(--line); border-left-width: 6px; font-size: 13px; line-height: 1.3; }
+.d-odds-top b { font: 700 17px var(--display-font); }
+.d-odds-word { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 4px; }
+.d-odds-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.d-odds-sub b { color: var(--text); }
+.d-odds-sub b.d-good { color: var(--accent); }
+.d-odds-sub b.d-red { color: #ff7a6a; }
+.odds-good { border-left-color: #3ee0a0; } .odds-good .d-odds-top b, .odds-good .d-odds-word { color: #3ee0a0; }
+.odds-ok { border-left-color: #ffc94a; } .odds-ok .d-odds-top b, .odds-ok .d-odds-word { color: #ffc94a; }
+.odds-risky { border-left-color: #ff9a3a; } .odds-risky .d-odds-top b, .odds-risky .d-odds-word { color: #ff9a3a; }
+.odds-bad { border-left-color: #ff5a4a; } .odds-bad .d-odds-top b, .odds-bad .d-odds-word { color: #ff5a4a; }
+.d-stats + .d-odds { margin: 8px 0 4px; }
+.d-odds-boss { font-size: 12px; margin-top: 1px; }
+.d-odds-boss b { font-size: 13px; }
+.d-odds-boss .odds-good { color: #3ee0a0; } .d-odds-boss .odds-ok { color: #ffc94a; } .d-odds-boss .odds-risky { color: #ff9a3a; } .d-odds-boss .odds-bad { color: #ff5a4a; }

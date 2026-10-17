@@ -1,7 +1,7 @@
 // Dungeon screens: tower hub, battles, floor results, gear, Blacksmith and Potion Shop.
 // app.js calls init() once with shared helpers, view() to draw the tab, action() for clicks.
 import {
-  SECTIONS, FAMILIES, DITEMS, POTIONS, MATERIALS, RAR_NAME, TYPE_NAME, SETS, SLOT_NAME_D, GEAR_SLOTS_D, POTIONS_PER_FIGHT, SECTION_SCALE,
+  SECTIONS, FAMILIES, BOSSES, DITEMS, POTIONS, MATERIALS, RAR_NAME, TYPE_NAME, SETS, SLOT_NAME_D, GEAR_SLOTS_D, POTIONS_PER_FIGHT, SECTION_SCALE,
 } from './ddata.js';
 import {
   newDungeon, startDungeon, cryptsProgress, cryptsLevel, sectionOf, floorInSection, sectionStart, sectionUnlocked, canPlay,
@@ -11,6 +11,7 @@ import {
 import { createBattle, takeTurn, getActions, aliveEnemies, typeMult, moveType } from './engine.js';
 import { gearIcon, mountEnemy, enemyIcon, BOSS_AURA, TOWER_PAL, towerTexture } from './dart.js';
 import { uiIcon } from '../uiicons.js';
+import { winChance, oddsLabel } from './dbot.js';
 
 let api = null;          // helpers from app.js
 let sub = 'hub';         // hub | gear | smith | potions
@@ -133,17 +134,43 @@ export function view() {
     <div class="d-hud">
       <div class="d-lv" style="--p:${(cp.pct * 100).toFixed(1)}%"><b>${cp.level}</b></div>
       <div class="d-hud-mid"><div class="d-hud-t">Crypts level ${cp.level}</div><div class="d-hud-s">${fmt(cp.into)} / ${fmt(cp.needed)} XP</div></div>
-      <span class="d-chip ${power < bossRec * 0.8 ? 'red' : 'ok'}" title="Your Power vs the recommended Power for the next boss">⚔ ${fmt(power)} <span>/ ${fmt(bossRec)}</span></span>
+      <span class="d-chip" title="Your total gear Power">⚔ ${fmt(power)}</span>
     </div>
     <div class="d-tower-wrap"><div class="d-tower">
       <div class="d-spire"><div class="d-flag"></div><div class="d-roof"></div></div>${segs}<div class="d-ground"><div class="d-door"></div></div>
     </div><p class="hint d-tower-hint">Tap a glowing window to replay that floor and farm gear. If you fall, you drop to the start of the section but keep everything you found.</p></div>
-    <div class="d-bar"><div class="d-bar-row">
+    <div class="d-bar">${oddsHtml(dg)}<div class="d-bar-row">
       <button class="d-hubbtn" data-action="d-sub" data-sub="gear"><img src="${uiIcon('swords', 'color', 3)}" alt="">Gear</button>
       <button class="d-hubbtn" data-action="d-sub" data-sub="smith"><img src="${uiIcon('anvil', 'color', 3)}" alt="">Smith</button>
       <button class="d-hubbtn" data-action="d-sub" data-sub="potions"><img src="${uiIcon('potion', 'color', 3)}" alt="">Potions</button>
       ${go}
     </div></div>`;
+}
+
+// ---------- win chance ----------
+// "How likely am I to beat the next floor?" from a quick simulation with your real gear.
+function nextFloor(dg) {
+  const f = Math.min(50, dg.climb), sec = SECTIONS[sectionOf(f) - 1];
+  return { f, sec, boss: floorInSection(f) === 10, locked: !sectionUnlocked(dg, sec.id) };
+}
+const pctText = (c) => (c > 0 && c < 0.01 ? '<1' : c > 0.99 && c < 1 ? '>99' : Math.round(c * 100));
+function oddsHtml(dg) {
+  const nf = nextFloor(dg);
+  if (nf.locked) return '';
+  const c = winChance(dg, nf.f);
+  const lab = oddsLabel(c);
+  const fam = FAMILIES[nf.sec.family];
+  const B = BOSSES[nf.sec.boss];
+  const weak = [...fam.weak, ...(nf.boss && B.extraWeak ? B.extraWeak : [])];
+  const p = buildPlayer(dg);
+  const m = typeMult(p.dtype, { family: nf.sec.family, extraWeak: nf.boss ? B.extraWeak : null });
+  const word = m > 1 ? 'super effective' : m < 1 ? 'resisted' : 'neutral';
+  const names = (list) => list.map((t) => TYPE_NAME[t]).join(' & ');
+  return `<div class="d-odds ${lab.cls}">
+    <div class="d-odds-top"><b>${pctText(c)}%</b> to beat ${nf.boss ? `the ${esc(B.name)}` : `floor ${nf.f}`} <span class="d-odds-word">${lab.text}</span></div>
+    ${nf.boss ? '' : (() => { const bc = winChance(dg, nf.sec.id * 10), bl = oddsLabel(bc); return `<div class="d-odds-boss">Boss on floor ${nf.sec.id * 10}, the ${esc(B.name)}: <b class="${bl.cls}">${pctText(bc)}%</b> <span class="${bl.cls}">${bl.text}</span></div>`; })()}
+    <div class="d-odds-sub">${fam.name}s: weak to <b class="d-good">${names(weak)}</b>${fam.resist.length ? `, resist <b class="d-red">${names(fam.resist)}</b>` : ''} · your weapon: <b class="${m > 1 ? 'd-good' : m < 1 ? 'd-red' : ''}">${TYPE_NAME[p.dtype]} (${word})</b></div>
+  </div>`;
 }
 
 // ---------- section folders ----------
@@ -198,6 +225,7 @@ function viewGear() {
       <button class="btn d-back" data-action="d-sub" data-sub="hub">‹ Tower</button>
       <h2>Dungeon gear</h2>
       <div class="d-stats"><span>Power <b>${fmt(powerScore(p))}</b></span><span>Atk <b>${p.atk}</b></span><span>Def <b>${p.def}</b></span><span>HP <b>${p.maxHp}</b></span><span>Crit <b>${Math.round(p.crit * 100)}%</b></span>${p.dodge ? `<span>Dodge <b>${Math.round(p.dodge * 100)}%</b></span>` : ''}</div>
+      ${oddsHtml(dg)}
       ${set ? `<p class="boost small">Set bonus · ${esc(SETS[set].name)}: ${esc(SETS[set].text)}</p>` : '<p class="muted small">Wear all 4 armour pieces of a section\'s Epic set for a set bonus.</p>'}
       <div class="d-slots">${slots}</div>
       <h3>Moves</h3>
@@ -214,11 +242,22 @@ function showItem(id) {
   const moves = it.slot === 'weapon' ? weaponMoves(id, dg.equipped.offhand) : null;
   const p = buildPlayer(dg);
   const passive = passiveText(it);
+  const nf = nextFloor(dg);
+  let oddsLine = '';
+  if (!nf.locked) {
+    const now = winChance(dg, nf.f);
+    const swapped = { ...dg.equipped, [it.slot]: eq ? null : id };
+    const then = winChance({ ...dg, equipped: swapped }, nf.f);
+    const who = nf.boss ? `the ${esc(BOSSES[nf.sec.boss].name)}` : `floor ${nf.f}`;
+    const cls = then > now + 0.005 ? 'd-good' : then < now - 0.005 ? 'd-red' : 'muted';
+    oddsLine = `<p class="small">${eq ? 'Unequipping' : 'Equipping'} this: chance to beat ${who} <b>${pctText(now)}%</b> → <b class="${cls}">${pctText(then)}%</b></p>`;
+  }
   api.openModal(`<div class="item-detail">
       ${gearImg(id, 'xl')}
       <h2>${itemName(id)}</h2>
       <div>${rarTag(it.rarity)} <span class="muted">${SLOT_NAME_D[it.slot]}${it.weaponType ? ` · ${esc(it.weaponType)}` : ''}${it.section ? ` · ${esc(SECTIONS[it.section - 1].name)}` : ''}</span></div>
       <p>${statLine(id)}</p>
+      ${oddsLine}
       ${passive.length ? `<p class="boost small">${passive.map(esc).join('<br>')}</p>` : ''}
       ${it.set ? `<p class="small muted">Part of the ${esc(SETS[it.set].name)} set (4 pieces: ${esc(SETS[it.set].text)})</p>` : ''}
       ${moves ? `<ul class="d-moves left">${moves.map((mv) => `<li><b>${esc(mv.name)}</b>${mv.sig ? ' <span class="new">SIGNATURE</span>' : ''}<br><span class="small muted">${moveText(mv, { ...p, dtype: it.dtype || p.dtype })}</span></li>`).join('')}</ul>` : ''}

@@ -44,52 +44,9 @@ export function loadout(sec, kind, family = SECTIONS[sec - 1].family) {
 export const BOSS_LEVEL = [4, 10, 17, 26, 34];
 export const FLOOR_LEVEL = [2, 7, 14, 22, 31];
 
-// ---------- bots ----------
-function healPotion(acts) {
-  return acts.filter((a) => a.kind === 'potion' && a.available && POTIONS[a.id].heal).sort((a, b) => POTIONS[b.id].heal - POTIONS[a.id].heal)[0];
-}
-export function spamBot(b) {
-  const acts = getActions(b);
-  if (acts[0].firing) return acts[0];
-  const p = b.player;
-  if (p.hp / p.maxHp < 0.35) { const pot = healPotion(acts); if (pot) return pot; }
-  const dmg = acts.filter((a) => a.kind === 'move' && a.available && a.move.power > 0 && !a.move.aim);
-  const best = dmg.sort((x, y) => y.move.power * (y.move.hits || 1) - x.move.power * (x.move.hits || 1))[0];
-  return { ...best, target: aliveEnemies(b)[0].uid };
-}
-export function smartBot(b) {
-  const acts = getActions(b);
-  if (acts[0].firing) return acts[0];
-  const p = b.player;
-  const foes = aliveEnemies(b);
-  const hp = p.hp / p.maxHp;
-  const tele = foes.some((e) => e.charging);
-  const pot = healPotion(acts);
-  const guard = acts.find((a) => a.kind === 'move' && a.available && (a.move.parry || a.move.brace || a.move.ward)) || acts.find((a) => a.kind === 'block');
-  if (b.round === 1 && b.isBoss) { const str = acts.find((a) => a.kind === 'potion' && a.id === 'strength' && a.available); if (str) return str; }
-  if (tele) { if (guard) return guard; if (hp < 0.6 && pot) return pot; }
-  if (hp < 0.4 && pot) return pot;
-  // healers first; in boss fights focus the boss unless an add is nearly dead; otherwise the weakest
-  const boss = foes.find((e) => e.boss);
-  const weakAdd = foes.find((e) => !e.boss && e.hp < e.maxHp * 0.35);
-  const target = foes.find((e) => e.healer) || (boss ? (weakAdd || boss) : foes.slice().sort((a, c) => a.hp - c.hp)[0]);
-  const phase2 = foes.some((e) => e.boss && e.phase === 2);
-  let best = null, bestScore = -1;
-  for (const a of acts) {
-    if (a.kind !== 'move' || !a.available || a.move.power <= 0 || (a.move.aim && tele)) continue;
-    const mv = a.move;
-    const eff = typeMult(moveType(p, mv), target);
-    let score = mv.power * (mv.hits || 1) * (mv.aoe ? foes.reduce((n, e) => n + typeMult(moveType(p, mv), e), 0) : eff);
-    if (mv.aim) score *= 0.55;
-    if (mv.bleed && !target.st.bleed && target.hp > target.maxHp * 0.3) score += 0.5;
-    if (mv.poison && !target.st.poison && target.hp > target.maxHp * 0.3) score += 0.6;
-    if (mv.stun || mv.freeze) score += 0.35;
-    if (mv.lifesteal && hp < 0.7) score += mv.lifesteal * 0.8;
-    if (mv.charges && (b.isBoss ? (!phase2 && target.hp > target.maxHp * 0.75) : target.hp < target.maxHp * 0.35)) score *= 0.5;
-    if (score > bestScore) { bestScore = score; best = a; }
-  }
-  return { ...best, target: target.uid };
-}
+// ---------- bots (shared with the game's win-chance estimate) ----------
+import { spamBot, smartBot } from '../js/dungeon/dbot.js';
+export { spamBot, smartBot };
 
 // ---------- runs ----------
 const scaleOf = (sec) => SECTION_SCALE[sec - 1] * SECTION_FUDGE[sec - 1];
