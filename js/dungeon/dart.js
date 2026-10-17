@@ -62,6 +62,26 @@ export const BOSS_ART = {
 };
 export const BOSS_AURA = { 'goblin-king': '#ffd84a', lich: '#9a6ae0', 'stone-golem': '#ff8a2e', 'frost-wyrm': '#9fd3ff', 'demon-lord': '#ff4a2a' };
 
+// Tower stone per section, for the hub's tower: mossy, crypt purple, grey, ice, and lava-cracked.
+export const TOWER_PAL = [
+  { base: '#5a6a3a', dark: '#3e4a28', light: '#76884a', mortar: '#262c16', edge: '#2a3218' },
+  { base: '#4c4062', dark: '#342a46', light: '#665a80', mortar: '#1c1628', edge: '#221a30' },
+  { base: '#66666e', dark: '#48484e', light: '#86868e', mortar: '#26262c', edge: '#2e2e34' },
+  { base: '#6c9cc2', dark: '#4a769c', light: '#a8d0ee', mortar: '#2a4a6a', edge: '#2e4e6e' },
+  { base: '#5e2620', dark: '#401814', light: '#82362a', mortar: '#ff6a2a', edge: '#2a0e0a' },
+];
+const texCache = {};
+export function towerTexture(k) {
+  if (texCache[k]) return texCache[k];
+  const p = TOWER_PAL[k];
+  const c = document.createElement('canvas'); c.width = 16; c.height = 8;
+  const x = c.getContext('2d');
+  x.fillStyle = p.mortar; x.fillRect(0, 0, 16, 8);
+  const brick = (bx, by, w) => { x.fillStyle = p.base; x.fillRect(bx, by, w, 3); x.fillStyle = p.light; x.fillRect(bx, by, w, 1); x.fillStyle = p.dark; x.fillRect(bx, by + 2, w, 1); };
+  brick(0, 0, 7); brick(8, 0, 7); brick(-4, 4, 7); brick(4, 4, 7); brick(12, 4, 7);
+  return (texCache[k] = c.toDataURL());
+}
+
 export function enemyDrawing(f) { return f.boss || f.isBoss ? BOSS_ART[f.id] : ENEMY_ART[f.id]; }
 const iconCache = new Map();
 export function enemyIcon(id, scale = 3) {

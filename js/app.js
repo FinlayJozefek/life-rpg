@@ -997,6 +997,7 @@ const TAB_ICONS = { home: 'helmet', skills: 'swords', quests: 'scroll', dungeon:
 // The Dungeon game mode gets the shared helpers it needs.
 dungeon.init({
   state: () => state, persist, render, openModal, closeModal, toast, esc, fmt, sfx, confetti, shake, flash, vibrate,
+  avatarUrl: (scale = 3) => avatarDataUrl({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, scale),
   avatarImg: () => `<img class="d-faller-img" src="${avatarDataUrl({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, 4)}" alt="">`,
 });
 document.querySelectorAll('.tabbar button').forEach((b) => { const sp = b.querySelector('span'); if (sp) sp.innerHTML = ic(TAB_ICONS[b.dataset.view], 'tab-ic'); });

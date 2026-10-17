@@ -79,6 +79,12 @@ const S = {
   tower: { pal: { a: '#8a8a92', b: '#2a2a30', c: '#5a5a62', d: '#ff8a2e' }, half: [
     '........', '..a.a.a.', '..aaaaaa', '...aaaaa', '...abaaa', '...aaaaa', '...aaaaa', '...aaada',
     '...aaaaa', '...abaaa', '...aaaaa', '..aaaaaa', '..aaaabb', '..aaaabb', '.ccccccc', '........'] },
+  anvil: { pal: { a: '#8a92a8', b: '#4a5068', c: '#c4c9d6', d: '#ff8a2e' }, rows: [
+    '................', '................', '................', '.....d..........', '....ddd.........', '.cccccccccccccc.', 'aaaaaaaaaaaaaaa.', '.aaaaaaaaaaaaa..',
+    '....aaaaaaa.....', '.....aaaaa......', '.....aaaaa......', '....bbbbbbb.....', '...bbbbbbbbb....', '................', '................', '................'] },
+  potion: { pal: { a: '#e8435a', b: '#8a1a2a', c: '#ffb0b8', d: '#c8a060', e: '#c4c9d6' }, rows: [
+    '................', '......dddd......', '......eeee......', '.......ee.......', '.......ee.......', '.....eaaae......', '....eaaaaae.....', '...eaacaaaae....',
+    '...eacaaaaae....', '...eaaaaaaae....', '...eaaaaaabe....', '....eabbbbe.....', '.....eeeee......', '................', '................', '................'] },
   // achievement symbols
   gem: { pal: { a: '#4ab0ff', b: '#1f5a9a', c: '#bff0ff' }, half: [
     '........', '........', '........', '...bbbbb', '..bccaaa', '.bcaaaaa', 'baaaaaaa', '.baaaaaa',

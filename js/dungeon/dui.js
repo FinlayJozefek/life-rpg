@@ -9,7 +9,8 @@ import {
   itemStats, weaponMoves, activeSet, sellPrice, buyPrice, upgradeCost, MAX_PLUS, blacksmithStock, XP, SECTION_XP, SECTION_FUDGE,
 } from './dgame.js';
 import { createBattle, takeTurn, getActions, aliveEnemies, typeMult, moveType } from './engine.js';
-import { gearIcon, mountEnemy, enemyIcon } from './dart.js';
+import { gearIcon, mountEnemy, enemyIcon, BOSS_AURA, TOWER_PAL, towerTexture } from './dart.js';
+import { uiIcon } from '../uiicons.js';
 
 let api = null;          // helpers from app.js
 let sub = 'hub';         // hub | gear | smith | potions
@@ -97,49 +98,50 @@ export function view() {
   if (sub === 'smith') return viewSmith();
   if (sub === 'potions') return viewPotions();
   const cp = cryptsProgress(dg.xp);
-  const p = buildPlayer(dg);
-  const power = powerScore(p);
-  const curSec = sectionOf(dg.climb);
+  const power = powerScore(buildPlayer(dg));
   const next = Math.min(50, dg.climb);
-  const nextLocked = !sectionUnlocked(dg, sectionOf(next));
-  const bossRec = recommendedPower(curSec);
-  const sections = SECTIONS.map((sec) => {
-    const unlocked = sectionUnlocked(dg, sec.id);
+  const nextSec = sectionOf(next);
+  const nextLocked = !sectionUnlocked(dg, nextSec);
+  const bossRec = recommendedPower(nextSec);
+  const hero = api.avatarUrl(3);
+  const segs = SECTIONS.map((sec, k) => {
+    const locked = !sectionUnlocked(dg, sec.id);
     const floors = Array.from({ length: 10 }, (_, i) => {
-      const f = (sec.id - 1) * 10 + i + 1;
-      const cleared = dg.cleared[f];
-      const isNext = f === dg.climb;
-      const playable = canPlay(dg, f);
-      const cls = `${cleared ? 'cleared' : ''} ${isNext ? 'next' : ''} ${i === 9 ? 'boss' : ''}`;
-      return `<button class="d-floor ${cls}" ${playable ? `data-action="d-floor" data-floor="${f}"` : 'disabled'}>${i === 9 ? `<img src="${enemyIcon(sec.boss, 2)}" alt="">` : f}${cleared ? '<i>✓</i>' : ''}</button>`;
+      const f = k * 10 + i + 1;
+      const play = canPlay(dg, f) ? `data-action="d-floor" data-floor="${f}"` : 'disabled';
+      if (i === 9) {
+        return `<div class="d-tfl boss"><button class="d-balcony ${dg.cleared[f] ? 'dead' : ''} ${f === next ? 'here' : ''}" ${play} aria-label="Floor ${f} boss">
+          <img src="${enemyIcon(sec.boss, 4)}" alt="">${f === next ? `<img class="d-hero" src="${hero}" alt="">` : ''}</button><div class="d-ledge"></div></div>`;
+      }
+      const cls = f === next ? 'next' : dg.cleared[f] ? 'lit' : canPlay(dg, f) ? 'open' : '';
+      return `<div class="d-tfl"><button class="d-win ${cls}" ${play} aria-label="Floor ${f}">${f === next ? `<img src="${hero}" alt="">` : ''}</button><span class="d-plaque">${f}</span><span class="d-stair"></span></div>`;
     }).join('');
-    return `<div class="d-section ${unlocked ? '' : 'locked'}">
-      <div class="d-sec-head"><b>${sec.id}. ${esc(sec.name)}</b><span class="muted small">${FAMILIES[sec.family].name}s · floors ${(sec.id - 1) * 10 + 1}–${sec.id * 10}</span>
-        ${unlocked ? '' : `<span class="d-lock">Crypts level ${sec.crypts}</span>`}</div>
-      <div class="d-floors">${floors}</div>
+    return `<div class="d-seg ${locked ? 'locked' : ''}" style="--edge:${TOWER_PAL[k].edge};--aura:${BOSS_AURA[sec.boss]};background-image:url(${towerTexture(k)})">
+      <div class="d-crenel"></div><div class="d-seg-name">${sec.id}. ${esc(sec.name)}</div>
+      <div class="d-tfloors">${floors}</div>
+      ${locked ? `<div class="d-fog"><img src="${uiIcon('lock', 'color', 3)}" alt=""><b>${esc(sec.name)}</b><span>Crypts level ${sec.crypts}</span></div>` : ''}
     </div>`;
-  }).join('');
+  }).reverse().join('');
+  const isBoss = floorInSection(next) === 10;
+  const go = nextLocked
+    ? `<button class="btn wide d-go" disabled>Crypts level ${SECTIONS[nextSec - 1].crypts} needed</button>`
+    : `<button class="btn primary wide d-go" data-action="d-floor" data-floor="${next}">${isBoss ? `Fight the ${esc(SECTIONS[nextSec - 1].name)} boss` : `Climb floor ${next}`}</button>`;
+  setTimeout(() => { if (window.scrollY < 10) document.querySelector('.d-tower .next, .d-tower .here')?.scrollIntoView({ block: 'center' }); }, 0);
   return `
-    <section class="panel d-head">
-      <div class="d-rank"><span class="d-rank-num">${cp.level}</span><span class="small muted">Crypts<br>level</span></div>
-      <div class="d-rank-body">
-        <div class="bar"><span style="width:${(cp.pct * 100).toFixed(1)}%"></span></div>
-        <div class="small muted">${fmt(cp.into)} / ${fmt(cp.needed)} Crypts XP</div>
-        <div class="d-power">Power <b>${fmt(power)}</b> <span class="small ${power < bossRec * 0.8 ? 'd-red' : 'muted'}">· recommended for ${esc(SECTIONS[curSec - 1].name)} boss: ${fmt(bossRec)}</span></div>
-      </div>
-    </section>
-    <section class="panel d-climb">
-      <div class="small muted">You're on</div>
-      <div class="d-climb-floor">Floor ${next} <span class="muted small">· ${esc(SECTIONS[sectionOf(next) - 1].name)}${floorInSection(next) === 10 ? ' · BOSS' : ''}</span></div>
-      ${nextLocked ? `<button class="btn wide" disabled>Reach Crypts level ${SECTIONS[sectionOf(next) - 1].crypts} to enter</button><p class="hint">Farm earlier floors and bosses for Crypts XP and better gear.</p>`
-        : `<button class="btn primary wide d-go" data-action="d-floor" data-floor="${next}">${floorInSection(next) === 10 ? `Fight ${esc(SECTIONS[sectionOf(next) - 1].name)} boss` : `Climb floor ${next}`}</button>`}
-      <div class="btn-row d-shops">
-        <button class="btn" data-action="d-sub" data-sub="gear">Gear</button>
-        <button class="btn" data-action="d-sub" data-sub="smith">Blacksmith</button>
-        <button class="btn" data-action="d-sub" data-sub="potions">Potions</button>
-      </div>
-    </section>
-    <section class="panel"><h2>The Tower</h2><p class="muted small">Tap a floor you've reached to replay it and farm gear. Dying sends you back to the start of the section, but you keep everything you found.</p>${sections}</section>`;
+    <div class="d-hud">
+      <div class="d-lv" style="--p:${(cp.pct * 100).toFixed(1)}%"><b>${cp.level}</b></div>
+      <div class="d-hud-mid"><div class="d-hud-t">Crypts level ${cp.level}</div><div class="d-hud-s">${fmt(cp.into)} / ${fmt(cp.needed)} XP</div></div>
+      <span class="d-chip ${power < bossRec * 0.8 ? 'red' : 'ok'}" title="Your Power vs the recommended Power for the next boss">⚔ ${fmt(power)} <span>/ ${fmt(bossRec)}</span></span>
+    </div>
+    <div class="d-tower-wrap"><div class="d-tower">
+      <div class="d-spire"><div class="d-flag"></div><div class="d-roof"></div></div>${segs}<div class="d-ground"><div class="d-door"></div></div>
+    </div><p class="hint d-tower-hint">Tap a glowing window to replay that floor and farm gear. If you fall, you drop to the start of the section but keep everything you found.</p></div>
+    <div class="d-bar"><div class="d-bar-row">
+      <button class="d-shop" data-action="d-sub" data-sub="gear"><img src="${uiIcon('swords', 'color', 3)}" alt="">Gear</button>
+      <button class="d-shop" data-action="d-sub" data-sub="smith"><img src="${uiIcon('anvil', 'color', 3)}" alt="">Smith</button>
+      <button class="d-shop" data-action="d-sub" data-sub="potions"><img src="${uiIcon('potion', 'color', 3)}" alt="">Potions</button>
+      ${go}
+    </div></div>`;
 }
 
 // ---------- gear ----------
