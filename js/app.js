@@ -227,7 +227,7 @@ function viewSettings() {
       <ul class="rules">
         <li>Each skill has a unit length. Every unit = <b>100 XP</b>, <b>10 coins</b> and <b>one drop roll</b>.</li>
         <li>Partial units still give XP and coins. Leftover minutes carry over toward your next drop roll.</li>
-        <li>Every item in a skill's table is rolled separately on each roll, so you can get several drops at once.</li>
+        <li>Every item in a skill's table gets its own chance on each roll, so you can get several drops at once — but at most <b>2 of any one rarity per roll</b>.</li>
         <li>Pets drop once; after that they leave the table. Everything else stacks.</li>
         <li>Luck from pets boosts Rare drops and above.</li>
         <li>Max level is ${MAX_LEVEL} (100,000 XP).</li>

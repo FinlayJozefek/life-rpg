@@ -36,6 +36,8 @@ export const XP_PER_UNIT = 100;
 export const COINS_PER_UNIT = 10;
 export const COLLECTION_COMPLETE_XP_BOOST = 0.05;
 export const BADGE_COUNT = 100;
+// Most items of a single rarity that can drop from one roll (one unit).
+export const MAX_PER_RARITY_PER_ROLL = 2;
 
 const LISTS = {
   fitness: {

@@ -1,6 +1,6 @@
 import {
   RARITY, LUCK_MIN_RARITY, OUTFIT_XP_BOOST, PET_BOOST, XP_PER_UNIT, COINS_PER_UNIT,
-  COLLECTION_COMPLETE_XP_BOOST, BADGE_COUNT, SKILLS, SKILL, ITEM, ITEMS_BY_SKILL,
+  COLLECTION_COMPLETE_XP_BOOST, BADGE_COUNT, MAX_PER_RARITY_PER_ROLL, SKILLS, SKILL, ITEM, ITEMS_BY_SKILL,
 } from './data.js';
 
 // ---------- Levelling ----------
@@ -164,16 +164,32 @@ export function previewLog(state, skillId, minutes) {
   };
 }
 
-// Roll every item in the skill's table independently, once per roll.
+function shuffled(arr, rng) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Each roll gives every item in the skill's table its own chance, but at most
+// MAX_PER_RARITY_PER_ROLL items of any one rarity can drop. Items are checked in a
+// random order so the cap doesn't favour whichever item is listed first.
 function rollDrops(state, skillId, rolls, luck, rng) {
   const drops = {};
   const ownedPets = new Set(Object.keys(state.everOwned).filter((id) => ITEM[id].type === 'pet'));
   for (let r = 0; r < rolls; r++) {
-    for (const item of ITEMS_BY_SKILL[skillId]) {
+    const perRarity = {};
+    for (const item of shuffled(ITEMS_BY_SKILL[skillId], rng)) {
       if (item.type === 'pet' && (ownedPets.has(item.id) || drops[item.id])) continue;
+      if ((perRarity[item.rarity] || 0) >= MAX_PER_RARITY_PER_ROLL) continue;
       const rar = RARITY[item.rarity];
       const chance = rar.index >= LUCK_MIN_RARITY ? rar.chance * (1 + luck) : rar.chance;
-      if (rng() < chance) drops[item.id] = (drops[item.id] || 0) + 1;
+      if (rng() < chance) {
+        drops[item.id] = (drops[item.id] || 0) + 1;
+        perRarity[item.rarity] = (perRarity[item.rarity] || 0) + 1;
+      }
     }
   }
   return drops;
