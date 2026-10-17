@@ -5,6 +5,7 @@ import {
   MAX_LEVEL,
 } from './game.js';
 import { itemSprite, avatarSprite } from './sprites.js';
+import { isInstalled, isIOS, inAppBrowser, installInstructions, promptInstall, onInstallChange, canPromptInstall } from './install.js';
 
 let state = load();
 let view = 'home';
@@ -16,7 +17,56 @@ const $modal = document.getElementById('modal-root');
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n) => Math.round(n).toLocaleString();
-const persist = () => save(state);
+let saveWarned = false;
+const persist = () => {
+  if (!save(state) && !saveWarned) {
+    saveWarned = true;
+    toast("Couldn't save — is private browsing on?");
+  }
+};
+
+// Per-device UI preferences (not game progress).
+const pref = {
+  get(k) { try { return localStorage.getItem(`liferpg.pref.${k}`); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(`liferpg.pref.${k}`, v); } catch {} },
+};
+let installBannerHidden = pref.get('hideInstall') === '1';
+
+function installBanner() {
+  if (isInstalled() || installBannerHidden) return '';
+  return `<section class="install-banner">
+    <img src="icons/icon-192.png" alt="" width="44" height="44">
+    <div class="install-text"><b>Get the app</b><br><span class="muted small">${inAppBrowser ? 'Open in your browser to install' : 'Add Life RPG to your home screen'}</span></div>
+    <button class="btn primary" data-action="install">${canPromptInstall() ? 'Install' : 'How?'}</button>
+    <button class="install-x" data-action="hide-install" aria-label="Hide">×</button>
+  </section>`;
+}
+
+function welcome() {
+  const suggestInstall = !isInstalled() && (isIOS || inAppBrowser || canPromptInstall());
+  openModal(`
+    <div class="welcome">
+      <img class="welcome-icon" src="icons/icon-192.png" alt="" width="72" height="72">
+      <h2>Welcome to Life RPG</h2>
+      <p>Log real things you do. Earn XP, level up 12 skills and collect 288 items and pets.</p>
+      ${suggestInstall ? `<div class="welcome-install">
+        <p><b>Playing on your phone?</b> Install it first. Progress you make in the browser stays in the browser and won't move to the app.</p>
+        <button class="btn wide" data-action="install">How to install</button>
+      </div>` : ''}
+      <label class="field">What's your character called?
+        <input id="welcome-name" type="text" maxlength="24" autocomplete="off" autocapitalize="words" enterkeyhint="go" placeholder="Adventurer">
+      </label>
+      <button class="btn primary wide" data-action="start-game">Start adventure</button>
+    </div>`, { cls: 'welcome-sheet', locked: true });
+  document.getElementById('welcome-name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.querySelector('[data-action=start-game]').click();
+  });
+}
+
+function showInstall() {
+  openModal(`${installInstructions()}
+    <div class="btn-row"><button class="btn" data-action="${state.onboarded ? 'close' : 'back-to-welcome'}">${state.onboarded ? 'Close' : 'Back'}</button></div>`);
+}
 
 function fmtDuration(min) {
   const h = Math.floor(min / 60), m = Math.round(min % 60);
@@ -78,6 +128,7 @@ function viewHome() {
       <span class="li-time muted">${timeAgo(e.at)}</span></li>`;
   }).join('');
   return `
+    ${installBanner()}
     <section class="hero panel">
       <div class="avatar-wrap ${outfit ? 'glow-' + outfit.rarity : ''}">
         <img class="avatar" src="${avatarSprite(state.equipped.outfit)}" alt="Your character">
@@ -153,12 +204,21 @@ function viewCollection() {
 }
 
 function viewSettings() {
+  const installed = isInstalled();
   return `
     <section class="panel">
+      <h2>App</h2>
+      ${installed
+        ? '<p>✓ Installed on this device. Your progress saves automatically after every action.</p>'
+        : `<p>You're playing in the browser. Install Life RPG to get a home screen icon, full-screen play and offline support.</p>
+           <button class="btn primary" data-action="install">${canPromptInstall() ? 'Install' : 'How to install'}</button>`}
+    </section>
+    <section class="panel">
       <h2>Backup &amp; restore</h2>
-      <p>Your progress is saved on this device only. Clearing your browser data will wipe it, so download a backup now and then.</p>
+      <p>Your progress is saved on this device only. If you delete the app, clear browser data or change phones, it's gone, so save a backup now and then (e.g. to Files, iCloud Drive or a message to yourself).</p>
+      <p class="muted small">Last backup: ${state.lastBackupAt ? new Date(state.lastBackupAt).toLocaleDateString() : 'never'}</p>
       <div class="btn-row">
-        <button class="btn primary" data-action="backup">Download backup</button>
+        <button class="btn primary" data-action="backup">Save backup</button>
         <label class="btn">Restore from file<input type="file" accept="application/json,.json" id="restore-input" hidden></label>
       </div>
     </section>
@@ -209,8 +269,9 @@ function setupChipScroller() {
 }
 
 // ---------- Modals ----------
-function openModal(html, { cls = '' } = {}) {
-  $modal.innerHTML = `<div class="backdrop" data-action="close"></div><div class="sheet ${cls}" role="dialog" aria-modal="true">${html}</div>`;
+function openModal(html, { cls = '', locked = false } = {}) {
+  $modal.dataset.locked = locked ? '1' : '';
+  $modal.innerHTML = `<div class="backdrop" ${locked ? '' : 'data-action="close"'}></div><div class="sheet ${cls}" role="dialog" aria-modal="true">${html}</div>`;
   $modal.classList.add('open');
 }
 function closeModal() {
@@ -395,16 +456,30 @@ function toast(msg) {
 }
 
 // ---------- Backup ----------
-function backup() {
-  const blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
+async function backup() {
+  const name = `life-rpg-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  const json = JSON.stringify({ ...state, lastBackupAt: Date.now() }, null, 1);
+  const markDone = (msg) => { state.lastBackupAt = Date.now(); persist(); render(); toast(msg); };
+  // Phones (especially iPhone home-screen apps) handle the share sheet far better
+  // than downloads: it offers Save to Files, AirDrop, Messages, email, etc.
+  const file = new File([json], name, { type: 'application/json' });
+  if ((isIOS || /Android/.test(navigator.userAgent)) && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Life RPG backup' });
+      markDone('Backup saved');
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // user closed the share sheet
+    }
+  }
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `life-rpg-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  a.download = name;
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  toast('Backup downloaded');
+  markDone('Backup downloaded');
 }
 
 async function restore(file) {
@@ -471,17 +546,37 @@ document.addEventListener('click', (e) => {
         <button class="btn primary" data-action="sell" data-id="${id}" data-qty="${n}">Yes, sell</button></div>`, { cls: 'small' });
       break;
     }
-    case 'rename': {
-      const name = prompt('Character name', state.name);
-      if (name && name.trim()) { state.name = name.trim().slice(0, 24); persist(); render(); }
+    case 'rename':
+      openModal(`<h2>Rename character</h2>
+        <label class="field">Name<input id="rename-input" type="text" maxlength="24" autocomplete="off" autocapitalize="words" value="${esc(state.name)}"></label>
+        <div class="btn-row"><button class="btn" data-action="close">Cancel</button><button class="btn primary" data-action="rename-save">Save</button></div>`, { cls: 'small' });
+      break;
+    case 'rename-save': {
+      const name = document.getElementById('rename-input').value.trim();
+      if (name) { state.name = name.slice(0, 24); persist(); render(); }
+      closeModal();
       break;
     }
+    case 'start-game': {
+      const name = document.getElementById('welcome-name').value.trim();
+      state.name = (name || 'Adventurer').slice(0, 24);
+      state.onboarded = true;
+      persist(); closeModal(); render();
+      break;
+    }
+    case 'install':
+      if (canPromptInstall()) promptInstall().then(() => render());
+      else showInstall();
+      break;
+    case 'install-now': promptInstall().then(() => { closeModal(); render(); }); break;
+    case 'back-to-welcome': welcome(); break;
+    case 'hide-install': installBannerHidden = true; pref.set('hideInstall', '1'); render(); break;
     case 'backup': backup(); break;
     case 'reset':
       openModal(`<h2>Reset everything?</h2><p>This deletes all your XP, items and coins on this device. Download a backup first if you might want it back.</p>
         <div class="btn-row"><button class="btn" data-action="close">Cancel</button><button class="btn danger-btn" data-action="reset-confirm">Delete progress</button></div>`, { cls: 'small' });
       break;
-    case 'reset-confirm': state = newState(); persist(); closeModal(); view = 'home'; render(); toast('Progress reset'); break;
+    case 'reset-confirm': state = newState(); persist(); closeModal(); view = 'home'; render(); welcome(); break;
   }
 });
 
@@ -493,7 +588,7 @@ document.addEventListener('change', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && $modal.classList.contains('open')) closeModal();
+  if (e.key === 'Escape' && $modal.classList.contains('open') && !$modal.dataset.locked) closeModal();
 });
 
 // Ask the browser not to evict our storage (best effort).
@@ -503,4 +598,8 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW registration failed', e));
 }
 
+// Re-render when the install state changes (Android/desktop install prompt becomes available, or app installed).
+onInstallChange(() => { if (state.onboarded && !$modal.classList.contains('open')) render(); });
+
 render();
+if (!state.onboarded) welcome();

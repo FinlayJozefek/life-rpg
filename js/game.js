@@ -55,6 +55,8 @@ export function newState() {
     version: 1,
     createdAt: Date.now(),
     name: 'Adventurer',
+    onboarded: false,
+    lastBackupAt: null,
     coins: 0,
     skills: Object.fromEntries(SKILLS.map((s) => [s.id, { xp: 0, carryMin: 0, totalMin: 0 }])),
     items: {},        // itemId -> count currently held
@@ -71,17 +73,27 @@ export function load() {
     return migrate(JSON.parse(raw));
   } catch (e) {
     console.error('Failed to load save', e);
+    // Keep the unreadable save so a fresh game doesn't overwrite it.
+    try { localStorage.setItem(`${SAVE_KEY}.corrupt.${Date.now()}`, localStorage.getItem(SAVE_KEY)); } catch {}
     return newState();
   }
 }
 
 export function save(state) {
-  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    return true;
+  } catch (e) {
+    // Storage full or blocked (e.g. some private-browsing modes).
+    console.error('Failed to save', e);
+    return false;
+  }
 }
 
 function migrate(s) {
   const base = newState();
   const out = { ...base, ...s };
+  if (s.onboarded === undefined) out.onboarded = true; // saves from before onboarding existed
   out.skills = { ...base.skills, ...(s.skills || {}) };
   out.equipped = { ...base.equipped, ...(s.equipped || {}) };
   return out;

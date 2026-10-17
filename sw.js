@@ -1,11 +1,12 @@
 // Offline support: network-first so updates show up straight away, falling back
 // to the cache when offline. Bump VERSION if you add/rename shell files.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `life-rpg-${VERSION}`;
 const SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest',
-  './js/app.js', './js/game.js', './js/data.js', './js/sprites.js',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
+  './js/app.js', './js/game.js', './js/data.js', './js/sprites.js', './js/install.js',
+  './fonts/cinzel-latin.woff2',
+  './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (e) => {
