@@ -570,7 +570,7 @@ function showResult(r, progress = { quests: [], achievements: [], titles: [] }) 
     }
     return `<div class="drop big-drop rar-${it.rarity} pending" id="bigdrop-${i}" style="--charge:${tl.charge}ms">
       ${tl.ri >= 4 ? '<div class="rays"></div>' : ''}
-      <div class="mystery-orb"><span>?</span></div>
+      <div class="mystery-orb"><span></span></div>
       <div class="drop-inner">
         ${itemImg(id)}
         <div class="drop-text"><div>${esc(it.name)}${count}</div><div>${tags}</div></div>
