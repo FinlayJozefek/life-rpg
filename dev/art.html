@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Art trial</title>
+<!-- Dev-only page: compares the current sprites with the detailed trial art in
+     js/sprites2.js. Nothing here changes the game. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding-bottom: 40px; }
+  main { max-width: 1100px; }
+  .row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; }
+  .card { flex: none; width: 150px; background: var(--panel-2); border: 2px solid var(--line); padding: 8px; text-align: center; }
+  .card canvas, .card img { image-rendering: pixelated; display: block; margin: 0 auto; }
+  .card .nm { font-size: 12px; margin-top: 6px; line-height: 1.25; }
+  .card.empty { opacity: 0.35; display: grid; place-items: center; font-size: 12px; }
+  .skill-label { font-family: var(--display-font); color: var(--gold); margin: 14px 0 6px; }
+  .vs { display: flex; gap: 6px; justify-content: center; align-items: flex-end; }
+  .vs small { display: block; font-size: 10px; color: var(--muted); }
+  .grid-big { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+  .grid-big .card { width: auto; }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="brand">Art trial</div><div class="muted small">Nothing here changes the game yet</div></header>
+<main>
+  <section class="panel">
+    <h2>Outfits by rarity</h2>
+    <p class="muted">Each row is one skill's outfits, Common → Mythic. The small figure is what that outfit looks like in the game right now.</p>
+    <div id="progression"></div>
+  </section>
+  <section class="panel">
+    <h2>Every Mythic outfit</h2>
+    <p class="muted">Each Mythic has its own effect: embers, stars, leaves, spirit wisps, rainbow, rising light, sparkles or forge dust.</p>
+    <div class="grid-big" id="mythics"></div>
+  </section>
+  <section class="panel">
+    <h2>Pets: now vs detailed</h2>
+    <p class="muted">Hand-drawn, front-facing. They bob and blink; Legendary and Divine pets glow, Divine ones sparkle.</p>
+    <div class="row" id="pets"></div>
+  </section>
+  <section class="panel">
+    <h2>Outfit icons in the Collection</h2>
+    <p class="muted">Left: current icon. Right: new icon (the outfit as worn).</p>
+    <div class="row" id="icons"></div>
+  </section>
+</main>
+<script type="module">
+import { ITEMS, ITEM, RARITY } from '../js/data.js';
+import { itemSprite, avatarSprite } from '../js/sprites.js';
+import { mountAvatar, mountPet, outfitIcon, DETAILED_PETS } from '../js/sprites2.js';
+
+const byName = (n) => ITEMS.find((i) => i.name === n)?.id;
+const rows = {
+  Fitness: ['Cotton Tee', 'Track Jacket', 'Trail Runner Outfit', 'Olympian Tracksuit', 'Thunderstep Sandals', 'Phoenix Gear'],
+  Intelligence: ['Cardigan', 'Tweed Blazer', "Professor's Robes", "Scholar's Gown", 'Crown of Wisdom', 'Celestial Sage Robes'],
+  Crafting: ['Canvas Apron', 'Leather Apron', "Carpenter's Overalls", "Artisan's Smock", null, "Forgemaster's Armour"],
+  Charisma: ['Polo Shirt', 'Smart Blazer', 'Tailored Suit', 'Velvet Tuxedo', 'Golden Crown', 'Silver-Tongued Regalia'],
+  Mindfulness: ['Hoodie', 'Linen Set', "Monk's Robes", 'Lotus Robes', null, 'Ascendant Robes'],
+  Labour: ['Hi-Vis Vest', 'Steel Toe Boots', "Foreman's Outfit", 'Executive Suit', null, "Titan's Workwear"],
+};
+const tag = (r) => `<span class="rtag r-${r}">${RARITY[r].name}</span>`;
+
+function avatarCard(id, scale = 4, showOld = true) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  const it = ITEM[id];
+  const cv = document.createElement('canvas');
+  cv.style.width = `${32 * scale}px`;
+  const vs = document.createElement('div'); vs.className = 'vs';
+  if (showOld) {
+    const old = document.createElement('div');
+    old.innerHTML = `<img src="${avatarSprite(id, 2)}" style="width:32px"><small>now</small>`;
+    vs.appendChild(old);
+  }
+  vs.appendChild(cv);
+  card.appendChild(vs);
+  card.insertAdjacentHTML('beforeend', `<div class="nm">${it.name}<br>${tag(it.rarity)}</div>`);
+  mountAvatar(cv, id, { scale });
+  return card;
+}
+
+const prog = document.getElementById('progression');
+for (const [skill, names] of Object.entries(rows)) {
+  prog.insertAdjacentHTML('beforeend', `<div class="skill-label">${skill}</div>`);
+  const row = document.createElement('div'); row.className = 'row';
+  row.appendChild((() => { const c = document.createElement('div'); c.className = 'card'; const cv = document.createElement('canvas'); cv.style.width = '128px'; c.appendChild(cv); c.insertAdjacentHTML('beforeend', '<div class="nm">Nothing equipped</div>'); mountAvatar(cv, null, { scale: 4 }); return c; })());
+  for (const n of names) {
+    if (!n) { row.insertAdjacentHTML('beforeend', '<div class="card empty">No outfit at this rarity</div>'); continue; }
+    row.appendChild(avatarCard(byName(n), 3.5));
+  }
+  prog.appendChild(row);
+}
+
+const myth = document.getElementById('mythics');
+for (const it of ITEMS.filter((i) => i.rarity === 'mythic')) myth.appendChild(avatarCard(it.id, 4.5, false));
+
+const pets = document.getElementById('pets');
+for (const id of DETAILED_PETS) {
+  const card = document.createElement('div'); card.className = 'card';
+  const cv = document.createElement('canvas'); cv.style.width = '110px';
+  const vs = document.createElement('div'); vs.className = 'vs';
+  vs.innerHTML = `<div><img src="${itemSprite(id)}" style="width:40px"><small>now</small></div>`;
+  vs.appendChild(cv);
+  card.appendChild(vs);
+  card.insertAdjacentHTML('beforeend', `<div class="nm">${ITEM[id].name}<br>${tag(ITEM[id].rarity)}</div>`);
+  mountPet(cv, id, { scale: 5 });
+  pets.appendChild(card);
+}
+
+const icons = document.getElementById('icons');
+for (const n of [...rows.Fitness, ...rows.Intelligence, ...rows.Charisma].filter(Boolean)) {
+  const id = byName(n);
+  icons.insertAdjacentHTML('beforeend', `<div class="card" style="width:130px"><div class="vs">
+    <div><img src="${itemSprite(id)}" style="width:48px"><small>now</small></div>
+    <div><img src="${outfitIcon(id)}" style="width:64px"><small>new</small></div></div>
+    <div class="nm">${n}<br>${tag(ITEM[id].rarity)}</div></div>`);
+}
+</script>
+</body>
+</html>
