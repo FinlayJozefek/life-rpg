@@ -140,7 +140,11 @@ function viewCollection() {
   const done = discoveredCount(state, sid);
   return `<section class="panel">
     <h2>Collection</h2>
-    <div class="chips">${chips}</div>
+    <div class="chip-scroller">
+      <button class="chip-arrow left" data-action="chip-scroll" data-dir="-1" aria-label="Scroll skills left">‹</button>
+      <div class="chips skill-chips">${chips}</div>
+      <button class="chip-arrow right" data-action="chip-scroll" data-dir="1" aria-label="Scroll skills right">›</button>
+    </div>
     <div class="coll-head"><b>${SKILL[sid].name}</b> · ${done}/24 found
       ${done === 24 ? `<span class="boost">Complete! +${pct(COLLECTION_COMPLETE_XP_BOOST)} XP</span>` : `<span class="muted">Find all 24 for +${pct(COLLECTION_COMPLETE_XP_BOOST)} ${SKILL[sid].name} XP</span>`}
     </div>
@@ -182,6 +186,26 @@ function render() {
   $main.innerHTML = VIEWS[view]();
   document.querySelectorAll('.tabbar button').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
   document.getElementById('coin-pill').textContent = fmt(state.coins);
+  if (view === 'collection') setupChipScroller();
+}
+
+// The skill chip row re-renders on every tap, so restore its scroll position by
+// centring the selected chip, and let mouse wheels scroll it sideways.
+function setupChipScroller() {
+  const row = document.querySelector('.skill-chips');
+  if (!row) return;
+  const on = row.querySelector('.chip.on');
+  if (on) row.scrollLeft = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
+  const updateArrows = () => {
+    const max = row.scrollWidth - row.clientWidth;
+    row.parentElement.classList.toggle('at-start', row.scrollLeft <= 2);
+    row.parentElement.classList.toggle('at-end', row.scrollLeft >= max - 2);
+  };
+  row.addEventListener('scroll', updateArrows, { passive: true });
+  row.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { row.scrollLeft += e.deltaY; e.preventDefault(); }
+  }, { passive: false });
+  updateArrows();
 }
 
 // ---------- Modals ----------
@@ -419,6 +443,11 @@ document.addEventListener('click', (e) => {
     case 'back-to-log': renderLogSheet(); break;
     case 'do-log': doLog(); break;
     case 'coll-skill': collectionSkill = el.dataset.skill; render(); break;
+    case 'chip-scroll': {
+      const row = document.querySelector('.skill-chips');
+      row.scrollLeft += Number(el.dataset.dir) * row.clientWidth * 0.7;
+      break;
+    }
     case 'item': showItem(el.dataset.id); break;
     case 'equip': equip(state, el.dataset.id); persist(); render(); showItem(el.dataset.id); break;
     case 'equip-pick': {

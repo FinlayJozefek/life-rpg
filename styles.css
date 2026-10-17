@@ -116,6 +116,17 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 }
 .chip.on { border-color: var(--gold); color: var(--gold); }
 
+.chip-scroller { position: relative; display: flex; align-items: stretch; gap: 4px; }
+.chip-scroller .chips { flex: 1; min-width: 0; -webkit-overflow-scrolling: touch; }
+.chip-arrow {
+  flex: none; width: 32px; min-height: 36px; padding: 0;
+  background: var(--panel-2); border: 2px solid var(--line); color: var(--gold);
+  font-size: 22px; line-height: 1; cursor: pointer;
+}
+.chip-arrow:active { transform: translateY(1px); }
+.chip-scroller.at-start .chip-arrow.left,
+.chip-scroller.at-end .chip-arrow.right { opacity: 0.3; pointer-events: none; }
+
 /* ---------- Home ---------- */
 .hero { text-align: center; }
 .avatar-wrap { position: relative; display: inline-block; padding: 8px 32px 0; }
