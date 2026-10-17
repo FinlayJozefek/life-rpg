@@ -323,6 +323,7 @@ function renderLogSheet() {
       <div><b>${prev.rolls}</b><span>drop roll${prev.rolls === 1 ? '' : 's'}</span></div>` : '<p class="muted">Enter how long you spent.</p>'}
     </div>
     ${prev && prev.rolls === 0 ? `<p class="hint">Not a full unit yet, so no drop roll — the time carries over (${fmtDuration(prev.carryAfter)} of ${fmtDuration(s.unit)}).</p>` : ''}
+    ${gearSection(s.id)}
     ${b.sources.length ? `<div class="boost-list">${b.sources.map((x) => `<div>✦ ${esc(x)}</div>`).join('')}</div>` : ''}
     <div class="btn-row">
       <button class="btn" data-action="close">Cancel</button>
@@ -453,6 +454,59 @@ function showItem(id) {
     </div>`);
 }
 
+// Best owned outfit/pet for a skill (highest rarity = biggest boost).
+function bestGear(skillId, type) {
+  return Object.keys(state.items)
+    .filter((id) => state.items[id] > 0 && ITEM[id].type === type && ITEM[id].skill === skillId)
+    .sort((a, b) => RARITY[ITEM[b].rarity].index - RARITY[ITEM[a].rarity].index)[0] || null;
+}
+
+// "Gear" block on the log screen: what you're wearing, whether it boosts this
+// skill, and a one-tap swap to your best gear for it.
+function gearSection(skillId) {
+  const skill = SKILL[skillId];
+  const slot = (type) => {
+    const id = state.equipped[type];
+    const best = bestGear(skillId, type);
+    const matches = id && ITEM[id].skill === skillId;
+    const status = !id ? 'Nothing equipped'
+      : matches ? `<span class="boost">✓ boosting ${skill.name}</span>`
+      : `<span class="muted">${SKILL[ITEM[id].skill].name} gear: no boost here</span>`;
+    return `<button class="gear-slot ${matches ? 'match' : ''}" data-action="gear-pick" data-type="${type}" data-skill="${skillId}">
+      <span class="gear-icon">${id ? itemImg(id) : `<span class="slot-empty">${type === 'pet' ? '🐾' : '👕'}</span>`}</span>
+      <span class="gear-text"><span class="slot-label">${type === 'pet' ? 'Pet' : 'Outfit'}</span>
+        <span class="gear-name">${id ? esc(ITEM[id].name) : '—'}</span><span class="small">${status}</span></span>
+      ${best && best !== id && (!matches || RARITY[ITEM[best].rarity].index > RARITY[ITEM[id].rarity].index) ? '<span class="gear-up">▲</span>' : ''}
+    </button>`;
+  };
+  const upgrades = ['outfit', 'pet'].filter((t) => {
+    const best = bestGear(skillId, t), cur = state.equipped[t];
+    return best && best !== cur && !(cur && ITEM[cur].skill === skillId && RARITY[ITEM[cur].rarity].index >= RARITY[ITEM[best].rarity].index);
+  });
+  return `<div class="gear">
+    <div class="gear-slots">${slot('outfit')}${slot('pet')}</div>
+    ${upgrades.length ? `<button class="btn wide gear-best" data-action="equip-best" data-skill="${skillId}">Equip best ${skill.name} gear</button>` : ''}
+  </div>`;
+}
+
+// Picker opened from the log screen: this skill's gear first, then everything else.
+function gearPicker(type, skillId) {
+  const owned = Object.keys(state.items).filter((id) => state.items[id] > 0 && ITEM[id].type === type)
+    .sort((a, b) => (ITEM[b].skill === skillId) - (ITEM[a].skill === skillId) || RARITY[ITEM[b].rarity].index - RARITY[ITEM[a].rarity].index);
+  const current = state.equipped[type];
+  openModal(`
+    <h2>${type === 'pet' ? 'Pet' : 'Outfit'} for ${SKILL[skillId].name}</h2>
+    <p class="muted small">Only ${SKILL[skillId].name} gear boosts this log. Anything else is just for looks.</p>
+    ${owned.length ? `<div class="pick-list">${owned.map((id) => `
+      <button class="pick ${id === current ? 'on' : ''}" data-action="gear-choose" data-id="${id}">
+        ${itemImg(id)}<span><b>${esc(ITEM[id].name)}</b><br><span class="small">${rarityTag(ITEM[id].rarity)} ${ITEM[id].skill === skillId ? `<span class="boost">boosts ${SKILL[skillId].name}</span>` : `<span class="muted">${SKILL[ITEM[id].skill].name}</span>`}</span></span>
+      </button>`).join('')}</div>` : `<p class="muted">You don't have any ${type === 'pet' ? 'pets' : 'outfits'} yet.</p>`}
+    <div class="btn-row">
+      ${current ? `<button class="btn" data-action="gear-none" data-type="${type}">Unequip</button>` : ''}
+      <button class="btn" data-action="back-to-log">Back</button>
+    </div>`);
+}
+
 function pickSlot(type) {
   const owned = Object.keys(state.items).filter((id) => state.items[id] > 0 && ITEM[id].type === type)
     .sort((a, b) => RARITY[ITEM[b].rarity].index - RARITY[ITEM[a].rarity].index);
@@ -547,6 +601,18 @@ document.addEventListener('click', (e) => {
     }
     case 'item': showItem(el.dataset.id); break;
     case 'equip': equip(state, el.dataset.id); persist(); render(); showItem(el.dataset.id); break;
+    case 'equip-best': {
+      for (const t of ['outfit', 'pet']) {
+        const best = bestGear(el.dataset.skill, t);
+        const cur = state.equipped[t];
+        if (best && !(cur && ITEM[cur].skill === el.dataset.skill && RARITY[ITEM[cur].rarity].index >= RARITY[ITEM[best].rarity].index)) state.equipped[t] = best;
+      }
+      persist(); render(); renderLogSheet(); toast(`${SKILL[el.dataset.skill].name} gear equipped`);
+      break;
+    }
+    case 'gear-pick': gearPicker(el.dataset.type, el.dataset.skill); break;
+    case 'gear-choose': state.equipped[ITEM[el.dataset.id].type] = el.dataset.id; persist(); render(); renderLogSheet(); break;
+    case 'gear-none': state.equipped[el.dataset.type] = null; persist(); render(); renderLogSheet(); break;
     case 'equip-pick': {
       const id = el.dataset.id;
       if (state.equipped[ITEM[id].type] !== id) equip(state, id);

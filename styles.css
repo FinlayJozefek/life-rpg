@@ -304,6 +304,20 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 .preview b, .gains b { font: 700 22px var(--display-font); }
 .preview span, .gains span { font-size: 11px; color: var(--muted); text-transform: uppercase; }
 .preview p { grid-column: 1 / -1; margin: 6px 0; }
+.gear { margin-top: 14px; }
+.gear-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gear-slot {
+  position: relative; display: flex; gap: 8px; align-items: center; text-align: left; min-width: 0;
+  background: var(--panel-2); border: 2px solid var(--line); padding: 6px; cursor: pointer;
+}
+.gear-slot.match { border-color: var(--primary); }
+.gear-icon { flex: none; width: 40px; height: 40px; display: grid; place-items: center; background: var(--deep); }
+.gear-icon .sprite { width: 34px; }
+.gear-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.gear-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gear-up { position: absolute; top: 2px; right: 5px; color: var(--accent); font-size: 12px; }
+.gear-best { margin-top: 8px; min-height: 40px; border-color: var(--primary-line); color: var(--accent); }
+@media (max-width: 380px) { .gear-slots { grid-template-columns: 1fr; } }
 .boost-list { margin-top: 12px; font-size: 13px; color: var(--accent); }
 .big-q { font-size: 18px; }
 
