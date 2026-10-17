@@ -5,7 +5,7 @@ import {
   MAX_LEVEL,
 } from './game.js';
 import { itemSprite } from './sprites.js';
-import { mountAvatar, mountPet, outfitIcon, DETAILED_PETS } from './sprites2.js';
+import { mountAvatar, mountPet, outfitIcon, petIcon } from './sprites2.js';
 import { startAutoUpdate } from './updates.js';
 import { isInstalled, isIOS, inAppBrowser, installInstructions, promptInstall, onInstallChange, canPromptInstall } from './install.js';
 
@@ -93,8 +93,10 @@ function rarityTag(r) {
 
 function itemImg(id, { hidden = false, cls = '' } = {}) {
   const item = ITEM[id];
-  const src = item.type === 'outfit' ? outfitIcon(id, { hidden }) : itemSprite(id, { hidden });
-  return `<img class="sprite ${cls} ${item.type === 'outfit' ? 'outfit-icon' : ''} ${hidden ? '' : 'glow-' + item.rarity}" src="${src}" alt="${hidden ? 'Unknown item' : esc(item.name)}">`;
+  const src = item.type === 'outfit' ? outfitIcon(id, { hidden })
+    : item.type === 'pet' ? petIcon(id, { hidden })
+    : itemSprite(id, { hidden });
+  return `<img class="sprite ${cls} ${item.type !== 'collection' ? 'outfit-icon' : ''} ${hidden ? '' : 'glow-' + item.rarity}" src="${src}" alt="${hidden ? 'Unknown item' : esc(item.name)}">`;
 }
 
 const SLOT_EMPTY_ICON = { head: '🎩', body: '👕', feet: '👢', pet: '🐾' };
@@ -140,9 +142,7 @@ function viewHome() {
     <section class="hero panel">
       <div class="avatar-wrap">
         <canvas class="avatar" id="avatar-canvas" role="img" aria-label="Your character"></canvas>
-        ${state.equipped.pet ? (DETAILED_PETS.includes(state.equipped.pet)
-          ? `<canvas class="avatar-pet detailed" id="pet-canvas" role="img" aria-label="${esc(ITEM[state.equipped.pet].name)}"></canvas>`
-          : `<img class="avatar-pet" src="${itemSprite(state.equipped.pet)}" alt="${esc(ITEM[state.equipped.pet].name)}">`) : ''}
+        ${state.equipped.pet ? `<canvas class="avatar-pet detailed" id="pet-canvas" role="img" aria-label="${esc(ITEM[state.equipped.pet].name)}"></canvas>` : ''}
       </div>
       <button class="name" data-action="rename">${esc(state.name)} <span class="muted">✎</span></button>
       <div class="stats">

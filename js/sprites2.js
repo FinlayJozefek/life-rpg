@@ -2,6 +2,7 @@
 // suits, hats...) and scale up with rarity: trim -> gems -> capes -> aura ->
 // animated mythic effects. Not used by the game yet; see dev/art.html.
 import { ITEM, RARITY, SKILL, slotFor } from './data.js';
+import { PET_ART, petDrawing } from './pets.js';
 
 export const AW = 32;           // avatar grid width
 export const AH = 52;           // avatar grid height
@@ -787,48 +788,12 @@ export function outfitIcon(outfitId, { scale = 4, hidden = false } = {}) {
   return url;
 }
 
-// ---------- hand-drawn pets (front-facing, 16x16, left half mirrored) ----------
-// Letters map to each pet's palette; '.' is empty. Outline is added automatically,
-// and the right-hand side is shaded darker for depth.
-const PETS = {
-  'fitness.fox': {
-    pal: { a: '#e0782a', b: '#a8501c', c: '#f6efe4', d: '#3a2418', e: '#1a1630', w: '#ffffff', n: '#1a1630' },
-    half: ['........', '.b......', '.ab.....', '.adb....', '.adab...', '.aaaaaaa', 'baaaaaaa', 'aaewaaaa', 'aaeeaaaa', 'caaaaaaa',
-      'cccaaaac', '.ccccccn', '..cccccc', '...aaacc', '...aaacc', '...dd.cc'],
-  },
-  'intelligence.owl': {
-    pal: { a: '#8a5a34', b: '#5e3a1e', c: '#e8d2a8', d: '#f2c14e', e: '#1a1630', w: '#ffffff' },
-    half: ['........', '.b......', '.bb.....', '..baaaaa', '.baaaaaa', '.acccaaa', 'acddddca', 'acdweedc', 'acddddca', 'aaccccad',
-      'bacccccd', 'baccbccc', 'bacccccc', '.baccbcc', '..bacccc', '....d..d'],
-  },
-  'fitness.cheetah': {
-    pal: { a: '#e8b648', b: '#b58324', c: '#f7ecd2', s: '#3a2a18', e: '#1a1630', w: '#ffffff', n: '#3a2a18' },
-    half: ['........', '..b.....', '.bab....', '.aaaaaaa', 'aasaaasa', 'aaaaasaa', 'aaewaaaa', 'saeeaaaa', 'aaasaaaa', 'caasaaac',
-      'ccaaaaac', '.ccccccn', '..cccccc', '...asacc', '...aaacc', '...bb.cc'],
-  },
-  'fitness.pegasus': {
-    pal: { a: '#f4f1ff', b: '#c3bce6', c: '#ffd84a', d: '#9fd3ff', e: '#1a1630', w: '#ffffff', n: '#e8a0b0' },
-    half: ['......cc', '....a.cc', '....aacc', 'd...aaac', 'dd..aaaa', 'ddd.aaaa', 'dddaewaa', 'ddbaeeaa', '.dbaaaaa', '..baaaaa',
-      '...baaaa', '...bbaaa', '...bbnaa', '....bbbb', '....a.aa', '....c.cc'],
-    aura: '#ffe680',
-  },
-  'mindfulness.jade-dragon': {
-    pal: { a: '#2fae6a', b: '#1d7a48', c: '#cdeeb0', d: '#ffd25e', e: '#1a1630', w: '#ffffff' },
-    half: ['..d.....', '..dd....', '...db...', 'b..bbaaa', 'bb.baaaa', 'bbbaaaaa', 'bbaaewaa', '.baaeeaa', '.baaaaaa', '..baaacc',
-      '..bacccc', '...bcccc', '...bacbc', '...baccc', '...ba.cc', '...dd...'],
-    aura: '#7dffc0',
-  },
-  'housekeeping.kitsune': {
-    pal: { a: '#f6f2ec', b: '#cfc6d8', c: '#ffffff', d: '#e0587a', e: '#1a1630', w: '#ffffff', f: '#6ad0ff', n: '#e0587a' },
-    half: ['f.......', 'ff.a....', '.f.ab...', 'ff.adb..', '.fadaab.', 'f.aaaaaa', '.baaaaaa', '.adeaaaa', '.adeeaaa', '.aaaaaaa',
-      '..baaaaa', '..bccccn', '...ccccc', 'f..aaacc', 'ff.aaacc', '.f.dd.cc'],
-    aura: '#9fe0ff',
-  },
-};
-export const DETAILED_PETS = Object.keys(PETS);
+// ---------- detailed pets (front-facing, 16x16, left half mirrored; art in pets.js) ----------
+// Outline is added automatically, and the right-hand side is shaded a touch darker.
+export const DETAILED_PETS = Object.keys(PET_ART);
 
 function buildPet(id) {
-  const P = PETS[id];
+  const P = petDrawing(id);
   const g = new Grid(22, 22);
   const eyes = [];
   g.oy = 3;
@@ -837,7 +802,7 @@ function buildPet(id) {
     [...full].forEach((ch, x) => {
       const col = P.pal[ch];
       if (!col) return;
-      const shade = x >= 11 && (ch === 'a' || ch === 'c') ? adj(col, -0.08, 0, 8) : col;
+      const shade = x >= 9 && (ch === 'a' || ch === 'c') ? adj(col, -0.07, 0, 6) : col;
       g.px(x + 3, y, shade);
       if (ch === 'e' || ch === 'w') eyes.push([x + 3, y + 3]);
     });
@@ -845,6 +810,22 @@ function buildPet(id) {
   g.oy = 0;
   g.outline();
   return { g, P, eyes };
+}
+
+const petIconCache = new Map();
+// Static pet icon for lists and the Collection. `hidden` gives an undiscovered silhouette.
+export function petIcon(id, { scale = 4, hidden = false } = {}) {
+  const key = `${id}|${scale}|${hidden}`;
+  if (petIconCache.has(key)) return petIconCache.get(key);
+  const { g } = buildPet(id);
+  const src = g.toCanvas();
+  const cv = document.createElement('canvas'); cv.width = 22 * scale; cv.height = 22 * scale;
+  const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(src, 0, 0, 22 * scale, 22 * scale);
+  if (hidden) { ctx.globalCompositeOperation = 'source-in'; ctx.fillStyle = '#2a2f55'; ctx.fillRect(0, 0, cv.width, cv.height); }
+  const url = cv.toDataURL();
+  petIconCache.set(key, url);
+  return url;
 }
 
 export function mountPet(canvas, id, { scale = 6, animate = true } = {}) {
@@ -856,7 +837,7 @@ export function mountPet(canvas, id, { scale = 6, animate = true } = {}) {
   blink.c = g.c.map((row) => row.slice());
   for (const [x, y] of eyes) blink.c[y][x] = adj(P.pal.a, -0.15);
   const blinkImg = blink.toCanvas();
-  const aura = P.aura || tier >= 4 ? auraMask(g, tier >= 6 ? 3 : 2) : [];
+  const aura = tier >= 4 ? auraMask(g, tier >= 6 ? 3 : 2) : [];
   canvas.width = 22 * scale; canvas.height = 22 * scale;
   const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
   const rnd = rng32(hashStr(id));
