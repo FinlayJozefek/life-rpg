@@ -53,12 +53,16 @@
   </script>
   <header class="topbar">
     <div class="brand">Life RPG</div>
-    <div class="coin-pill"><span class="coin-icon"></span><span id="coin-pill">0</span></div>
+    <div class="top-pills">
+      <button class="streak-pill" id="streak-pill" data-action="nav" data-view="quests" aria-label="Streak">🔥 <span id="streak-num">0</span></button>
+      <div class="coin-pill"><span class="coin-icon"></span><span id="coin-pill">0</span></div>
+    </div>
   </header>
   <main id="main"></main>
   <nav class="tabbar">
     <button data-action="nav" data-view="home"><span>🛡️</span>Character</button>
     <button data-action="nav" data-view="skills"><span>⚔️</span>Skills</button>
+    <button data-action="nav" data-view="quests"><span>📜</span>Quests<i class="tab-dot" id="quest-dot" hidden></i></button>
     <button data-action="nav" data-view="collection"><span>🎒</span>Collection</button>
     <button data-action="nav" data-view="settings"><span>⚙️</span>Settings</button>
   </nav>

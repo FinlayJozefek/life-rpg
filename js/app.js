@@ -2,11 +2,16 @@ import { SKILLS, SKILL, ITEM, ITEMS_BY_SKILL, RARITY, RARITIES, OUTFIT_XP_BOOST,
 import {
   load, save, newState, validateImport, levelProgress, previewLog, logActivity,
   boostsFor, pct, effectiveDropChance, sell, sellPrice, canSell, equip, isEquipped, totalLevel, discoveredCount, isCollectionComplete,
+  currentStreak, streakAtRisk, streakBonus,
   MAX_LEVEL,
 } from './game.js';
 import { itemSprite } from './sprites.js';
 import { mountAvatar, mountPet, outfitIcon, petIcon } from './sprites2.js';
 import { startAutoUpdate } from './updates.js';
+import { checkProgress, questsFor, rewardText, ACHIEVEMENTS, TITLES, TITLE, titleLabel, bestDrops } from './engage.js';
+import * as sfx from './sfx.js';
+import { drawCard } from './card.js';
+import { confetti, shake, flash, vibrate } from './celebrate.js';
 import { isInstalled, isIOS, inAppBrowser, installInstructions, promptInstall, onInstallChange, canPromptInstall } from './install.js';
 
 let state = load();
@@ -145,10 +150,15 @@ function viewHome() {
         ${state.equipped.pet ? `<canvas class="avatar-pet detailed" id="pet-canvas" role="img" aria-label="${esc(ITEM[state.equipped.pet].name)}"></canvas>` : ''}
       </div>
       <button class="name" data-action="rename">${esc(state.name)} <span class="muted">✎</span></button>
+      <button class="title-line" data-action="pick-title">${titleLabel(state) ? esc(titleLabel(state)) : '<span class="muted">No title yet</span>'} <span class="muted">▾</span></button>
       <div class="stats">
         <div><div class="stat-num">${totalLevel(state)}</div><div class="stat-label">Total level</div></div>
         <div><div class="stat-num coin">${fmt(state.coins)}</div><div class="stat-label">Coins</div></div>
         <div><div class="stat-num">${totalDiscovered}<span class="muted">/288</span></div><div class="stat-label">Items found</div></div>
+      </div>
+      <div class="btn-row hero-btns">
+        <button class="btn" data-action="achievements">🏆 Achievements <span class="muted">${Object.keys(state.achievements).length}/${ACHIEVEMENTS.length}</span></button>
+        <button class="btn" data-action="profile-card">🪪 Profile card</button>
       </div>
     </section>
     <section class="panel">
@@ -235,6 +245,10 @@ function viewSettings() {
       </div>
     </section>
     <section class="panel">
+      <h2>Sound</h2>
+      <button class="btn" data-action="toggle-sound">${sfx.isMuted() ? '🔇 Sound off: tap to turn on' : '🔊 Sound on: tap to mute'}</button>
+    </section>
+    <section class="panel">
       <h2>How it works</h2>
       <ul class="rules">
         <li>Each skill has a unit length. Every unit = <b>100 XP</b>, <b>10 coins</b> and <b>one drop roll</b>.</li>
@@ -252,7 +266,108 @@ function viewSettings() {
     <p class="muted center small">Life RPG v1 · solo edition</p>`;
 }
 
-const VIEWS = { home: viewHome, skills: viewSkills, collection: viewCollection, settings: viewSettings };
+function viewQuests() {
+  const quests = questsFor(state);
+  const streak = currentStreak(state);
+  const atRisk = streakAtRisk(state);
+  const bonus = streakBonus(streak);
+  const row = (q) => {
+    const pctDone = Math.min(1, q.progress / q.goal);
+    const prog = q.unit === 'min' ? `${fmtDuration(Math.min(q.progress, q.goal))} / ${fmtDuration(q.goal)}` : `${Math.min(q.progress, q.goal)} / ${q.goal}`;
+    return `<li class="quest ${q.claimed ? 'claimed' : ''}">
+      <span class="quest-icon">${q.claimed ? '✅' : q.icon}</span>
+      <span class="quest-body"><b>${esc(q.text)}</b>
+        <span class="bar"><span style="width:${(pctDone * 100).toFixed(0)}%"></span></span>
+        <span class="small muted">${prog} · Reward: ${rewardText(q.reward)}${q.claimed ? ' · claimed' : ''}</span></span>
+    </li>`;
+  };
+  const daily = quests.filter((q) => q.period === 'daily');
+  const weekly = quests.filter((q) => q.period === 'weekly');
+  return `
+    <section class="panel streak-card ${atRisk ? 'at-risk' : ''}">
+      <div class="flame">🔥</div>
+      <div class="streak-info">
+        <div class="streak-big">${streak} day${streak === 1 ? '' : 's'}</div>
+        <div class="small">${streak === 0 ? 'Log anything today to start a streak.'
+          : atRisk ? '<b>Log something today</b> or your streak resets at midnight!'
+          : 'Logged today. Come back tomorrow to keep it going.'}</div>
+        <div class="small muted">Streak bonus: <span class="boost">+${pct(bonus)} XP</span> (+1% a day from day 2, max +10%) · Best: ${state.bestStreak || 0}</div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Daily quests</h2>
+      <p class="muted small">New quests every day. Rewards are paid automatically when you log.</p>
+      <ul class="quest-list">${daily.map(row).join('')}</ul>
+    </section>
+    <section class="panel">
+      <h2>Weekly quests</h2>
+      <p class="muted small">Reset every Monday.</p>
+      <ul class="quest-list">${weekly.map(row).join('')}</ul>
+      ${state.bonusRolls ? `<p class="boost">✦ You have ${state.bonusRolls} bonus drop roll${state.bonusRolls > 1 ? 's' : ''} waiting: they're added to your next log.</p>` : ''}
+    </section>
+    <section class="panel">
+      <div class="btn-row">
+        <button class="btn" data-action="achievements">🏆 Achievements ${Object.keys(state.achievements).length}/${ACHIEVEMENTS.length}</button>
+        <button class="btn" data-action="pick-title">🎖️ Titles ${Object.keys(state.titlesUnlocked || {}).length}/${TITLES.length}</button>
+      </div>
+    </section>`;
+}
+
+function showAchievements() {
+  const cards = ACHIEVEMENTS.map((a) => {
+    const got = state.achievements[a.id];
+    const [have, goal] = a.have(state);
+    return `<div class="ach ${got ? 'got' : 'locked'}">
+      <div class="ach-icon">${got ? a.icon : '🔒'}</div>
+      <div class="ach-text"><b>${esc(a.name)}</b><span class="small">${esc(a.desc)}</span>
+        ${got ? `<span class="small boost">Earned ${new Date(got).toLocaleDateString()}</span>`
+          : goal > 1 ? `<span class="bar"><span style="width:${Math.min(100, (have / goal) * 100).toFixed(0)}%"></span></span><span class="small muted">${fmt(have)} / ${fmt(goal)}</span>` : ''}
+      </div></div>`;
+  }).join('');
+  openModal(`<h2>Achievements <span class="muted small">${Object.keys(state.achievements).length}/${ACHIEVEMENTS.length}</span></h2>
+    <div class="ach-grid">${cards}</div>
+    <button class="btn wide" data-action="close">Close</button>`);
+}
+
+function showTitles() {
+  const unlocked = state.titlesUnlocked || {};
+  const rows = TITLES.map((t) => {
+    const ok = unlocked[t.id];
+    return `<button class="pick title-pick ${state.title === t.id ? 'on' : ''}" ${ok ? `data-action="set-title" data-id="${t.id}"` : 'disabled'}>
+      <span class="title-icon">${ok ? '🎖️' : '🔒'}</span>
+      <span><b>${esc(state.name)} ${esc(t.label)}</b><br><span class="small muted">${esc(t.how)}</span></span>
+    </button>`;
+  }).join('');
+  openModal(`<h2>Titles</h2><p class="muted small">Shown under your name and on your profile card.</p>
+    <div class="pick-list">${rows}</div>
+    <div class="btn-row">${state.title ? '<button class="btn" data-action="set-title" data-id="">No title</button>' : ''}<button class="btn" data-action="close">Close</button></div>`);
+}
+
+let cardCanvas = null;
+async function showProfileCard() {
+  openModal('<h2>Profile card</h2><p class="muted">Drawing your card…</p>');
+  cardCanvas = await drawCard(state);
+  openModal(`<h2>Profile card</h2>
+    <img class="card-img" src="${cardCanvas.toDataURL('image/png')}" alt="Your profile card">
+    <p class="muted small center">Save it or send it to your mates.</p>
+    <div class="btn-row"><button class="btn" data-action="close">Close</button><button class="btn primary" data-action="share-card">Share / save</button></div>`);
+}
+
+async function shareCard() {
+  if (!cardCanvas) return;
+  const blob = await new Promise((res) => cardCanvas.toBlob(res, 'image/png'));
+  const file = new File([blob], `${state.name.replace(/[^\w-]+/g, '_')}-life-rpg.png`, { type: 'image/png' });
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'My Life RPG card' }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Card saved');
+}
+
+const VIEWS = { home: viewHome, skills: viewSkills, quests: viewQuests, collection: viewCollection, settings: viewSettings };
 
 let stopAnimations = [];
 
@@ -262,6 +377,11 @@ function render() {
   $main.innerHTML = VIEWS[view]();
   document.querySelectorAll('.tabbar button').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
   document.getElementById('coin-pill').textContent = fmt(state.coins);
+  const streak = currentStreak(state);
+  document.getElementById('streak-num').textContent = streak;
+  document.getElementById('streak-pill').classList.toggle('at-risk', streakAtRisk(state));
+  document.getElementById('streak-pill').classList.toggle('cold', streak === 0);
+  document.getElementById('quest-dot').hidden = !questsFor(state).some((q) => q.period === 'daily' && !q.claimed);
   if (view === 'collection') setupChipScroller();
   if (view === 'home') mountCharacter();
 }
@@ -340,9 +460,10 @@ function renderLogSheet() {
     <div class="preview">${prev ? `
       <div><b>+${fmt(prev.xp)}</b><span>XP</span></div>
       <div><b class="coin">+${fmt(prev.coins)}</b><span>coins</span></div>
-      <div><b>${prev.rolls}</b><span>drop roll${prev.rolls === 1 ? '' : 's'}</span></div>` : '<p class="muted">Enter how long you spent.</p>'}
+      <div><b>${prev.rolls + (state.bonusRolls || 0)}</b><span>drop roll${prev.rolls + (state.bonusRolls || 0) === 1 ? '' : 's'}</span></div>` : '<p class="muted">Enter how long you spent.</p>'}
     </div>
-    ${prev && prev.rolls === 0 ? `<p class="hint">Not a full unit yet, so no drop roll — the time carries over (${fmtDuration(prev.carryAfter)} of ${fmtDuration(s.unit)}).</p>` : ''}
+    ${prev && state.bonusRolls ? `<p class="hint boost">Includes ${state.bonusRolls} bonus roll${state.bonusRolls > 1 ? 's' : ''} from quests.</p>` : ''}
+    ${prev && prev.rolls === 0 && !state.bonusRolls ? `<p class="hint">Not a full unit yet, so no drop roll — the time carries over (${fmtDuration(prev.carryAfter)} of ${fmtDuration(s.unit)}).</p>` : ''}
     ${gearSection(s.id)}
     ${b.sources.length ? `<div class="boost-list">${b.sources.map((x) => `<div>✦ ${esc(x)}</div>`).join('')}</div>` : ''}
     <div class="btn-row">
@@ -378,45 +499,86 @@ function confirmLog() {
 }
 
 function doLog() {
+  sfx.unlock();
   const minutes = logDraft.hours * 60 + logDraft.minutes;
   const result = logActivity(state, logDraft.skill, minutes);
+  const progress = checkProgress(state);
   persist();
   logDraft = null;
-  showResult(result);
+  showResult(result, progress);
   render();
 }
 
-function showResult(r) {
+const MILESTONES = { 15: 'Apprentice', 30: 'Adept', 45: 'Master', 60: 'Maxed out' };
+
+// The result screen. Everything is revealed on a timeline: XP and coins, then each
+// drop (rarer ones later, louder and flashier), then level-ups, then quests,
+// achievements and titles. Sounds and effects are scheduled to match.
+function showResult(r, progress = { quests: [], achievements: [], titles: [] }) {
   const s = SKILL[r.skill];
   const drops = Object.entries(r.drops).sort(([a], [b]) => RARITY[ITEM[a].rarity].index - RARITY[ITEM[b].rarity].index);
-  const best = drops.length ? RARITY[ITEM[drops[drops.length - 1][0]].rarity].index : -1;
   const p = levelProgress(state.skills[r.skill].xp);
+  const levelled = r.levelAfter > r.levelBefore;
+  const milestone = [60, 45, 30, 15].find((m) => r.levelBefore < m && r.levelAfter >= m);
+
+  // reveal times (ms after the roll finishes)
+  let t = 350;
+  const dropTimes = drops.map(([id]) => {
+    const ri = RARITY[ITEM[id].rarity].index;
+    t += ri >= 5 ? 900 : ri >= 3 ? 520 : 170;           // dramatic pause before the big ones
+    return t;
+  });
+  const levelAt = t + 450;
+  const extrasAt = levelAt + (levelled ? (milestone ? 1600 : 900) : 0);
+
+  const banners = [];
+  if (r.completedCollection) banners.push(`<div class="banner levelup">📚 Collection complete! Permanent +${pct(COLLECTION_COMPLETE_XP_BOOST)} ${s.name} XP</div>`);
+  for (const id of r.newBadges) banners.push(`<div class="banner bonus">🏅 Badge earned: ${BADGE_COUNT}× ${esc(ITEM[id].name)}</div>`);
+  for (const q of progress.quests) banners.push(`<div class="banner quest">✅ Quest done: ${esc(q.text)}<span>+${rewardText(q.reward)}</span></div>`);
+  for (const a of progress.achievements) banners.push(`<div class="banner achieve">${a.icon} Achievement: <b>${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`);
+  for (const ti of progress.titles) {
+    const note = state.title === ti.id ? '<span>Now showing under your name</span>' : '<span>Pick it on your Character screen</span>';
+    banners.push(`<div class="banner title-unlock">🎖️ New title: <b>${esc(state.name)} ${esc(ti.label)}</b>${note}</div>`);
+  }
+
+  let levelBanner = '';
+  if (levelled) {
+    levelBanner = milestone
+      ? `<div class="banner levelup milestone"><small>Tier unlocked · ${MILESTONES[milestone]}</small>LEVEL ${r.levelAfter} ${s.name.toUpperCase()}</div>`
+      : `<div class="banner levelup">LEVEL UP! ${s.name} ${r.levelBefore} → ${r.levelAfter}</div>`;
+  }
+
+  const dropCards = drops.map(([id, n], i) => {
+    const it = ITEM[id];
+    const isNew = r.newDiscoveries.includes(id);
+    const count = n > 1 ? ` <b>x${n}</b>` : '';
+    const tags = `${rarityTag(it.rarity)}${isNew ? '<span class="new">NEW</span>' : ''}${it.type === 'pet' ? '<span class="new pet">PET</span>' : ''}`;
+    return `<div class="drop rar-${it.rarity}" style="animation-delay:${dropTimes[i]}ms">
+      ${itemImg(id)}
+      <div class="drop-text"><div>${esc(it.name)}${count}</div><div>${tags}</div></div>
+    </div>`;
+  }).join('');
+
+  const levelLine = p.level < MAX_LEVEL ? ` · ${fmt(p.into)} / ${fmt(p.needed)} XP` : ' · MAX';
   openModal(`
     <div class="roll-stage" id="roll-stage">
       <div class="roller"><div class="die">${s.icon}</div><div class="muted">Rolling ${r.rolls}× the ${s.name} table…</div></div>
     </div>
     <div class="result hidden" id="result">
       <h2>${s.name} · ${fmtDuration(r.minutes)}</h2>
+      ${r.streak >= 2 ? `<div class="streak-line">🔥 ${r.streak}-day streak</div>` : ''}
       ${r.bonusRoll ? '<div class="banner bonus">✦ Pet bonus roll! ✦</div>' : ''}
+      ${r.questRolls ? `<div class="banner quest">✦ ${r.questRolls} quest bonus roll${r.questRolls > 1 ? 's' : ''} used ✦</div>` : ''}
       <div class="gains">
         <div><b id="xp-count">+0</b><span>XP</span></div>
         <div><b class="coin" id="coin-count">+0</b><span>coins</span></div>
       </div>
       <div class="bar big"><span id="xp-bar" style="width:0%"></span></div>
-      <div class="muted small center">Level ${p.level}${p.level < MAX_LEVEL ? ` · ${fmt(p.into)} / ${fmt(p.needed)} XP` : ' · MAX'}</div>
-      ${r.levelAfter > r.levelBefore ? `<div class="banner levelup">LEVEL UP! ${s.name} ${r.levelBefore} → ${r.levelAfter}</div>` : ''}
+      <div class="muted small center">Level ${p.level}${levelLine}</div>
       <h3>${drops.length ? 'Drops' : 'No drops this time'}</h3>
-      <div class="drops">${drops.map(([id, n], i) => {
-        const it = ITEM[id];
-        const isNew = r.newDiscoveries.includes(id);
-        return `<div class="drop r-border-${it.rarity} ${RARITY[it.rarity].index >= 2 ? 'fancy' : ''}" style="animation-delay:${200 + i * 160 + (RARITY[it.rarity].index >= 3 ? 400 : 0)}ms">
-          ${itemImg(id)}
-          <div class="drop-text"><div>${esc(it.name)}${n > 1 ? ` <b>x${n}</b>` : ''}</div>
-          <div>${rarityTag(it.rarity)}${isNew ? '<span class="new">NEW</span>' : ''}${it.type === 'pet' ? '<span class="new pet">PET</span>' : ''}</div></div>
-        </div>`;
-      }).join('')}</div>
-      ${r.completedCollection ? `<div class="banner levelup">Collection complete! Permanent +${pct(COLLECTION_COMPLETE_XP_BOOST)} ${s.name} XP</div>` : ''}
-      ${r.newBadges.map((id) => `<div class="banner bonus">🏅 Badge earned: ${BADGE_COUNT}× ${esc(ITEM[id].name)}</div>`).join('')}
+      <div class="drops">${dropCards}</div>
+      ${levelBanner ? `<div class="later lvl">${levelBanner}</div>` : ''}
+      ${banners.length ? `<div class="later extras">${banners.join('')}</div>` : ''}
       <button class="btn primary wide" data-action="close">Continue</button>
     </div>`, { cls: 'result-sheet' });
 
@@ -429,7 +591,21 @@ function showResult(r) {
       const bar = document.getElementById('xp-bar');
       if (bar) bar.style.width = `${(p.pct * 100).toFixed(1)}%`;
     }, 50);
-    if (best >= 2 && navigator.vibrate) navigator.vibrate(best >= 4 ? [80, 60, 160] : 60);
+    const sheet = $modal;   // shake the whole pop-up layer (works however the sheet is positioned)
+    drops.forEach(([id], i) => setTimeout(() => {
+      const ri = RARITY[ITEM[id].rarity].index;
+      sfx.dropSound(ri);
+      if (ri >= 5) { shake(sheet, true); flash(`${RARITY[ITEM[id].rarity].color}aa`); vibrate([90, 50, 200]); }
+      else if (ri >= 4) { shake(sheet); vibrate([60, 40, 120]); }
+      else if (ri >= 3) vibrate(50);
+    }, dropTimes[i]));
+    if (levelled) setTimeout(() => {
+      document.querySelector('.later.lvl')?.classList.add('show');
+      sfx.levelUpSound(!!milestone);
+      confetti(milestone ? { count: 220, duration: 3600, colors: ['#ffc94a', '#ffe680', '#fff4b0', '#3ee0a0'] } : {});
+      if (milestone) { shake(sheet); vibrate([100, 60, 100, 60, 250]); }
+    }, levelAt);
+    if (banners.length) setTimeout(() => { document.querySelector('.later.extras')?.classList.add('show'); sfx.chime(); }, extrasAt);
   }, 1100);
 }
 
@@ -606,6 +782,7 @@ async function restore(file) {
 
 // ---------- Events ----------
 document.addEventListener('click', (e) => {
+  sfx.unlock();   // phones only allow sound after a tap
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const a = el.dataset.action;
@@ -632,6 +809,12 @@ document.addEventListener('click', (e) => {
     }
     case 'item': showItem(el.dataset.id); break;
     case 'equip': equip(state, el.dataset.id); persist(); render(); showItem(el.dataset.id); break;
+    case 'achievements': showAchievements(); break;
+    case 'pick-title': showTitles(); break;
+    case 'set-title': state.title = el.dataset.id || null; persist(); render(); showTitles(); break;
+    case 'profile-card': showProfileCard(); break;
+    case 'share-card': shareCard(); break;
+    case 'toggle-sound': sfx.setMuted(!sfx.isMuted()); if (!sfx.isMuted()) { sfx.unlock(); sfx.chime(); } render(); break;
     case 'equip-best': {
       for (const t of GEAR_SLOTS) if (canUpgrade(el.dataset.skill, t)) state.equipped[t] = bestGear(el.dataset.skill, t);
       persist(); render(); renderLogSheet(); toast(`${SKILL[el.dataset.skill].name} gear equipped`);
@@ -650,7 +833,9 @@ document.addEventListener('click', (e) => {
     case 'pick-slot': pickSlot(el.dataset.type); break;
     case 'sell': {
       const got = sell(state, el.dataset.id, Number(el.dataset.qty));
+      const prog = checkProgress(state);
       persist(); render(); toast(`+${fmt(got)} coins`);
+      for (const ach of prog.achievements) setTimeout(() => { sfx.chime(); toast(`${ach.icon} Achievement: ${ach.name}`); }, 900);
       if (state.items[el.dataset.id] > 0) showItem(el.dataset.id); else closeModal();
       break;
     }

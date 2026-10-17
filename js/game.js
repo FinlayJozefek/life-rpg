@@ -63,7 +63,39 @@ export function newState() {
     everOwned: {},    // itemId -> true (for collection completion / discovery)
     equipped: { head: null, body: null, feet: null, pet: null },
     log: [],          // recent log entries, newest first
+    days: {},         // 'YYYY-MM-DD' (local) -> { min, skills: { skillId: minutes } } — streaks and quests
+    bestStreak: 0,
+    bonusRolls: 0,    // extra drop rolls earned from quests, used on the next log
+    quests: { claimed: {} },
+    achievements: {}, // id -> time earned
+    title: null,      // chosen title id
   };
+}
+
+// ---------- Days & streaks ----------
+export function dayKey(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+
+// Consecutive days with at least one log, counting back from today (or from
+// yesterday if nothing is logged yet today, so the streak isn't "lost" until the day ends).
+export function currentStreak(state, now = new Date()) {
+  let d = state.days[dayKey(now)] ? now : addDays(now, -1);
+  let n = 0;
+  while (state.days[dayKey(d)]) { n++; d = addDays(d, -1); }
+  return n;
+}
+export const streakAtRisk = (state, now = new Date()) => !state.days[dayKey(now)] && currentStreak(state, now) > 0;
+
+// +1% XP per streak day, from day 2, capped at +10%.
+export const STREAK_BONUS_PER_DAY = 0.01;
+export const STREAK_BONUS_CAP = 0.10;
+export function streakBonus(streak) { return streak >= 2 ? Math.min(STREAK_BONUS_CAP, streak * STREAK_BONUS_PER_DAY) : 0; }
+// The streak a log made right now would count towards (today included).
+function streakIfLoggedNow(state, now = new Date()) {
+  if (state.days[dayKey(now)]) return currentStreak(state, now);
+  return currentStreak(state, addDays(now, -1)) + 1;
 }
 
 export function load() {
@@ -101,6 +133,16 @@ function migrate(s) {
     const old = out.equipped.outfit;
     delete out.equipped.outfit;
     if (old && ITEM[old]?.slot) out.equipped[ITEM[old].slot] = old;
+  }
+  out.quests = { ...base.quests, ...(s.quests || {}) };
+  // Saves from before streaks: rebuild the day history from the recent log.
+  if (!s.days) {
+    out.days = {};
+    for (const e of out.log) {
+      const k = dayKey(new Date(e.at));
+      const d = (out.days[k] ||= { min: 0, skills: {} });
+      d.min += e.minutes; d.skills[e.skill] = (d.skills[e.skill] || 0) + e.minutes;
+    }
   }
   return out;
 }
@@ -141,6 +183,12 @@ export function boostsFor(state, skillId) {
   if (isCollectionComplete(state, skillId)) {
     b.xp += COLLECTION_COMPLETE_XP_BOOST;
     b.sources.push(`Full collection: +${pct(COLLECTION_COMPLETE_XP_BOOST)} XP`);
+  }
+  const streak = streakIfLoggedNow(state);
+  const sb = streakBonus(streak);
+  if (sb) {
+    b.xp += sb;
+    b.sources.push(`🔥 ${streak}-day streak: +${pct(sb)} XP`);
   }
   return b;
 }
@@ -235,13 +283,21 @@ export function logActivity(state, skillId, minutes, rng = Math.random) {
 
   let bonusRoll = false;
   if (p.boosts.bonusRollChance > 0 && rng() < p.boosts.bonusRollChance) bonusRoll = true;
-  const totalRolls = p.rolls + (bonusRoll ? 1 : 0);
+  const questRolls = state.bonusRolls || 0;          // earned from quests
+  state.bonusRolls = 0;
+  const totalRolls = p.rolls + (bonusRoll ? 1 : 0) + questRolls;
   const drops = rollDrops(state, skillId, totalRolls, p.boosts.luck, rng);
 
   s.xp += p.xp;
   s.carryMin = p.carryAfter;
   s.totalMin += minutes;
   state.coins += p.coins;
+
+  const today = (state.days[dayKey()] ||= { min: 0, skills: {} });
+  today.min += minutes;
+  today.skills[skillId] = (today.skills[skillId] || 0) + minutes;
+  const streak = currentStreak(state);
+  state.bestStreak = Math.max(state.bestStreak || 0, streak);
 
   const newDiscoveries = [];
   const newBadges = [];
@@ -258,8 +314,8 @@ export function logActivity(state, skillId, minutes, rng = Math.random) {
   const levelAfter = levelForXp(s.xp);
   const result = {
     at: Date.now(), skill: skillId, minutes, xp: p.xp, coins: p.coins, rolls: totalRolls,
-    bonusRoll, drops, newDiscoveries, newBadges, completedCollection,
-    levelBefore, levelAfter,
+    bonusRoll, questRolls, drops, newDiscoveries, newBadges, completedCollection,
+    levelBefore, levelAfter, streak,
   };
   state.log.unshift({ at: result.at, skill: skillId, minutes, xp: p.xp, coins: p.coins, drops });
   state.log = state.log.slice(0, 50);
