@@ -713,9 +713,27 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW registration failed', e));
 }
 
+// Fade the splash (in index.html) out once the first screen is drawn. It stays at
+// least long enough for the logo to fade in, and is skipped after an auto-update
+// reload so updates feel instant.
+function hideSplash() {
+  const splash = document.getElementById('splash');
+  if (!splash) return Promise.resolve();
+  let quick = false;
+  try { quick = sessionStorage.getItem('liferpg.quickStart') === '1'; sessionStorage.removeItem('liferpg.quickStart'); } catch {}
+  const minShow = quick ? 0 : 1300;
+  const wait = Math.max(0, minShow - performance.now());
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      splash.classList.add('out');
+      setTimeout(() => { splash.remove(); resolve(); }, quick ? 0 : 560);
+    }, wait);
+  });
+}
+
 // Re-render when the install state changes (Android/desktop install prompt becomes available, or app installed).
 onInstallChange(() => { if (state.onboarded && !$modal.classList.contains('open')) render(); });
 
 render();
-if (!state.onboarded) welcome();
+hideSplash().then(() => { if (!state.onboarded) welcome(); });
 startAutoUpdate({ isBusy: () => $modal.classList.contains('open') && state.onboarded });

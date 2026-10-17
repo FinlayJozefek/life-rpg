@@ -26,6 +26,7 @@ function reloadWhenIdle(isBusy) {
   pendingReload = true;
   const tryReload = () => {
     if (isBusy()) return setTimeout(tryReload, 1000);
+    try { sessionStorage.setItem('liferpg.quickStart', '1'); } catch {}   // skip the splash after updating
     location.reload();
   };
   tryReload();
