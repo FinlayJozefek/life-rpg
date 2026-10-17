@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill icon options</title>
+<!-- Dev-only page: compare skill icon styles. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding-bottom: 40px; }
+  main { max-width: 900px; padding-left: 8px; padding-right: 8px; }
+  .panel { padding: 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 4px; text-align: center; }
+  th { font-family: var(--display-font); color: var(--gold); font-size: 13px; }
+  th small { display: block; font-family: system-ui, sans-serif; color: var(--muted); font-weight: 400; font-size: 10px; }
+  td.name { text-align: left; font-size: 13px; }
+  td img { width: 48px; height: 48px; image-rendering: pixelated; display: block; margin: 0 auto; }
+  td.emoji { font-size: 30px; }
+  .preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .pv h3 { margin: 0 0 6px; }
+  .pv .skill-row { pointer-events: none; padding: 6px; }
+  .pv .skill-icon img { width: 40px; height: 40px; image-rendering: pixelated; }
+  .pv .skill-icon { background: none; border: 0; }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="brand">Skill icons</div><div class="muted small">pick a style · ask for edits</div></header>
+<main>
+  <section class="panel">
+    <h2>All skills, every style</h2>
+    <table id="table"></table>
+  </section>
+  <section class="panel">
+    <h2>How the Skills screen would look</h2>
+    <div class="preview" id="preview"></div>
+  </section>
+</main>
+<script type="module">
+import { SKILLS } from '../js/data.js';
+import { skillIcon, STYLES } from '../js/skillicons.js';
+
+const t = document.getElementById('table');
+t.innerHTML = `<tr><th>Skill</th><th>Now<small>emoji</small></th>${STYLES.map((s, i) => `<th>${String.fromCharCode(65 + i)}. ${s.name}<small>${s.blurb}</small></th>`).join('')}</tr>` +
+  SKILLS.map((k) => `<tr><td class="name">${k.name}</td><td class="emoji">${k.icon}</td>${STYLES.map((s) => `<td><img src="${skillIcon(k.id, s.id)}" alt=""></td>`).join('')}</tr>`).join('');
+
+const pv = document.getElementById('preview');
+pv.innerHTML = STYLES.map((s, i) => `<div class="pv"><h3>${String.fromCharCode(65 + i)}. ${s.name}</h3><ul class="skill-list">${SKILLS.slice(0, 4).map((k) => `
+  <li><div class="skill-row"><span class="skill-icon"><img src="${skillIcon(k.id, s.id)}" alt=""></span>
+  <span class="skill-body"><span class="skill-top"><b>${k.name}</b><span class="lvl">Lv 12</span></span>
+  <span class="bar"><span style="width:45%"></span></span><span class="skill-sub muted">1 unit = ${k.unit} min</span></span></div></li>`).join('')}</ul></div>`).join('');
+</script>
+</body>
+</html>
