@@ -24,7 +24,7 @@ function bestWeapon(ids, family) {
   };
   return ids.slice().sort((a, b) => score(b) - score(a))[0];
 }
-const ofRarity = (sec, slot, rarities) => DITEMS_BY_SECTION[sec].filter((i) => i.slot === slot && rarities.includes(i.rarity)).map((i) => i.id);
+const ofRarity = (sec, slot, rarities) => DITEMS_BY_SECTION[sec].filter((i) => !i.shopOnly && i.slot === slot && rarities.includes(i.rarity)).map((i) => i.id);
 export function loadout(sec, kind, family = SECTIONS[sec - 1].family) {
   const eq = {};
   if (kind === 'starter') {

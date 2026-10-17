@@ -252,6 +252,10 @@ const G = {
     ['legendary', 'chest', 'Golemheart Plate', null, { defMult: 1.5, reflect: 0.15 }],
     ['legendary', 'weapon', 'Mountainheart Hammer', 'hammer', { sig: ['Quake', 'Landslide'] }],
     ['mythic', 'weapon', "Titan's Fist", 'gauntlet', { titan: true, sig: ['Titan Strike', 'Colossus'] }],
+    // Blacksmith exclusives (bought, never dropped)
+    ['legendary', 'chest', 'Deepforge Cuirass', null, { shopOnly: true, defMult: 1.3, healStart: 0.15 }],
+    ['legendary', 'weapon', "Runesmith's Maul", 'hammer', { shopOnly: true, ignoreDef: 0.25, sig: ['Rune Strike', 'Landslide'] }],
+    ['mythic', 'offhand', 'Heart of the Mountain', 'relic', { shopOnly: true, allStats: 0.2, reflect: 0.2, cheatDeath: true }],
   ],
   4: [
     ['common', 'weapon', 'Ice Pick', 'dagger'], ['common', 'helmet', 'Fur Hat'], ['common', 'chest', 'Padded Parka'],
@@ -268,6 +272,10 @@ const G = {
     ['legendary', 'helmet', 'Wyrmscale Helm', null, { freezeImmune: true, crit: 0.2 }],
     ['legendary', 'weapon', 'Wyrmfang Bow', 'bow', { sig: ['Frost Volley', 'Piercing Gale'] }],
     ['mythic', 'weapon', 'Blizzard Staff', 'staff', { dtype: 'frost', blizzard: 0.25, sig: ['Whiteout', 'Avalanche'] }],
+    // Blacksmith exclusives
+    ['legendary', 'boots', 'Windrunner Boots', null, { shopOnly: true, dodge: 0.12, firstStrike: true }],
+    ['legendary', 'offhand', 'Everfrost Lantern', 'lantern', { shopOnly: true, dodge: 0.1, freezeImmune: true, slowOnHit: 0.3 }],
+    ['mythic', 'chest', 'Aurora Plate', null, { shopOnly: true, defMult: 1.4, healStart: 0.25, freezeImmune: true }],
   ],
   5: [
     ['common', 'weapon', 'Charred Blade', 'sword'], ['common', 'helmet', 'Ashen Hood'], ['common', 'chest', 'Cinder Tunic'],
@@ -285,6 +293,10 @@ const G = {
     ['legendary', 'weapon', "Demon Lord's Trident", 'spear', { dtype: 'fire', sig: ['Infernal Impale', 'Brimstone Rain'] }],
     ['mythic', 'weapon', 'Ashbringer', 'sword', { dtype: 'holy', killHeal: 1, sig: ['Dawnbreak', 'Purify'] }],
     ['divine', 'offhand', 'Wings of the Seraph', 'relic', { allStats: 0.3, cheatDeath: true }],
+    // Blacksmith exclusives
+    ['legendary', 'legs', 'Cinderwalker Greaves', null, { shopOnly: true, dmgPct: 0.1, burnAttackers: 0.5 }],
+    ['legendary', 'offhand', 'Tome of Ash', 'tome', { shopOnly: true, dtype: 'fire', burnOnHit: 0.25 }],
+    ['mythic', 'helmet', 'Crown of the Phoenix', null, { shopOnly: true, crit: 0.15, healStart: 0.3, dmgPct: 0.15 }],
   ],
 };
 
@@ -322,7 +334,7 @@ for (const [sec, list] of Object.entries(G)) {
       kind: slot === 'weapon' ? kind : slot === 'offhand' ? kind : 'armour',
       weaponType: slot === 'weapon' ? kind : null,
       stats, ...extra,
-      bossOnly: rarity === 'legendary' || (rarity === 'divine'),
+      bossOnly: !extra.shopOnly && (rarity === 'legendary' || rarity === 'divine'),
     };
   }
 }

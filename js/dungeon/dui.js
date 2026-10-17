@@ -16,6 +16,8 @@ let api = null;          // helpers from app.js
 let sub = 'hub';         // hub | gear | smith | potions
 let battle = null;       // current fight UI state
 let run = null;          // current floor run
+let smithMode = 'buy';   // buy | upgrade
+const openFold = {};     // which section folder is open in each list: { pack, buy, upgrade }
 
 export function init(helpers) { api = helpers; }
 const S = () => api.state();
@@ -144,6 +146,27 @@ export function view() {
     </div></div>`;
 }
 
+// ---------- section folders ----------
+// One fold-out row per tower section; only one is open at a time. groups: [{ key, title, sub, icon, locked, count, body }]
+function folders(list, groups, fallback) {
+  if (!(list in openFold)) openFold[list] = fallback;
+  return groups.map((g) => {
+    const open = openFold[list] === g.key && !g.locked;
+    return `<div class="d-fold ${open ? 'open' : ''} ${g.locked ? 'locked' : ''}">
+      <button class="d-fold-head" ${g.locked ? 'disabled' : `data-action="d-fold" data-list="${list}" data-key="${g.key}"`}>
+        <span class="d-fold-icon">${g.icon}</span>
+        <span class="d-fold-title"><b>${g.title}</b><span class="small muted">${g.sub}</span></span>
+        <span class="d-fold-count">${g.locked ? '🔒' : g.count}</span><span class="d-fold-chev">${g.locked ? '' : '›'}</span>
+      </button>
+      ${open ? `<div class="d-fold-body">${g.body}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+const RAR_ORDER = ['divine', 'mythic', 'legendary', 'epic', 'rare', 'uncommon', 'common'];
+const byRarity = (a, b) => RAR_ORDER.indexOf(DITEMS[a].rarity) - RAR_ORDER.indexOf(DITEMS[b].rarity);
+const homeSection = (id) => Math.max(1, DITEMS[id].section);   // starter kit lives with section 1
+const secIcon = (k) => `<img src="${enemyIcon(SECTIONS[k - 1].boss, 2)}" alt="">`;
+
 // ---------- gear ----------
 function viewGear() {
   const dg = d();
@@ -156,14 +179,18 @@ function viewGear() {
       <span class="d-slot-text"><span class="slot-label">${SLOT_NAME_D[slot]}</span><span class="gear-name">${id ? itemName(id) : '<span class="muted">Empty</span>'}</span><span class="small muted">${id ? statLine(id) : ''}</span></span>
     </button>`;
   }).join('');
-  const owned = Object.keys(dg.inv).filter((id) => dg.inv[id] > 0)
-    .sort((a, b) => DITEMS[b].section - DITEMS[a].section || ['divine', 'mythic', 'legendary', 'epic', 'rare', 'uncommon', 'common'].indexOf(DITEMS[a].rarity) - ['divine', 'mythic', 'legendary', 'epic', 'rare', 'uncommon', 'common'].indexOf(DITEMS[b].rarity));
-  const list = owned.map((id) => {
+  const owned = Object.keys(dg.inv).filter((id) => dg.inv[id] > 0).sort(byRarity);
+  const invRow = (id) => {
     const eq = Object.values(dg.equipped).includes(id);
     return `<button class="d-inv r-border-${DITEMS[id].rarity}" data-action="d-item" data-id="${id}">
       ${gearImg(id)}<span class="d-inv-text"><b>${itemName(id)}</b>${dg.inv[id] > 1 ? ` <span class="muted">x${dg.inv[id]}</span>` : ''}${eq ? ' <span class="eq">E</span>' : ''}<br>
       <span class="small">${rarTag(DITEMS[id].rarity)} <span class="muted">${SLOT_NAME_D[DITEMS[id].slot]} · ${statLine(id)}</span></span></span></button>`;
-  }).join('');
+  };
+  const pack = folders('pack', SECTIONS.map((sec) => {
+    const ids = owned.filter((id) => homeSection(id) === sec.id);
+    return { key: sec.id, title: esc(sec.name), sub: ids.length ? `${ids.length} item${ids.length > 1 ? 's' : ''}` : 'nothing yet', icon: secIcon(sec.id), count: ids.length,
+      locked: !ids.length && !sectionUnlocked(dg, sec.id), body: ids.map(invRow).join('') || '<p class="muted small">Nothing from here yet.</p>' };
+  }), Math.max(1, ...owned.map(homeSection)));
   const mats = Object.entries(dg.materials).filter(([, n]) => n > 0).map(([m, n]) => `${esc(MATERIALS[m].name)} ×${n}`).join(' · ') || 'none yet';
   const pots = Object.entries(dg.potions).filter(([, n]) => n > 0).map(([k, n]) => `${esc(POTIONS[k].name)} ×${n}`).join(' · ') || 'none';
   return `
@@ -176,7 +203,7 @@ function viewGear() {
       <h3>Moves</h3>
       <ul class="d-moves">${p.moves.map((mv) => `<li><b>${esc(mv.name)}</b>${mv.sig ? ' <span class="new">SIGNATURE</span>' : ''}<br><span class="small muted">${moveText(mv, p)}</span></li>`).join('')}</ul>
     </section>
-    <section class="panel"><h2>Backpack</h2><p class="small muted">Materials: ${mats}<br>Potions: ${pots}</p><div class="d-inv-list">${list || '<p class="muted">Nothing yet.</p>'}</div></section>`;
+    <section class="panel"><h2>Backpack</h2><p class="small muted">Materials: ${mats}<br>Potions: ${pots}</p><div class="d-folds">${pack}</div></section>`;
 }
 
 function showItem(id) {
@@ -208,21 +235,45 @@ function showItem(id) {
 function viewSmith() {
   const dg = d();
   const coins = S().coins;
-  const stock = blacksmithStock(dg).map((it) => `<div class="d-shop-row">${gearImg(it.id)}<span class="d-inv-text"><b>${esc(it.name)}</b><br><span class="small">${rarTag(it.rarity)} <span class="muted">${SLOT_NAME_D[it.slot]} · ${statLine(it.id)}</span></span></span>
-    <button class="btn" data-action="d-buy" data-id="${it.id}" ${coins >= buyPrice(it.id) ? '' : 'disabled'}>${fmt(buyPrice(it.id))}</button></div>`).join('');
-  const ups = Object.keys(dg.inv).filter((id) => dg.inv[id] > 0).map((id) => {
+  const cur = sectionOf(Math.min(50, dg.climb));
+  const stock = blacksmithStock(dg);
+  const buyRow = (it) => `<div class="d-shop-row ${it.shopOnly ? `d-exclusive r-border-${it.rarity}` : ''}">${gearImg(it.id)}<span class="d-inv-text"><b>${esc(it.name)}</b>${dg.inv[it.id] ? ' <span class="muted small">(owned)</span>' : ''}<br><span class="small">${rarTag(it.rarity)} <span class="muted">${SLOT_NAME_D[it.slot]} · ${statLine(it.id)}</span></span>
+      ${it.shopOnly && passiveText(it).length ? `<br><span class="small boost">${esc(passiveText(it).join(' · '))}</span>` : ''}</span>
+    <button class="btn" data-action="d-buy" data-id="${it.id}" ${coins >= buyPrice(it.id) ? '' : 'disabled'}>${fmt(buyPrice(it.id))}</button></div>`;
+  const upRow = (id) => {
     const plus = dg.upgrades[id] || 0;
     if (plus >= MAX_PLUS) return `<div class="d-shop-row">${gearImg(id)}<span class="d-inv-text"><b>${itemName(id)}</b><br><span class="small muted">Fully upgraded</span></span></div>`;
     const c = upgradeCost(id, plus);
     const have = dg.materials[c.material] || 0;
     const ok = coins >= c.coins && have >= c.count;
-    return `<div class="d-shop-row">${gearImg(id)}<span class="d-inv-text"><b>${itemName(id)}</b> → <b class="plus">+${plus + 1}</b><br><span class="small muted">${fmt(c.coins)} coins + ${c.count} ${esc(MATERIALS[c.material].name)} (have ${have})</span></span>
+    return `<div class="d-shop-row">${gearImg(id)}<span class="d-inv-text"><b>${itemName(id)}</b> → <b class="plus">+${plus + 1}</b><br><span class="small muted">${fmt(c.coins)} coins + ${c.count} ${esc(MATERIALS[c.material].name)} <span class="${have >= c.count ? '' : 'd-red'}">(have ${have})</span></span></span>
       <button class="btn" data-action="d-upgrade" data-id="${id}" ${ok ? '' : 'disabled'}>Upgrade</button></div>`;
-  }).join('');
+  };
+  let body;
+  if (smithMode === 'buy') {
+    body = folders('buy', SECTIONS.map((sec) => {
+      const items = stock.filter((i) => i.section === sec.id);
+      const exclusive = items.filter((i) => i.shopOnly).sort((x, y) => byRarity(x.id, y.id));
+      const basic = items.filter((i) => !i.shopOnly);
+      const hasExcl = Object.values(DITEMS).some((i) => i.shopOnly && i.section === sec.id);
+      return { key: sec.id, title: esc(sec.name), icon: secIcon(sec.id), count: items.length, locked: !sectionUnlocked(dg, sec.id),
+        sub: hasExcl ? '<span class="d-gold">Legendary & Mythic for sale</span>' : 'Common & Uncommon',
+        body: (exclusive.length ? `<h4 class="d-fold-h">Masterworks · only sold here</h4>${exclusive.map(buyRow).join('')}<h4 class="d-fold-h">Everyday gear</h4>` : '') + basic.map(buyRow).join('') };
+    }), cur);
+  } else {
+    const owned = Object.keys(dg.inv).filter((id) => dg.inv[id] > 0).sort(byRarity);
+    body = folders('upgrade', SECTIONS.map((sec) => {
+      const ids = owned.filter((id) => homeSection(id) === sec.id);
+      return { key: sec.id, title: esc(sec.name), icon: secIcon(sec.id), count: ids.length, locked: !ids.length && !sectionUnlocked(dg, sec.id),
+        sub: `uses ${esc(MATERIALS[materialFor(sec.id)].name)} · you have ${dg.materials[materialFor(sec.id)] || 0}`,
+        body: ids.map(upRow).join('') || '<p class="muted small">No gear from here yet.</p>' };
+    }), cur);
+  }
   return `<section class="panel"><button class="btn d-back" data-action="d-sub" data-sub="hub">‹ Tower</button>
-      <h2>Blacksmith</h2><p class="small muted">Coins: <b class="coin">${fmt(coins)}</b> (shared with your life skills). Each upgrade adds ${6}% to an item's stats, up to +${MAX_PLUS}.</p>
-      <h3>Upgrade</h3><div class="d-shop">${ups || '<p class="muted">No gear yet.</p>'}</div>
-      <h3>Buy</h3><div class="d-shop">${stock}</div></section>`;
+      <h2>Blacksmith</h2><p class="small muted">Coins: <b class="coin">${fmt(coins)}</b> (shared with your life skills).</p>
+      <div class="d-seg-toggle"><button class="${smithMode === 'buy' ? 'on' : ''}" data-action="d-smith-mode" data-mode="buy">Buy</button><button class="${smithMode === 'upgrade' ? 'on' : ''}" data-action="d-smith-mode" data-mode="upgrade">Upgrade</button></div>
+      ${smithMode === 'upgrade' ? `<p class="small muted">Each upgrade adds 6% to an item's stats, up to +${MAX_PLUS}, using the material from that item's section.</p>` : ''}
+      <div class="d-folds">${body}</div></section>`;
 }
 
 // ---------- Potion Shop ----------
@@ -518,6 +569,8 @@ export function action(a, el) {
       api.toast('Starter kit added to your Dungeon gear');
       return true;
     }
+    case 'd-fold': { const k = Number(el.dataset.key); openFold[el.dataset.list] = openFold[el.dataset.list] === k ? null : k; api.render(); return true; }
+    case 'd-smith-mode': smithMode = el.dataset.mode; api.render(); return true;
     case 'd-sub': sub = el.dataset.sub; api.render(); window.scrollTo(0, 0); return true;
     case 'd-floor': {
       const f = Number(el.dataset.floor);

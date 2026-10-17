@@ -706,3 +706,24 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 /* six tabs: keep labels on one line on narrow phones */
 .tabbar button { font-size: 9.5px; letter-spacing: -0.01em; padding: 0 1px; }
 .ui-ic.tab-ic { width: 27px; height: 27px; }
+
+/* Dungeon: fold-out section lists (Backpack, Blacksmith) */
+.d-folds { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.d-fold { border: 2px solid var(--line); border-radius: 12px; background: var(--panel-2); overflow: hidden; }
+.d-fold.open { border-color: var(--gold-dark); }
+.d-fold.locked { opacity: 0.5; }
+.d-fold-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: none; border: 0; color: var(--text); text-align: left; cursor: pointer; }
+.d-fold-head:disabled { cursor: default; }
+.d-fold-icon img { width: 36px; height: 36px; image-rendering: pixelated; display: block; }
+.d-fold-title { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.d-fold-title b { font-family: var(--display-font); font-size: 14px; }
+.d-fold-count { font-weight: 700; color: var(--muted); font-size: 13px; }
+.d-fold-chev { font-size: 22px; color: var(--gold); transition: transform 0.15s; width: 14px; text-align: center; }
+.d-fold.open .d-fold-chev { transform: rotate(90deg); }
+.d-fold-body { display: flex; flex-direction: column; gap: 6px; padding: 0 8px 8px; }
+.d-fold-h { margin: 6px 2px 0; font: 700 12px var(--display-font); color: var(--gold); letter-spacing: 0.5px; }
+.d-gold { color: var(--gold); }
+.d-exclusive { background: linear-gradient(90deg, rgba(255, 201, 74, 0.1), transparent 60%), var(--panel-2); }
+.d-seg-toggle { display: flex; gap: 0; margin: 4px 0 2px; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; }
+.d-seg-toggle button { flex: 1; padding: 9px 0; background: var(--panel-2); border: 0; color: var(--muted); font: 700 14px var(--display-font); cursor: pointer; }
+.d-seg-toggle button.on { background: var(--gold-bg); color: var(--gold); }

@@ -200,7 +200,7 @@ const DROP = { common: 0.09, uncommon: 0.045, rare: 0.016, epic: 0.005, mythic: 
 export function rollEnemyDrops(e, rng = Math.random, luck = 1) {
   const drops = [];
   const height = 0.7 + 0.06 * e.fis;
-  const pool = DITEMS_BY_SECTION[e.section].filter((i) => !i.bossOnly);
+  const pool = DITEMS_BY_SECTION[e.section].filter((i) => !i.bossOnly && !i.shopOnly);
   for (const r of ['common', 'uncommon', 'rare', 'epic', 'mythic']) {
     if (r === 'mythic' && e.section < 3) continue;
     if (rng() < DROP[r] * height * (r === 'common' ? 1 : luck)) {
@@ -214,7 +214,7 @@ export function rollEnemyDrops(e, rng = Math.random, luck = 1) {
 const BOSS_TABLE = [['divine', 0.006], ['mythic', 0.03], ['legendary', 0.12], ['epic', 0.3], ['rare', 0.55]];
 export function rollBossDrops(section, rng = Math.random, luck = 1) {
   const drops = [];
-  const items = DITEMS_BY_SECTION[section];
+  const items = DITEMS_BY_SECTION[section].filter((i) => !i.shopOnly);
   for (let roll = 0; roll < 2; roll++) {
     let r = rng();
     for (const [rar, p] of BOSS_TABLE) {
@@ -233,7 +233,7 @@ export const materialFor = (section) => SECTIONS[section - 1].material;
 // ---------- inventory & shops ----------
 const SELL = { common: 2, uncommon: 5, rare: 12, epic: 30, legendary: 80, mythic: 200, divine: 600 };
 export const sellPrice = (id) => (DITEMS[id].section === 0 ? 1 : Math.round(SELL[DITEMS[id].rarity] * SECTION_SCALE[DITEMS[id].section - 1]));
-export const buyPrice = (id) => sellPrice(id) * (DITEMS[id].rarity === 'common' ? 4 : 5);
+export const buyPrice = (id) => sellPrice(id) * (DITEMS[id].shopOnly ? 3 : DITEMS[id].rarity === 'common' ? 4 : 5);
 export const MAX_PLUS = 10;
 export function upgradeCost(id, plus) {
   const it = DITEMS[id];
@@ -245,7 +245,7 @@ export function upgradeCost(id, plus) {
 }
 // The Blacksmith sells Commons and Uncommons from sections you've unlocked.
 export function blacksmithStock(d) {
-  return Object.values(DITEMS).filter((i) => i.section >= 1 && ['common', 'uncommon'].includes(i.rarity) && sectionUnlocked(d, i.section));
+  return Object.values(DITEMS).filter((i) => i.section >= 1 && (i.shopOnly || ['common', 'uncommon'].includes(i.rarity)) && sectionUnlocked(d, i.section));
 }
 export { POTIONS, MATERIALS, DITEMS, SECTIONS, RAR };
 
