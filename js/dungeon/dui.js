@@ -137,9 +137,9 @@ export function view() {
       <div class="d-spire"><div class="d-flag"></div><div class="d-roof"></div></div>${segs}<div class="d-ground"><div class="d-door"></div></div>
     </div><p class="hint d-tower-hint">Tap a glowing window to replay that floor and farm gear. If you fall, you drop to the start of the section but keep everything you found.</p></div>
     <div class="d-bar"><div class="d-bar-row">
-      <button class="d-shop" data-action="d-sub" data-sub="gear"><img src="${uiIcon('swords', 'color', 3)}" alt="">Gear</button>
-      <button class="d-shop" data-action="d-sub" data-sub="smith"><img src="${uiIcon('anvil', 'color', 3)}" alt="">Smith</button>
-      <button class="d-shop" data-action="d-sub" data-sub="potions"><img src="${uiIcon('potion', 'color', 3)}" alt="">Potions</button>
+      <button class="d-hubbtn" data-action="d-sub" data-sub="gear"><img src="${uiIcon('swords', 'color', 3)}" alt="">Gear</button>
+      <button class="d-hubbtn" data-action="d-sub" data-sub="smith"><img src="${uiIcon('anvil', 'color', 3)}" alt="">Smith</button>
+      <button class="d-hubbtn" data-action="d-sub" data-sub="potions"><img src="${uiIcon('potion', 'color', 3)}" alt="">Potions</button>
       ${go}
     </div></div>`;
 }
