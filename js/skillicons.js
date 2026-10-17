@@ -132,6 +132,169 @@ function frame(style, skillId) {
   return g;
 }
 
+// ---------- Tiered icons: the frame upgrades as the skill levels up ----------
+// 1-14 rune stone · 15-29 bronze · 30-44 silver crest · 45-59 gold crest + laurels · 60 legendary (wings, crown, animated)
+export const TIERS = [
+  { start: 1, name: 'Rune stone' }, { start: 15, name: 'Bronze' }, { start: 30, name: 'Silver crest' },
+  { start: 45, name: 'Gold crest' }, { start: 60, name: 'Legendary' },
+];
+export const tierOf = (level) => (level >= 60 ? 4 : level >= 45 ? 3 : level >= 30 ? 2 : level >= 15 ? 1 : 0);
+// 0-5 pips filled towards the next tier
+export function pipsFor(level) {
+  const t = tierOf(level);
+  if (t === 4) return 5;
+  const start = TIERS[t].start, end = TIERS[t + 1].start;
+  return Math.floor(((level - start) / (end - start)) * 5);
+}
+
+const G = 32;          // tiered icons are 32x32 so wings, crown and laurels fit
+const B = 4;           // the 24x24 frame box starts at (4,4)
+const g32 = () => Array.from({ length: G }, () => Array(G).fill(null));
+const put = (g, x, y, c) => { if (x >= 0 && y >= 0 && x < G && y < G) g[y][x] = c; };
+function outline32(g, col = OUT) {
+  const add = [];
+  for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
+    if (g[y][x]) continue;
+    const n = (dx, dy) => g[y + dy]?.[x + dx];
+    if (n(-1, 0) || n(1, 0) || n(0, -1) || n(0, 1)) add.push([x, y]);
+  }
+  for (const [x, y] of add) g[y][x] = col;
+}
+const inShield = (bx, by) => { const half = by < 14 ? 11 : 11 - Math.round((by - 13) * 1.15); return by >= 1 && by <= 22 && Math.abs(bx - 11.5) <= half; };
+const shieldEdge = (bx, by) => { const half = by < 14 ? 11 : 11 - Math.round((by - 13) * 1.15); return by <= 2 || Math.abs(bx - 11.5) > half - 1.5 || (by >= 14 && Math.abs(bx - 11.5) > half - 2); };
+
+function tierFrame(tier, skillId) {
+  const g = g32();
+  const col = SKILL_COLOR[skillId];
+  const METAL = [null, ['#e0a060', '#b87333', '#7a4318'], ['#f4f6fb', '#c4c9d6', '#7a8090'], ['#fff1a0', '#ffc94a', '#b88a1c'], ['#fff6c0', '#ffd84a', '#c8961c']][tier];
+  for (let by = 0; by < 24; by++) for (let bx = 0; bx < 24; bx++) {
+    const cx = bx - 11.5, cy = by - 11.5, x = bx + B, y = by + B;
+    if (tier <= 1) {                                                  // stone tile
+      if (Math.abs(cx) > 11.5 || Math.abs(cy) > 11.5 || (Math.abs(cx) > 9.5 && Math.abs(cy) > 9.5)) continue;
+      const outer = Math.abs(cx) > 10.5 || Math.abs(cy) > 10.5 || (Math.abs(cx) > 8.5 && Math.abs(cy) > 8.5);
+      const inner = !outer && (Math.abs(cx) > 9.5 || Math.abs(cy) > 9.5 || (Math.abs(cx) > 7.5 && Math.abs(cy) > 7.5));
+      let c = shade('#2a2e44', ((bx * 7 + by * 13) % 5 === 0 ? 0.04 : 0) - cy * 0.004);
+      if (tier === 0 && outer) c = shade(col, -0.18);
+      if (tier === 1 && outer) c = cx + cy < 0 ? METAL[0] : cx + cy > 6 ? METAL[2] : METAL[1];
+      if (tier === 1 && inner) c = col;
+      put(g, x, y, c);
+    } else {                                                          // shield crest
+      if (!inShield(bx, by)) continue;
+      const c = shieldEdge(bx, by)
+        ? (cx < -1 ? METAL[0] : cx > 2 ? METAL[2] : METAL[1])
+        : shade(col, (tier - 2) * 0.05 + (11.5 - by) * 0.012 - (cx > 0 ? 0.06 : 0));
+      put(g, x, y, c);
+    }
+  }
+  if (tier === 1) for (const [x, y] of [[B + 2, B + 2], [B + 21, B + 2], [B + 2, B + 21], [B + 21, B + 21]]) put(g, x, y, '#ffe0a0');   // rivets
+  if (tier >= 2) { put(g, B + 11, B + 1, '#ffffff'); put(g, B + 12, B + 1, shade(col, 0.25)); put(g, B + 11, B + 2, shade(col, 0.2)); put(g, B + 12, B + 2, col); }  // top gem
+  if (tier === 3) {                                                   // laurel wreath up both sides
+    for (let y = 9; y <= 27; y += 3) {
+      const d = Math.round((y - 9) / 6);
+      for (const [x, s] of [[2 + d, 1], [29 - d, -1]]) {
+        put(g, x, y, '#5aa83a'); put(g, x + s, y - 1, '#8ad06a'); put(g, x, y + 1, '#3a7a2a'); put(g, x - s, y + 1, '#5aa83a');
+      }
+    }
+    put(g, 14, 29, '#c83a2a'); put(g, 15, 29, '#e8604a'); put(g, 16, 29, '#e8604a'); put(g, 17, 29, '#c83a2a');   // ribbon
+  }
+  if (tier === 4) {                                                   // wings + crown
+    for (let y = 7; y <= 20; y++) {
+      const reach = Math.max(0, 5 - Math.floor(Math.abs(y - 11) / 2));
+      for (let i = 0; i < reach; i++) {
+        const c = (y + i) % 3 === 0 ? '#ffe680' : i === reach - 1 ? '#ffffff' : '#f4f1ff';
+        put(g, 4 - i, y, c); put(g, 27 + i, y, c);
+      }
+    }
+    for (let x = 11; x <= 20; x++) { put(g, x, 3, '#c8961c'); put(g, x, 2, '#ffd84a'); }
+    for (const x of [11, 15, 16, 20]) { put(g, x, 1, '#ffd84a'); put(g, x, 0, '#fff4b0'); }
+    put(g, 13, 2, '#e8435a'); put(g, 18, 2, '#4ab0ff'); put(g, 15, 2, '#ffffff');
+  }
+  return g;
+}
+
+function tieredGrid(skillId, level) {
+  const tier = tierOf(level);
+  const g = tierFrame(tier, skillId);
+  outline32(g);
+  const sym = SYMBOLS[skillId];
+  const oy = tier >= 2 ? 7 : 8;
+  sym.rows.forEach((row, y) => [...row].forEach((ch, x) => { if (sym.pal[ch]) put(g, x + 8, y + oy, sym.pal[ch]); }));
+  // symbol outline (only where it sits on the frame)
+  const symMask = g32();
+  sym.rows.forEach((row, y) => [...row].forEach((ch, x) => { if (sym.pal[ch]) symMask[y + oy][x + 8] = 1; }));
+  for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
+    if (symMask[y][x]) continue;
+    if (symMask[y]?.[x - 1] || symMask[y]?.[x + 1] || symMask[y - 1]?.[x] || symMask[y + 1]?.[x]) put(g, x, y, OUT);
+  }
+  // progress pips along the bottom (not at max level)
+  if (tier < 4) {
+    const filled = pipsFor(level);
+    for (let i = 0; i < 5; i++) {
+      const x0 = 8 + i * 3.4 | 0;
+      const c = i < filled ? '#ffc94a' : '#3a3f62';
+      put(g, x0, 30, c); put(g, x0 + 1, 30, c); put(g, x0, 31, OUT); put(g, x0 + 1, 31, OUT);
+    }
+  }
+  return g;
+}
+
+function gridToCanvas(g, scale, bright = 0) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = G * scale;
+  const ctx = cv.getContext('2d');
+  for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
+    if (!g[y][x]) continue;
+    ctx.fillStyle = bright && g[y][x] !== OUT ? shade(g[y][x], bright) : g[y][x];
+    ctx.fillRect(x * scale, y * scale, scale, scale);
+  }
+  return cv;
+}
+
+const tierCache = new Map();
+export function tieredIcon(skillId, level, scale = 3) {
+  const key = `${skillId}|${tierOf(level)}|${pipsFor(level)}|${scale}`;
+  if (!tierCache.has(key)) tierCache.set(key, gridToCanvas(tieredGrid(skillId, level), scale).toDataURL());
+  return tierCache.get(key);
+}
+
+// Draw onto a canvas; level 60 icons animate (glow pulse, shimmer sweep, sparkles). Returns stop().
+export function mountSkillIcon(canvas, skillId, level, { scale = 3 } = {}) {
+  const g = tieredGrid(skillId, level);
+  const base = gridToCanvas(g, scale);
+  canvas.width = canvas.height = G * scale;
+  const ctx = canvas.getContext('2d');
+  if (tierOf(level) < 4) { ctx.drawImage(base, 0, 0); return () => {}; }
+  const bright = gridToCanvas(g, scale, 0.25);
+  const size = G * scale;
+  let t = 0, raf = 0, stopped = false;
+  const sparks = [];
+  const frame = () => {
+    t++;
+    ctx.clearRect(0, 0, size, size);
+    ctx.save();
+    ctx.shadowColor = `rgba(255, 216, 74, ${0.45 + 0.35 * Math.sin(t / 20)})`;
+    ctx.shadowBlur = scale * 4;
+    ctx.drawImage(base, 0, 0);
+    ctx.restore();
+    const band = ((t * 1.2) % (size * 3)) - size;                       // shimmer sweep every few seconds
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(band, 0); ctx.lineTo(band + size * 0.25, 0); ctx.lineTo(band + size * 0.25 - size, size); ctx.lineTo(band - size, size); ctx.closePath(); ctx.clip();
+    ctx.drawImage(bright, 0, 0);
+    ctx.restore();
+    if (sparks.length < 6 && Math.random() < 0.08) sparks.push({ x: Math.random() * G | 0, y: Math.random() * G | 0, life: 0, max: 25 + Math.random() * 25 });
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i]; s.life++;
+      if (s.life > s.max) { sparks.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.sin((s.life / s.max) * Math.PI);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(s.x * scale, s.y * scale, scale, scale);
+      ctx.globalAlpha = 1;
+    }
+    if (!stopped) raf = requestAnimationFrame(frame);
+  };
+  frame();
+  return () => { stopped = true; cancelAnimationFrame(raf); };
+}
+
 const cache = new Map();
 export function skillIcon(skillId, style = 'shield', scale = 4) {
   const key = `${skillId}|${style}|${scale}`;

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill icon tiers</title>
+<!-- Dev-only page: skill icons upgrading through the 5 tiers. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding-bottom: 40px; }
+  main { max-width: 900px; padding-left: 8px; padding-right: 8px; }
+  .panel { padding: 10px; }
+  .slider { display: flex; gap: 12px; align-items: center; margin: 6px 0 10px; }
+  .slider input { flex: 1; accent-color: #ffc94a; }
+  .lv { font: 700 26px var(--display-font); color: var(--gold); min-width: 92px; }
+  .tier-name { color: var(--muted); font-size: 13px; }
+  .live { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+  .live div { text-align: center; font-size: 11px; color: var(--muted); }
+  .live canvas, .ladder canvas { width: 72px; height: 72px; image-rendering: pixelated; display: block; margin: 0 auto 2px; }
+  .ladder { width: 100%; border-collapse: collapse; }
+  .ladder th, .ladder td { border-bottom: 1px solid var(--line); padding: 4px 2px; text-align: center; }
+  .ladder th { font-family: var(--display-font); color: var(--gold); font-size: 12px; }
+  .ladder th small { display: block; font-family: system-ui, sans-serif; color: var(--muted); font-weight: 400; font-size: 10px; }
+  .ladder td.name { text-align: left; font-size: 12px; }
+  .scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="brand">Icon tiers</div><div class="muted small">stone → bronze → silver → gold → legendary</div></header>
+<main>
+  <section class="panel">
+    <h2>Drag to level up</h2>
+    <div class="slider"><span class="lv" id="lv">Lv 1</span><input type="range" min="1" max="60" value="1" id="level"></div>
+    <div class="tier-name" id="tier-name"></div>
+    <p class="muted small">The 5 dots along the bottom fill up as you get closer to the next tier.</p>
+    <div class="live" id="live"></div>
+  </section>
+  <section class="panel">
+    <h2>Every skill, every tier</h2>
+    <div class="scroll"><table class="ladder" id="ladder"></table></div>
+  </section>
+</main>
+<script type="module">
+import { SKILLS } from '../js/data.js';
+import { mountSkillIcon, TIERS, tierOf } from '../js/skillicons.js';
+
+const SHOW = [1, 15, 30, 45, 60];
+const ladder = document.getElementById('ladder');
+ladder.innerHTML = `<tr><th>Skill</th>${TIERS.map((t, i) => `<th>${t.name}<small>Lv ${t.start}${i < 4 ? `–${TIERS[i + 1].start - 1}` : ''}</small></th>`).join('')}</tr>` +
+  SKILLS.map((k) => `<tr><td class="name">${k.name}</td>${SHOW.map((l) => `<td><canvas data-skill="${k.id}" data-level="${l}"></canvas></td>`).join('')}</tr>`).join('');
+ladder.querySelectorAll('canvas').forEach((c) => mountSkillIcon(c, c.dataset.skill, Number(c.dataset.level)));
+
+const live = document.getElementById('live');
+let stops = [];
+function drawLive(level) {
+  stops.forEach((s) => s()); stops = [];
+  document.getElementById('lv').textContent = `Lv ${level}`;
+  const t = tierOf(level);
+  document.getElementById('tier-name').textContent = `${TIERS[t].name}${t < 4 ? ` · next tier at level ${TIERS[t + 1].start}` : ' · max level'}`;
+  live.innerHTML = SKILLS.map((k) => `<div><canvas data-skill="${k.id}"></canvas>${k.name}</div>`).join('');
+  live.querySelectorAll('canvas').forEach((c) => stops.push(mountSkillIcon(c, c.dataset.skill, level)));
+}
+const slider = document.getElementById('level');
+slider.addEventListener('input', () => drawLive(Number(slider.value)));
+drawLive(1);
+</script>
+</body>
+</html>
