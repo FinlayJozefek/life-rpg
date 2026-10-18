@@ -1034,3 +1034,83 @@ body[data-view="quests"] .btn.primary { background: #8e2418; border-color: #5a14
 
 /* page content sits on its own layer so area backdrops (e.g. the blood moon) draw between it and the background */
 main { position: relative; z-index: 1; }
+
+
+/* ==================== Battle: face-off (enemies on a platform above, you on one below) ==================== */
+.d-bg.sec-1 { background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20120%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%230a0e06%27%20d%3D%27M0%20120V70l30-30%2030%2040%2040-50%2040%2040%2040-30%2050%2050%2040-40%2060%2050%2040-30%2030%2020v60z%27%2F%3E%3Cg%20fill%3D%27%230a0e06%27%3E%3Cpath%20d%3D%27M60%20120l26-40%2026%2040zM250%20120l34-52%2034%2052z%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27%23ff9a3a%27%3E%3Crect%20x%3D%27280%27%20y%3D%27104%27%20width%3D%276%27%20height%3D%278%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") bottom / 100% 45% no-repeat, radial-gradient(ellipse at 70% 100%, rgba(255,140,40,.3), transparent 50%), linear-gradient(#0e1408, #2a3a1a 60%, #3e4a24); }
+.d-bg.sec-2 { background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20120%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%2308060e%27%20d%3D%27M0%20120V96c60-6%20140-8%20210-4s130%204%20190-2v30z%27%2F%3E%3Cg%20fill%3D%27%2308060e%27%3E%3Cpath%20d%3D%27M50%20100v-20a9%209%200%200%201%2018%200v20zM120%2098v-28h-8v-6h8v-8h6v8h8v6h-8v28zM300%20100v-18a8%208%200%200%201%2016%200v18zM230%20104c-2-30-4-50%202-70-10-6-18-14-22-24%208%206%2016%2010%2022%2012%202-10%208-18%2016-24-4%2010-6%2018-4%2026%208-2%2016-8%2022-16-4%2012-12%2020-20%2024%202%2022%202%2042-2%2072z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") bottom / 100% 50% no-repeat, radial-gradient(circle at 80% 18%, #d8d4f0 0 22px, rgba(200,190,255,.2) 23px, transparent 70px), linear-gradient(#0a0814, #1e1834 60%, #2e2448); }
+.d-bg.sec-3 { background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%2080%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%23050507%27%20d%3D%27M0%200h400v20l-10%2030-8-28-12%2018-10-24-14%2044-10-42-12%2016-8-20-14%2038-12-34-10%2014-12-24-12%2050-12-48-10%2016-12-20-10%2030-10-28-14%2024-10-26-12%2040-12-38-10%2018-12-22-12%2034-10-30-10%2012-12-18-10%2028-10-26-12%2014-10-16z%27%2F%3E%3C%2Fsvg%3E") top / 100% 30% no-repeat, radial-gradient(ellipse at 8% 60%, rgba(80,190,255,.4), transparent 22%), radial-gradient(ellipse at 92% 50%, rgba(80,190,255,.35), transparent 20%), linear-gradient(#0a0a0e, #1c1c24); }
+.d-bg.sec-4 { background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20160%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%23324a6e%27%20d%3D%27M0%20160V80l50-40%2040%2030%2050-60%2050%2050%2040-30%2060%2050%2040-30%2070%2050v60z%27%2F%3E%3Cpath%20fill%3D%27%23e8f2ff%27%20d%3D%27M50%2040l14%2012-6%202-8-5-8%206-6-3zM140%2010l18%2018-8%202-10-7-10%208-8-3z%27%2F%3E%3C%2Fsvg%3E") bottom / 100% 55% no-repeat, linear-gradient(#0a1426, #1e3456 60%, #3a5a80); }
+.d-bg.sec-5 { background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20160%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%23050101%27%20d%3D%27M0%20160v-40l10-40%208%2030%2010-70%2010%2080%2014-30%208%2040%2012-60%2010%2050%2016-20%2010%2040h10l12-80%2010%2070%2014-40%2010%2050%208-30%2012%2050%2014-100%2012%20100%2010-20%2014%2030%2010-60%2010%2060%2016-40%2010%2040%2012-70%2010%2070h10l10-40%2010%2040v60z%27%2F%3E%3C%2Fsvg%3E") bottom / 100% 55% no-repeat, radial-gradient(ellipse at 50% 110%, rgba(255,90,20,.6), transparent 50%), radial-gradient(circle at 25% 20%, #c8281e 0 30px, rgba(200,40,30,.3) 31px, transparent 90px), linear-gradient(#120404, #3a0a06 60%, #6a1a08); }
+#d-battle.fo { padding: 0; overflow: hidden; }
+#d-battle.fo .d-top { position: relative; z-index: 6; padding: calc(env(safe-area-inset-top) + 8px) 10px 6px; background: linear-gradient(rgba(0, 0, 0, 0.65), transparent); color: #e09a3a; text-shadow: 0 1px 2px #000; }
+#d-battle.fo .d-flee { background: rgba(0, 0, 0, 0.5); color: #e6dcc4; border-color: #5a5048; border-radius: 3px; }
+.fo-stage { position: relative; flex: 1; min-height: 250px; }
+.fo-plates { position: absolute; left: 8px; top: 2px; z-index: 4; width: 46%; max-width: 210px; display: flex; flex-direction: column; gap: 4px; }
+.fo-erow, .fo-me { background: rgba(20, 16, 12, 0.9); border: 2px solid #0a0908; box-shadow: inset 0 0 0 1px #5a5048; border-radius: 4px; padding: 3px 8px 4px; color: #e6dcc4; }
+.fo-erow.targeted { box-shadow: inset 0 0 0 1px #e09a3a; }
+.fo-erow.dead { opacity: 0.35; }
+.fo-ename { font: 400 13px var(--display-font); line-height: 1.15; }
+.fo-telename { font: 700 11px var(--body-font); color: #ff6a5a; animation: d-blink 0.8s infinite; }
+.fo-erow .d-hpbar, .fo-me .d-hpbar { height: 7px; margin: 2px 0 1px; border: 1px solid #0a0908; border-radius: 2px; overflow: hidden; }
+.fo-erow-sub { display: flex; justify-content: space-between; align-items: center; gap: 4px; }
+.fo-erow .d-hptext, .fo-me .d-hptext { font-size: 10px; text-align: left; color: #a89c86; }
+.fo-plat { position: absolute; border-radius: 50%; z-index: 1; background: radial-gradient(ellipse, rgba(255, 240, 210, 0.2), rgba(0, 0, 0, 0.35) 58%, transparent 72%); }
+.fo-plat-foe { right: -6%; top: 40%; width: 70%; height: 58px; }
+.fo-plat-me { left: -8%; bottom: 2%; width: 70%; height: 58px; }
+.fo-foes { position: absolute; right: 2%; width: 66%; top: 0; height: calc(40% + 32px); z-index: 3; display: flex; justify-content: center; align-items: flex-end; gap: 0; }
+#d-battle .fo-foe { position: relative; flex: none; min-width: 0; max-width: none; background: none; border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.15s; }
+#d-battle .fo-foe .d-enemy-cv { width: 88px; height: 88px; }
+#d-battle .fo-foes.n3 .fo-foe .d-enemy-cv, #d-battle .fo-foes.n4 .fo-foe .d-enemy-cv { width: 70px; height: 70px; }
+#d-battle .fo-foe.boss .d-enemy-cv { width: 136px; height: 136px; }
+#d-battle .fo-foe.dead { visibility: hidden; opacity: 1; filter: none; }
+.fo-shadow { width: 70%; height: 9px; margin-top: -7px; border-radius: 50%; background: radial-gradient(rgba(0, 0, 0, 0.65), transparent 70%); }
+.fo-mark { position: absolute; top: -12px; color: #e09a3a; font-size: 13px; text-shadow: 0 1px 0 #000; opacity: 0; }
+.fo-foes:not(.n1) .fo-foe.targeted .fo-mark { opacity: 1; animation: fo-bob 0.7s ease-in-out infinite alternate; }
+@keyframes fo-bob { to { transform: translateY(4px); } }
+.fo-hero { position: absolute; left: 7%; bottom: calc(2% + 26px); z-index: 3; }
+.fo-hero img { display: block; width: 104px; image-rendering: pixelated; }
+.fo-ui { position: relative; z-index: 5; margin-top: 0 !important; border: 0 !important; background: linear-gradient(transparent, rgba(10, 8, 6, 0.96) 18px) !important; padding: 18px 8px calc(env(safe-area-inset-bottom) + 8px) !important; }
+.fo-me { position: absolute; right: 8px; top: -58px; width: 52%; max-width: 230px; }
+.fo-me-top { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+.fo-me b { font: 400 15px var(--display-font); }
+.fo-text { min-height: 46px; margin: 0 0 8px !important; border: 2px solid #c8a24a !important; border-radius: 4px; background: rgba(12, 10, 8, 0.94) !important; font-size: 14px; color: #f4e6c8; }
+.fo-text div { color: #a89c86; } .fo-text div:last-child { color: #f4e6c8; }
+/* effects */
+#d-battle.fo .fo-foe.hit .d-enemy-cv, .fo-hero.hit img { animation: fo-hitflash 0.3s; }
+@keyframes fo-hitflash { 0%, 40% { filter: brightness(4) saturate(0); transform: translateX(6px); } 70% { transform: translateX(-4px); } 100% { filter: none; transform: none; } }
+.fo-hero.lunge { animation: fo-lunge-up 0.35s; }
+@keyframes fo-lunge-up { 40% { transform: translate(40px, -46px) scale(0.92); } }
+#d-battle .fo-foe.lunge { animation: fo-lunge-down 0.35s; }
+@keyframes fo-lunge-down { 40% { transform: translate(-34px, 40px) scale(1.15); } }
+#d-battle .fo-foe.tele .d-enemy-cv { animation: fo-tele 0.6s ease-in-out infinite alternate; }
+@keyframes fo-tele { from { filter: drop-shadow(0 0 0 #ff2a1a); } to { filter: drop-shadow(0 0 12px #ff2a1a) brightness(1.2); } }
+.fo-bang { position: absolute; top: -20px; z-index: 2; font: 400 28px var(--display-font); color: #ff3a2a; text-shadow: 0 2px 0 #000; animation: fo-bang 0.5s infinite alternate; }
+@keyframes fo-bang { to { transform: translateY(-5px) scale(1.15); } }
+.fo-warn { position: absolute; bottom: -4px; width: 110%; height: 20px; border-radius: 50%; border: 2px dashed #ff3a2a; animation: fo-warn 1.2s linear infinite; }
+@keyframes fo-warn { from { transform: rotate(0deg) scaleY(0.35); } to { transform: rotate(360deg) scaleY(0.35); } }
+#d-battle .fo-foe.dying .d-enemy-cv { animation: fo-dissolve 0.8s forwards; }
+@keyframes fo-dissolve { 0%, 30% { filter: brightness(5) saturate(0); transform: scale(1.1); } 100% { filter: blur(6px) brightness(3); transform: scale(0.2) translateY(-40px); opacity: 0; } }
+.fo-bit { position: absolute; z-index: 15; width: 5px; height: 5px; pointer-events: none; animation: fo-bit 0.8s ease-out forwards; }
+@keyframes fo-bit { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+.fo-slash { position: absolute; left: 50%; top: 42%; width: 130px; height: 130px; margin: -65px 0 0 -65px; z-index: 4; pointer-events: none; border-radius: 50%; border-top: 6px solid #fff; border-right: 3px solid rgba(255, 255, 255, 0.6); filter: drop-shadow(0 0 6px #ffe8a0); animation: fo-slash 0.28s ease-out forwards; }
+@keyframes fo-slash { from { transform: rotate(-80deg) scale(0.6); opacity: 1; } to { transform: rotate(60deg) scale(1.1); opacity: 0; } }
+#d-battle.fo .d-pop { top: 18%; font: 400 26px var(--display-font); color: #fff; text-shadow: 0 2px 0 #000, 0 0 6px #000; animation: fo-num 0.95s ease-out forwards; }
+#d-battle.fo .d-pop.crit { font-size: 38px; color: #ffd84a; }
+#d-battle.fo .d-pop.me { color: #ff7a6a; }
+#d-battle.fo .d-pop.heal { color: #8ae07a; }
+#d-battle.fo .d-pop small { display: block; font: 700 11px var(--body-font); color: #7ae0a0; text-align: center; }
+@keyframes fo-num { 0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; } 15% { transform: translate(-50%, -14px) scale(1.25); opacity: 1; } 35% { transform: translate(-50%, -20px) scale(1); } 100% { transform: translate(-50%, -58px); opacity: 0; } }
+.fo-flash { position: absolute; inset: 0; z-index: 20; background: #fff; opacity: 0; pointer-events: none; }
+.fo-flash.go { animation: fo-flash 0.25s; }
+@keyframes fo-flash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
+.fo-vig { position: absolute; inset: 0; z-index: 19; pointer-events: none; }
+.fo-vig.go { animation: fo-vig 0.6s; }
+@keyframes fo-vig { 0% { box-shadow: inset 0 0 80px 30px rgba(220, 20, 10, 0.75); } 100% { box-shadow: inset 0 0 80px 30px rgba(220, 20, 10, 0); } }
+.fo-bar { position: absolute; left: 0; right: 0; z-index: 25; height: 0; background: #000; transition: height 0.35s; }
+.fo-bar.top { top: 0; } .fo-bar.bot { bottom: 0; }
+.fo-bar.on { height: 70px; }
+.fo-bossname { position: absolute; top: 38%; left: 0; right: 0; z-index: 26; text-align: center; font: 400 36px var(--display-font); color: #e09a3a; text-shadow: 0 3px 0 #000; transform: translateX(-120%); animation: fo-bossname 2.4s cubic-bezier(.2, .8, .2, 1) forwards; pointer-events: none; }
+.fo-bossname small { display: block; font: 600 13px var(--body-font); color: #e6dcc4; letter-spacing: 3px; }
+@keyframes fo-bossname { 0% { transform: translateX(-120%); } 20%, 80% { transform: translateX(0); } 100% { transform: translateX(120%); } }
+.fo-me .d-hpbar.me span { background: linear-gradient(#8ae07a, #3a9a2a); }

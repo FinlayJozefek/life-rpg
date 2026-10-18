@@ -267,7 +267,7 @@ function calc(att, def, power, dtype, opts, rng) {
 function damage(b, f, amount, { crit = false, eff = 1, from = null, move = '', status = null } = {}) {
   if (amount <= 0 || f.hp <= 0) return;
   f.hp = Math.max(0, f.hp - amount);
-  b.events.push({ t: 'dmg', who: f.side, uid: f.uid, amount, crit, eff, move, status, by: from?.name });
+  b.events.push({ t: 'dmg', who: f.side, uid: f.uid, amount, crit, eff, move, status, by: from?.name, fromUid: from?.uid });
   if (f.side === 'enemy' && f.boss && f.phase === 1 && f.hp > 0 && f.hp <= f.maxHp * f.boss.phase2.at) {
     f.phase = 2; f.buff.atk *= f.boss.phase2.atk; f.pIdx = 0; f.charging = null;
     b.events.push({ t: 'phase', uid: f.uid, text: f.boss.phase2.text });

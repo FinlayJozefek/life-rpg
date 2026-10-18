@@ -364,6 +364,7 @@ function startFight() {
   const intro = b.enemies.length > 1 ? `${b.enemies.length} enemies appear!` : `${b.enemies[0].name} appears!`;
   battle.log.push(b.isBoss ? `The ${b.enemies[0].name} blocks your path!` : intro);
   renderBattle(true);
+  if (b.isBoss && run.idx === 0) bossIntro(b.enemies[0].name, run.floor);
 }
 
 function battleRoot() {
@@ -379,15 +380,17 @@ function renderBattle(full = false) {
   const sec = SECTIONS[sectionOf(run.floor) - 1];
   const target = b.enemies.find((e) => e.uid === battle.target && e.hp > 0) || aliveEnemies(b)[0];
   if (target) battle.target = target.uid;
+  battle.hero ||= api.avatarUrl(4);
   const statuses = statusChips;
-  const enemies = b.enemies.map((e) => `<button class="d-enemy ${shownHp(e) <= 0 ? 'dead' : ''} ${e.uid === battle.target ? 'targeted' : ''} ${e.boss ? 'boss' : ''}" data-action="d-target" data-uid="${e.uid}" data-e="${e.uid}">
-      ${e.charging ? `<div class="d-tele">⚠ ${esc(e.charging.name)}</div>` : ''}
-      <canvas class="d-enemy-cv" data-ecv="${e.uid}"></canvas>
-      <div class="d-ename">${esc(e.name)}${e.boss && e.phase === 2 ? ' <span class="d-red">ENRAGED</span>' : ''}</div>
-      <div class="d-hpbar"><span style="width:${(shownHp(e) / e.maxHp * 100).toFixed(1)}%"></span></div>
-      <div class="d-hptext">${fmt(shownHp(e))} / ${fmt(e.maxHp)}</div>
-      <div class="d-sts">${statuses(e)}</div>
+  const foes = b.enemies.map((e) => `<button class="d-enemy fo-foe ${shownHp(e) <= 0 ? 'dead' : ''} ${e.uid === battle.target ? 'targeted' : ''} ${e.boss ? 'boss' : ''} ${e.charging ? 'tele' : ''}" data-action="d-target" data-uid="${e.uid}" data-e="${e.uid}">
+      <span class="fo-mark">▼</span>${e.charging ? '<span class="fo-bang">!</span><span class="fo-warn"></span>' : ''}
+      <canvas class="d-enemy-cv" data-ecv="${e.uid}"></canvas><span class="fo-shadow"></span>
     </button>`).join('');
+  const rows = b.enemies.map((e) => `<div class="fo-erow ${shownHp(e) <= 0 ? 'dead' : ''} ${e.uid === battle.target ? 'targeted' : ''}" data-ehp="${e.uid}">
+      <div class="fo-ename">${foeName(e)}</div>
+      <div class="d-hpbar"><span style="width:${(shownHp(e) / e.maxHp * 100).toFixed(1)}%"></span></div>
+      <div class="fo-erow-sub"><span class="d-hptext">${fmt(shownHp(e))} / ${fmt(e.maxHp)}</span><span class="d-sts">${statuses(e)}</span></div>
+    </div>`).join('');
   const acts = getActions(b);
   let buttons;
   if (battle.potionPick) {
@@ -406,39 +409,79 @@ function renderBattle(full = false) {
     const potLeft = POTIONS_PER_FIGHT - b.potionsUsed;
     if (!acts[0]?.firing) buttons += `<button class="btn d-act" data-action="d-potions" data-open="1" ${battle.busy || potLeft <= 0 ? 'disabled' : ''}><b>Potion</b><span class="small">${potLeft}/${POTIONS_PER_FIGHT} left this fight</span></button>`;
   }
+  root.className = 'open fo';
   root.innerHTML = `<div class="d-bg sec-${sec.id}"></div>
     <div class="d-top"><span>Floor ${run.floor} · ${esc(sec.name)}</span><span>Fight ${run.idx + 1}/${run.plan.length}</span><button class="d-flee" data-action="d-flee">Flee</button></div>
-    <div class="d-enemies">${enemies}</div>
-    <div class="d-log">${battle.log.slice(-4).map((l) => `<div>${esc(l)}</div>`).join('')}</div>
-    <div class="d-player">
-      <div class="d-pname"><b>${esc(S().name)}</b> <span class="small muted">Atk ${p.atk} · Def ${p.def}</span> <span class="d-sts">${statuses(p)}${p.ward > 0 ? '<span class="d-st st-ward">ward</span>' : ''}${p.parry ? '<span class="d-st st-ward">parry</span>' : ''}</span></div>
-      <div class="d-hpbar me"><span style="width:${(shownHp(p) / p.maxHp * 100).toFixed(1)}%"></span></div>
-      <div class="d-hptext">${fmt(shownHp(p))} / ${fmt(p.maxHp)}</div>
+    <div class="fo-stage">
+      <div class="fo-plates">${rows}</div>
+      <div class="fo-plat fo-plat-foe"></div>
+      <div class="fo-foes n${Math.min(4, b.enemies.length)}">${foes}</div>
+      <div class="fo-plat fo-plat-me"></div>
+      <div class="fo-hero"><img src="${battle.hero}" alt=""></div>
+    </div>
+    <div class="d-player fo-ui">
+      <div class="fo-me"><div class="fo-me-top"><b>${esc(S().name)}</b><span class="d-sts">${statuses(p)}${p.ward > 0 ? '<span class="d-st st-ward">ward</span>' : ''}${p.parry ? '<span class="d-st st-ward">parry</span>' : ''}</span></div>
+        <div class="d-hpbar me"><span style="width:${(shownHp(p) / p.maxHp * 100).toFixed(1)}%"></span></div><div class="d-hptext">${fmt(shownHp(p))} / ${fmt(p.maxHp)}</div></div>
+      <div class="d-log fo-text">${battle.log.slice(-2).map((l) => `<div>${esc(l)}</div>`).join('')}</div>
       <div class="d-acts">${buttons}</div>
-    </div>`;
-  root.classList.add('open');
-  // enemy sprites
-  battle.stops.forEach((s) => s()); battle.stops = [];
+    </div>
+    <div class="fo-flash"></div><div class="fo-vig"></div>`;
+  battle.stops.forEach((st) => st()); battle.stops = [];
   for (const e of b.enemies) {
     const cv = root.querySelector(`[data-ecv="${e.uid}"]`);
     if (cv && e.hp > 0) battle.stops.push(mountEnemy(cv, e, e.boss ? 6 : 4));
   }
   if (full) root.scrollTop = 0;
 }
+const foeName = (e) => `${esc(e.name)}${e.boss && e.phase === 2 ? ' <span class="d-red">ENRAGED</span>' : ''}${e.charging ? ` <span class="fo-telename">⚠ ${esc(e.charging.name)}</span>` : ''}`;
+
+// ---------- battle effects ----------
+const replay = (el, cls) => { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+function fxBits(host, colour, count) {
+  const root = battleRoot();
+  const a = host.getBoundingClientRect(), r = root.getBoundingClientRect();
+  for (let i = 0; i < count; i++) {
+    const bit = document.createElement('i'); bit.className = 'fo-bit';
+    bit.style.left = `${a.left - r.left + a.width / 2}px`; bit.style.top = `${a.top - r.top + a.height / 2}px`; bit.style.background = colour;
+    bit.style.setProperty('--dx', `${Math.random() * 160 - 80}px`); bit.style.setProperty('--dy', `${Math.random() * 140 - 100}px`);
+    root.appendChild(bit); setTimeout(() => bit.remove(), 850);
+  }
+}
+function fxSlash(host) {
+  const s = document.createElement('i'); s.className = 'fo-slash';
+  host.appendChild(s); setTimeout(() => s.remove(), 320);
+}
+function bossIntro(name, floor) {
+  const root = battleRoot();
+  root.insertAdjacentHTML('beforeend', `<div class="fo-bar top"></div><div class="fo-bar bot"></div><div class="fo-bossname"><small>FLOOR ${floor} · BOSS</small>${esc(name)}</div>`);
+  requestAnimationFrame(() => root.querySelectorAll('.fo-bar').forEach((x) => x.classList.add('on')));
+  api.shake(root, true); api.sfx.dropSound(5);
+  setTimeout(() => root.querySelectorAll('.fo-bar').forEach((x) => x.classList.remove('on')), 2100);
+  setTimeout(() => root.querySelectorAll('.fo-bar, .fo-bossname').forEach((x) => x.remove()), 2600);
+}
 
 // Floating damage / heal numbers over a fighter.
 function popNumber(ev) {
   const root = battleRoot();
-  const host = ev.who === 'player' ? root.querySelector('.d-player') : root.querySelector(`[data-e="${ev.uid}"]`);
+  const host = ev.who === 'player' ? root.querySelector('.fo-hero') : root.querySelector(`[data-e="${ev.uid}"]`);
   if (!host) return;
   const n = document.createElement('div');
-  n.className = `d-pop ${ev.t === 'heal' ? 'heal' : ev.crit ? 'crit' : ''} ${ev.status ? `st-${ev.status}` : ''} ${ev.eff > 1 ? 'eff' : ''}`;
-  n.textContent = ev.t === 'heal' ? `+${fmt(ev.amount)}` : `${ev.crit ? 'CRIT ' : ''}-${fmt(ev.amount)}${ev.eff > 1 ? '!' : ''}`;
+  n.className = `d-pop ${ev.t === 'heal' ? 'heal' : ev.crit ? 'crit' : ''} ${ev.status ? `st-${ev.status}` : ''} ${ev.eff > 1 ? 'eff' : ''} ${ev.who === 'player' && ev.t === 'dmg' ? 'me' : ''}`;
+  n.innerHTML = ev.t === 'heal' ? `+${fmt(ev.amount)}` : `${fmt(ev.amount)}${ev.eff > 1 ? '<small>super effective!</small>' : ev.eff < 1 ? '<small>resisted</small>' : ''}`;
   host.appendChild(n);
-  setTimeout(() => n.remove(), 1100);
-  if (ev.t === 'dmg') {
-    host.classList.remove('hit'); void host.offsetWidth; host.classList.add('hit');
-    if (ev.who === 'player' && ev.amount > b0().player.maxHp * 0.2) { api.shake(root); api.vibrate(60); }
+  setTimeout(() => n.remove(), 1000);
+  if (ev.t !== 'dmg') return;
+  replay(host, 'hit');
+  if (!ev.status) {
+    if (ev.who === 'enemy') { replay(root.querySelector('.fo-hero'), 'lunge'); fxSlash(host); }
+    else {
+      const att = root.querySelector(`[data-e="${ev.fromUid}"]`);
+      replay(att, 'lunge');
+      replay(root.querySelector('.fo-vig'), 'go');
+      if (ev.amount > b0().player.maxHp * 0.2) api.vibrate(60);
+      api.shake(root);
+    }
+    if (ev.crit) { replay(root.querySelector('.fo-flash'), 'go'); api.shake(root, true); fxBits(host, '#ffd84a', 14); }
   }
 }
 const b0 = () => battle.b;
@@ -466,7 +509,12 @@ function playEvents(events, done) {
     if (ev.t === 'phase') { battle.log.push(ev.text); api.shake(battleRoot(), true); api.flash('#ff4a2a88'); api.sfx.dropSound(4); wait = 900; }
     if (ev.t === 'status') wait = 80;
     if (ev.t === 'potion') { api.sfx.chime(); wait = 150; }
-    if (ev.t === 'death' && ev.who === 'enemy') wait = 300;
+    if (ev.t === 'death' && ev.who === 'enemy') {
+      const el = battleRoot().querySelector(`[data-e="${ev.uid}"]`);
+      const foe = battle.b.enemies.find((x) => x.uid === ev.uid);
+      if (el) { el.classList.add('dying'); setTimeout(() => fxBits(el, foe?.boss ? BOSS_AURA[foe.id] : '#e6dcc4', foe?.boss ? 40 : 22), 250); }
+      wait = 700;
+    }
     if (wait) { updateBars(); setTimeout(step, wait); } else step();
   };
   step();
@@ -475,22 +523,23 @@ function updateBars() {
   const root = battleRoot();
   const b = battle.b;
   for (const e of b.enemies) {
-    const el = root.querySelector(`[data-e="${e.uid}"]`);
-    if (!el) { renderBattle(); return; }            // a summoned enemy appeared
+    const row = root.querySelector(`[data-ehp="${e.uid}"]`), sp = root.querySelector(`[data-e="${e.uid}"]`);
+    if (!row || !sp) { renderBattle(); return; }            // a summoned enemy appeared
     const hp = shownHp(e);
-    el.querySelector('.d-hpbar span').style.width = `${(hp / e.maxHp * 100).toFixed(1)}%`;
-    el.querySelector('.d-hptext').textContent = `${fmt(hp)} / ${fmt(e.maxHp)}`;
-    el.classList.toggle('dead', hp <= 0);
-    el.querySelector('.d-sts').innerHTML = statusChips(e);
-    const t = el.querySelector('.d-tele');
-    if (e.charging && !t) el.insertAdjacentHTML('afterbegin', `<div class="d-tele">⚠ ${esc(e.charging.name)}</div>`);
-    if (!e.charging && t) t.remove();
+    row.querySelector('.d-hpbar span').style.width = `${(hp / e.maxHp * 100).toFixed(1)}%`;
+    row.querySelector('.d-hptext').textContent = `${fmt(hp)} / ${fmt(e.maxHp)}`;
+    row.classList.toggle('dead', hp <= 0);
+    row.querySelector('.d-sts').innerHTML = statusChips(e);
+    row.querySelector('.fo-ename').innerHTML = foeName(e);
+    sp.classList.toggle('tele', !!e.charging);
+    if (e.charging && !sp.querySelector('.fo-bang')) sp.insertAdjacentHTML('afterbegin', '<span class="fo-bang">!</span><span class="fo-warn"></span>');
+    if (!e.charging) sp.querySelectorAll('.fo-bang, .fo-warn').forEach((x) => x.remove());
   }
   const p = b.player;
   const pe = root.querySelector('.d-player');
   pe.querySelector('.d-hpbar span').style.width = `${(shownHp(p) / p.maxHp * 100).toFixed(1)}%`;
   pe.querySelector('.d-hptext').textContent = `${fmt(shownHp(p))} / ${fmt(p.maxHp)}`;
-  root.querySelector('.d-log').innerHTML = battle.log.slice(-4).map((l) => `<div>${esc(l)}</div>`).join('');
+  root.querySelector('.d-log').innerHTML = battle.log.slice(-2).map((l) => `<div>${esc(l)}</div>`).join('');
 }
 
 function act(action) {
@@ -572,6 +621,7 @@ function finishRun(won) {
   const levelNow = cryptsLevel(dg.xp);
   const drops = run.drops.slice().sort((a, b) => ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'].indexOf(DITEMS[a].rarity) - ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'].indexOf(DITEMS[b].rarity));
   const root = battleRoot();
+  root.className = 'open';
   const dropHtml = drops.map((id, i) => `<div class="drop rar-${DITEMS[id].rarity}" style="animation-delay:${300 + i * (['epic', 'legendary', 'mythic', 'divine'].includes(DITEMS[id].rarity) ? 600 : 160)}ms">${gearImg(id)}<div class="drop-text"><div>${esc(DITEMS[id].name)}</div><div>${rarTag(DITEMS[id].rarity)}</div></div></div>`).join('');
   const summary = `<div class="d-gains"><div><b>+${fmt(run.xp)}</b><span>Crypts XP</span></div><div><b class="coin">+${fmt(run.coins)}</b><span>coins</span></div><div><b>${run.mats}</b><span>${esc(MATERIALS[mat].name)}</span></div></div>
     ${levelNow > run.startLevel ? `<div class="banner levelup">CRYPTS LEVEL ${levelNow}!${SECTIONS.find((s) => s.crypts === levelNow) ? `<span>${esc(SECTIONS.find((s) => s.crypts === levelNow).name)} unlocked!</span>` : ''}</div>` : ''}
