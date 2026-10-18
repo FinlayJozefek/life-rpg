@@ -123,3 +123,100 @@ body[data-camp="potions"] .d-pack div { border-color: #3a5a44; }
 
 /* the top and bottom bars keep one look everywhere */
 .topbar, .tabbar, .d-ctabs { --gold: #e09a3a; --gold-dark: #8a5a1a; --gold-bg: #2e2216; --text: #e6dcc4; --muted: #a89c86; color: #e6dcc4; }
+
+
+/* ===================== Realms backdrops (trial) ===================== */
+/* tower backdrop layers are fixed behind the tower */
+body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::before, body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::before { inset: 0 0 118px 0; }
+body[data-view="dungeon"]:not([data-camp]) .d-bar { background: linear-gradient(transparent, #0a0908 22%); }
+body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::before { background-repeat: no-repeat; }
+
+/* --- Tower: Moonlit Castle (default) --- */
+html:not([data-v~="tower-blood"]):not([data-v~="tower-sections"]) body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::before {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%230a0812%27%20d%3D%27M0%20200V150h20v-20h8v-10h6v10h8v20h18v-40l6-12%206%2012v40h16V120h6v-8h6v8h6v-8h6v8h6V95l10-22%2010%2022v35h22v-30l8-14%208%2014v30h14V60h4V40l12-28%2012%2028v20h4v80h16v-40h6v-8h6v8h6v-8h6v8h6v40h20V90l10-20%2010%2020v60h20v-25h8v-8h6v8h8v25h24v-35l8-14%208%2014v35h12v-15h10v-10h8v10h10v65z%27%2F%3E%3Cg%20fill%3D%27%23ffcc66%27%20opacity%3D%27.85%27%3E%3Crect%20x%3D%27104%27%20y%3D%27134%27%20width%3D%273%27%20height%3D%275%27%2F%3E%3Crect%20x%3D%27183%27%20y%3D%2770%27%20width%3D%273%27%20height%3D%276%27%2F%3E%3Crect%20x%3D%27183%27%20y%3D%2792%27%20width%3D%273%27%20height%3D%276%27%2F%3E%3Crect%20x%3D%27252%27%20y%3D%27112%27%20width%3D%273%27%20height%3D%275%27%2F%3E%3Crect%20x%3D%27322%27%20y%3D%27120%27%20width%3D%273%27%20height%3D%275%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"), url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%23231c3c%27%20d%3D%27M0%20200V120l40-30%2030%2020%2050-55%2040%2040%2035-25%2045%2045%2040-50%2050%2045%2030-20%2040%2030v80z%27%2F%3E%3C%2Fsvg%3E"), radial-gradient(circle at 78% 16%, #f2eed8 0 34px, transparent 35px), radial-gradient(circle at 78% 16%, rgba(242,238,216,.22) 34px, transparent 108.80000000000001px), radial-gradient(1px 1px at 12% 22%, #fff, transparent), radial-gradient(1px 1px at 30% 8%, #fff, transparent), radial-gradient(1.5px 1.5px at 46% 30%, #fff, transparent), radial-gradient(1px 1px at 60% 12%, #fff, transparent), radial-gradient(1px 1px at 90% 38%, #fff, transparent), radial-gradient(1px 1px at 20% 44%, #ddd, transparent), radial-gradient(1px 1px at 70% 46%, #fff, transparent), linear-gradient(#08071a, #1a1636 55%, #2e2648);
+  background-size: 100% 34%, 100% 46%, auto, auto, auto, auto, auto, auto, auto, auto, auto, auto, auto, auto;
+  background-position: bottom, bottom, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0;
+  background-repeat: no-repeat;
+}
+html:not([data-v~="tower-blood"]):not([data-v~="tower-sections"]) body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::after {
+  background: linear-gradient(transparent 62%, rgba(150, 140, 190, 0.18) 72%, transparent 84%), linear-gradient(rgba(220, 225, 255, 0.5), rgba(220, 225, 255, 0.5));
+  background-size: 200% 100%, 100% 100%;
+  animation: realm-fog 26s linear infinite, realm-lightning 11s steps(1) infinite;
+}
+@keyframes realm-fog { from { background-position: 0 0, 0 0; } to { background-position: -200% 0, 0 0; } }
+@keyframes realm-lightning { 0%, 93%, 95.5%, 97.5%, 100% { background-size: 200% 100%, 0 0; } 94% , 96.5% { background-size: 200% 100%, 100% 100%; } }
+
+/* --- Tower: Blood Moon Ruins --- */
+html[data-v~="tower-blood"] body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::before {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%23060203%27%20d%3D%27M0%20200v-40l14-6v-30l6-4%204%206v-20l8-30%206%2026v40l10%206v-18l10-4%206%2010v30h18l4-60%206-16%205%2018%203%2058h14v-24l10-30%206%2022v40h20v-80l7-24%207%2022v90h16v-36l10-8%208%2010v-20l6-14%206%2016v46h18l6-30%2010%2030h20v-60l6-20%206%2018v66h24v-30l8-6%206%2010v40z%27%2F%3E%3C%2Fsvg%3E"), radial-gradient(circle at 28% 20%, #c8281e 0 46px, transparent 47px), radial-gradient(circle at 28% 20%, rgba(200,40,30,.35) 46px, transparent 147.20000000000002px), linear-gradient(#0a0204, #2a0608 60%, #4a0e0c);
+  background-size: 100% 40%, auto, auto, auto; background-position: bottom, 0 0, 0 0, 0 0; background-repeat: no-repeat;
+}
+html[data-v~="tower-blood"] body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::after {
+  background-image: radial-gradient(2px 2px at 10% 80%, #ff5a2a, transparent), radial-gradient(1.5px 1.5px at 30% 90%, #ff8a3a, transparent), radial-gradient(2px 2px at 55% 85%, #ff5a2a, transparent), radial-gradient(1.5px 1.5px at 75% 95%, #ffaa4a, transparent), radial-gradient(2px 2px at 90% 75%, #ff5a2a, transparent);
+  animation: realm-ash 9s linear infinite;
+}
+@keyframes realm-ash { from { transform: translateY(0); opacity: 0.9; } to { transform: translateY(-70vh); opacity: 0; } }
+
+/* --- Tower: Section skies (matches the section you're climbing) --- */
+html[data-v~="tower-sections"] body[data-sec="1"] .d-tower-wrap::before {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%230a0e06%27%20d%3D%27M0%20200v-30c60-10%20140-14%20210-8s130%206%20190-2v40z%27%2F%3E%3Cg%20fill%3D%27%230a0e06%27%3E%3Cpath%20d%3D%27M40%20176l26-40%2026%2040z%27%2F%3E%3Crect%20x%3D%2750%27%20y%3D%27170%27%20width%3D%2732%27%20height%3D%2716%27%2F%3E%3Cpath%20d%3D%27M150%20172l34-52%2034%2052z%27%2F%3E%3Crect%20x%3D%27162%27%20y%3D%27166%27%20width%3D%2744%27%20height%3D%2720%27%2F%3E%3Cpath%20d%3D%27M300%20176l24-34%2024%2034z%27%2F%3E%3Crect%20x%3D%27308%27%20y%3D%27170%27%20width%3D%2732%27%20height%3D%2714%27%2F%3E%3Cpath%20d%3D%27M110%20180c-2-24%200-46%206-64M116%20116l-14-12M116%20128l14-10%27%20stroke%3D%27%230a0e06%27%20stroke-width%3D%274%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27%23ff9a3a%27%3E%3Crect%20x%3D%27182%27%20y%3D%27176%27%20width%3D%276%27%20height%3D%278%27%2F%3E%3Crect%20x%3D%2762%27%20y%3D%27178%27%20width%3D%275%27%20height%3D%276%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"), radial-gradient(ellipse at 46% 100%, rgba(255,140,40,.35), transparent 45%), linear-gradient(#0e1408, #24301a 60%, #3a4220);
+  background-size: 100% 30%, auto, auto; background-position: bottom, 0 0, 0 0; background-repeat: no-repeat;
+}
+html[data-v~="tower-sections"] body[data-sec="1"] .d-tower-wrap::after { background-image: radial-gradient(2px 2px at 15% 60%, #d8ff7a, transparent), radial-gradient(2px 2px at 70% 50%, #d8ff7a, transparent), radial-gradient(2px 2px at 85% 70%, #d8ff7a, transparent), radial-gradient(2px 2px at 35% 75%, #d8ff7a, transparent); animation: realm-blink 2.4s ease-in-out infinite alternate; }
+html[data-v~="tower-sections"] body[data-sec="2"] .d-tower-wrap::before {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%2308060e%27%20d%3D%27M0%20200v-34c40-6%2080-10%20130-6s110%208%20160%202%2080-6%20110-4v42z%27%2F%3E%3Cg%20fill%3D%27%2308060e%27%3E%3Cpath%20d%3D%27M40%20168v-22a9%209%200%200%201%2018%200v22z%27%2F%3E%3Cpath%20d%3D%27M96%20166v-28h-8v-6h8v-8h6v8h8v6h-8v28z%27%2F%3E%3Cpath%20d%3D%27M150%20166v-16a7%207%200%200%201%2014%200v16z%27%2F%3E%3Cpath%20d%3D%27M226%20168v-30h-9v-6h9v-9h6v9h9v6h-9v30z%27%2F%3E%3Cpath%20d%3D%27M300%20166v-20a8%208%200%200%201%2016%200v20z%27%2F%3E%3Cpath%20d%3D%27M352%20168v-24h-7v-5h7v-7h5v7h7v5h-7v24z%27%2F%3E%3Cpath%20d%3D%27M262%20170c-2-30-4-50%202-70-10-6-18-14-22-24%208%206%2016%2010%2022%2012%202-10%208-18%2016-24-4%2010-6%2018-4%2026%208-2%2016-8%2022-16-4%2012-12%2020-20%2024%202%2022%202%2042-2%2072z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"), radial-gradient(circle at 20% 14%, #d8d4f0 0 26px, transparent 27px), radial-gradient(circle at 20% 14%, rgba(200,190,255,.2) 26px, transparent 83.2px), linear-gradient(#0a0814, #1e1834 60%, #2e2448);
+  background-size: 100% 34%, auto, auto, auto; background-position: bottom, 0 0, 0 0, 0 0; background-repeat: no-repeat;
+}
+html[data-v~="tower-sections"] body[data-sec="2"] .d-tower-wrap::after { background: linear-gradient(transparent 66%, rgba(170, 130, 230, 0.22) 76%, transparent 88%); background-size: 200% 100%; animation: realm-fog 20s linear infinite; }
+html[data-v~="tower-sections"] body[data-sec="3"] .d-tower-wrap::before {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20120%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%23050507%27%20d%3D%27M0%200h400v30l-10%2040-8-38-12%2022-10-30-14%2058-10-56-12%2020-8-24-14%2048-12-44-10%2018-12-30-12%2064-12-62-10%2020-12-26-10%2040-10-38-14%2030-10-34-12%2052-12-50-10%2022-12-28-12%2044-10-40-10%2016-12-24-10%2036-10-34-12%2018-10-20z%27%2F%3E%3C%2Fsvg%3E"), radial-gradient(ellipse at 6% 70%, rgba(80,190,255,.35), transparent 22%), radial-gradient(ellipse at 94% 55%, rgba(80,190,255,.3), transparent 20%), radial-gradient(ellipse at 50% 120%, rgba(60,60,80,.6), transparent 60%), linear-gradient(#0a0a0e, #16161c);
+  background-size: 100% 18%, auto, auto, auto, auto; background-position: top, 0 0, 0 0, 0 0, 0 0; background-repeat: no-repeat;
+}
+html[data-v~="tower-sections"] body[data-sec="4"] .d-tower-wrap::before {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%23324a6e%27%20d%3D%27M0%20200V110l50-50%2040%2040%2050-70%2050%2060%2040-30%2060%2060%2040-40%2070%2060v70z%27%2F%3E%3Cpath%20fill%3D%27%23e8f2ff%27%20d%3D%27M50%2060l14%2014-6%202-8-6-8%208-6-4zM140%2030l18%2022-8%202-10-8-10%2010-8-4zM290%2080l18%2018-8%202-8-6-8%206-6-4z%27%2F%3E%3Cpath%20fill%3D%27%231a2a44%27%20d%3D%27M0%20200v-40l60-30%2050%2030%2060-50%2060%2050%2050-30%2070%2040%2050-20v50z%27%2F%3E%3C%2Fsvg%3E"), radial-gradient(1px 1px at 12% 22%, #fff, transparent), radial-gradient(1px 1px at 30% 8%, #fff, transparent), radial-gradient(1.5px 1.5px at 46% 30%, #fff, transparent), radial-gradient(1px 1px at 60% 12%, #fff, transparent), radial-gradient(1px 1px at 90% 38%, #fff, transparent), radial-gradient(1px 1px at 20% 44%, #ddd, transparent), radial-gradient(1px 1px at 70% 46%, #fff, transparent), linear-gradient(#0a1426, #1e3456 60%, #3a5a80);
+  background-size: 100% 42%, auto, auto, auto, auto, auto, auto, auto, auto; background-position: bottom, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0; background-repeat: no-repeat;
+}
+html[data-v~="tower-sections"] body[data-sec="4"] .d-tower-wrap::after { background-image: radial-gradient(2px 2px at 10% 10%, #fff, transparent), radial-gradient(2px 2px at 30% 30%, #fff, transparent), radial-gradient(1.5px 1.5px at 50% 5%, #fff, transparent), radial-gradient(2px 2px at 70% 25%, #fff, transparent), radial-gradient(1.5px 1.5px at 90% 15%, #fff, transparent), radial-gradient(2px 2px at 20% 50%, #fff, transparent), radial-gradient(1.5px 1.5px at 80% 45%, #fff, transparent); animation: realm-snow 7s linear infinite; }
+@keyframes realm-snow { from { transform: translateY(-20vh); } to { transform: translateY(60vh); } }
+html[data-v~="tower-sections"] body[data-sec="5"] .d-tower-wrap::before {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%23050101%27%20d%3D%27M0%20200v-60l10-50%208%2040%2010-80%2010%2090%2014-30%208%2040%2012-70%2010%2060%2016-20%2010%2040h10l12-90%2010%2080%2014-40%2010%2050%208-30%2012%2050%2014-110%2012%20110%2010-20%2014%2030%2010-60%2010%2060%2016-40%2010%2040%2012-70%2010%2070h10l10-40%2010%2040v80z%27%2F%3E%3C%2Fsvg%3E"), radial-gradient(ellipse at 50% 110%, rgba(255,90,20,.6), transparent 50%), linear-gradient(#120404, #3a0a06 60%, #6a1a08);
+  background-size: 100% 44%, auto, auto; background-position: bottom, 0 0, 0 0; background-repeat: no-repeat;
+}
+html[data-v~="tower-sections"] body[data-sec="5"] .d-tower-wrap::after { background-image: radial-gradient(2px 2px at 10% 80%, #ff7a2a, transparent), radial-gradient(1.5px 1.5px at 40% 90%, #ffaa4a, transparent), radial-gradient(2px 2px at 65% 85%, #ff5a2a, transparent), radial-gradient(1.5px 1.5px at 85% 95%, #ffaa4a, transparent); animation: realm-ash 8s linear infinite; }
+@keyframes realm-blink { from { opacity: 0.2; } to { opacity: 1; } }
+body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap .d-tower-hint { color: #e6dcc4; text-shadow: 0 1px 2px #000; }
+
+/* ===================== Gear screen scenes ===================== */
+body[data-camp="gear"] .d-doll { position: relative; isolation: isolate; padding: 14px 10px 12px; border: 3px solid #0a0908; border-radius: 4px; box-shadow: inset 0 0 0 2px #4a4540, 0 4px 0 rgba(0, 0, 0, 0.5); overflow: hidden; }
+body[data-camp="gear"] .d-doll::before, body[data-camp="gear"] .d-doll::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+body[data-camp="gear"] .d-dpowl { color: #e6dcc4; }
+body[data-camp="gear"] .d-dpow { text-shadow: 0 2px 0 #000; }
+/* Armory (default): stone wall, crossed swords and shield, two torches */
+html:not([data-v~="gear-banner"]):not([data-v~="gear-campfire"]) body[data-camp="gear"] .d-doll::before {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Cg%20fill%3D%27%23736048%27%20stroke%3D%27%231a120a%27%20stroke-width%3D%272%27%3E%3Cpath%20d%3D%27M14%2010l6-2%2058%2064-4%204z%27%2F%3E%3Cpath%20d%3D%27M86%2010l-6-2-58%2064%204%204z%27%2F%3E%3Crect%20x%3D%2714%27%20y%3D%2768%27%20width%3D%2722%27%20height%3D%275%27%20transform%3D%27rotate(-45%2025%2070)%27%2F%3E%3Crect%20x%3D%2764%27%20y%3D%2768%27%20width%3D%2722%27%20height%3D%275%27%20transform%3D%27rotate(45%2075%2070)%27%2F%3E%3C%2Fg%3E%3Cpath%20fill%3D%27%235a3a22%27%20stroke%3D%27%231a120a%27%20stroke-width%3D%272%27%20d%3D%27M30%2030h40v26c0%2016-10%2026-20%2032-10-6-20-16-20-32z%27%2F%3E%3Cpath%20fill%3D%27%23a8892e%27%20d%3D%27M47%2036h6v40h-6zM36%2048h28v6H36z%27%2F%3E%3C%2Fsvg%3E") 50% 6px / 92px no-repeat,
+    radial-gradient(ellipse at 50% 100%, rgba(120, 30, 20, 0.55), transparent 45%),
+    repeating-linear-gradient(0deg, #0a0908 0 2px, transparent 2px 34px), repeating-linear-gradient(90deg, #0a0908 0 2px, transparent 2px 68px), linear-gradient(#2a2622, #1a1816);
+  opacity: 0.95;
+}
+html:not([data-v~="gear-banner"]):not([data-v~="gear-campfire"]) body[data-camp="gear"] .d-doll::after,
+html[data-v~="gear-banner"] body[data-camp="gear"] .d-doll::after {
+  background: radial-gradient(circle at 4% 30%, rgba(255, 160, 60, 0.55), transparent 22%), radial-gradient(circle at 96% 30%, rgba(255, 160, 60, 0.55), transparent 22%);
+  animation: realm-torch 1.6s ease-in-out infinite alternate;
+}
+@keyframes realm-torch { 0% { opacity: 0.75; } 40% { opacity: 1; } 70% { opacity: 0.85; } 100% { opacity: 0.95; } }
+/* Banner: a great crimson banner hangs behind you */
+html[data-v~="gear-banner"] body[data-camp="gear"] .d-doll::before {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20160%27%3E%3Crect%20x%3D%274%27%20y%3D%274%27%20width%3D%2792%27%20height%3D%276%27%20rx%3D%273%27%20fill%3D%27%235a3a22%27%2F%3E%3Cpath%20fill%3D%27%237a1414%27%20stroke%3D%27%23c8a24a%27%20stroke-width%3D%273%27%20d%3D%27M12%2010h76v120l-38%2022-38-22z%27%2F%3E%3Cpath%20fill%3D%27%23c8a24a%27%20d%3D%27M47%2034h6v70h-6z%27%2F%3E%3Cpath%20fill%3D%27%23c8a24a%27%20d%3D%27M34%2058h32v6H34z%27%2F%3E%3Cpath%20fill%3D%27%23e8c870%27%20d%3D%27M50%2026l7%2010H43z%27%2F%3E%3Cpath%20fill%3D%27%23c8a24a%27%20d%3D%27M44%20104h12l-6%2012z%27%2F%3E%3C%2Fsvg%3E") 50% 0 / 150px 230px no-repeat, linear-gradient(#1c1a18, #121110);
+}
+/* Campfire: night in the woods, firelight from below */
+html[data-v~="gear-campfire"] body[data-camp="gear"] .d-doll::before {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%20preserveAspectRatio%3D%27none%27%3E%3Cg%20fill%3D%27%23060a0c%27%3E%3Cpath%20d%3D%27M0%20200v-30h400v30z%27%2F%3E%3Cpath%20d%3D%27M20%20180l20-70%2020%2070zM28%20150l12-50%2012%2050z%27%2F%3E%3Cpath%20d%3D%27M80%20186l26-96%2026%2096zM90%20140l16-60%2016%2060z%27%2F%3E%3Cpath%20d%3D%27M300%20184l24-88%2024%2088zM310%20140l14-56%2014%2056z%27%2F%3E%3Cpath%20d%3D%27M360%20182l18-64%2018%2064z%27%2F%3E%3Cpath%20d%3D%27M150%20190l14-40%2014%2040z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") bottom / 100% 60% no-repeat, radial-gradient(1px 1px at 12% 22%, #fff, transparent), radial-gradient(1px 1px at 30% 8%, #fff, transparent), radial-gradient(1.5px 1.5px at 46% 30%, #fff, transparent), radial-gradient(1px 1px at 60% 12%, #fff, transparent), radial-gradient(1px 1px at 90% 38%, #fff, transparent), radial-gradient(1px 1px at 20% 44%, #ddd, transparent), radial-gradient(1px 1px at 70% 46%, #fff, transparent), linear-gradient(#060a12, #10202a 70%, #18262a);
+}
+html[data-v~="gear-campfire"] body[data-camp="gear"] .d-doll::after {
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 140, 40, 0.6), transparent 50%);
+  animation: realm-torch 1.1s ease-in-out infinite alternate;
+}
+html:not([data-v~="gear-banner"]):not([data-v~="gear-campfire"]) body[data-camp="gear"] .d-doll { padding-top: 64px; }
+html:not([data-v~="gear-banner"]):not([data-v~="gear-campfire"]) body[data-camp="gear"] .d-doll::before { background-size: 110px, auto, auto, auto, auto; background-position: 50% 4px, 0 0, 0 0, 0 0, 0 0; }
+body[data-view="quests"] .streak-big, body[data-view="home"] .streak-big { color: #a8400a; }

@@ -21,6 +21,8 @@ import { isInstalled, isIOS, inAppBrowser, installInstructions, promptInstall, o
 const skinParam = new URLSearchParams(location.search).get('skin');
 if (skinParam && /^[a-z-]+$/.test(skinParam)) {
   document.documentElement.classList.add(`skin-${skinParam}`);
+  const v = new URLSearchParams(location.search).get('v');
+  if (v && /^[a-z -]+$/.test(v)) document.documentElement.dataset.v = v;   // look variants, e.g. 'tower-moon gear-armory'
   document.head.insertAdjacentHTML('beforeend', `<link rel="stylesheet" href="dev/skins/${skinParam}.css">`);
   document.getElementById('splash')?.remove();
 }

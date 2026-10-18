@@ -9,6 +9,9 @@
   body { margin: 0; background: #101014; color: #ddd; font: 14px system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; }
   .bar { position: sticky; top: 0; z-index: 2; width: 100%; background: #101014; padding: 10px 8px 8px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; border-bottom: 1px solid #333; }
   .bar button { padding: 8px 12px; border-radius: 8px; border: 1px solid #444; background: #1c1c22; color: #ddd; font-weight: 600; cursor: pointer; }
+  .bar.vars { position: static; border: 0; padding-top: 0; }
+  .bar.vars span { color: #888; font-size: 12px; align-self: center; margin-left: 6px; }
+  .bar.vars button { padding: 5px 9px; font-size: 12px; }
   .bar button.on { border-color: #ffc94a; color: #ffc94a; background: #2a2410; }
   .about { max-width: 420px; text-align: center; color: #999; padding: 6px 14px 0; min-height: 36px; }
   .phone { margin: 10px 0 24px; width: 390px; max-width: 100vw; height: 800px; max-height: calc(100vh - 130px); border: 10px solid #000; border-radius: 34px; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7); }
@@ -18,6 +21,7 @@
 </head>
 <body>
 <div class="bar" id="bar"></div>
+<div class="bar vars" id="vars"></div>
 <div class="about" id="about"></div>
 <div class="phone"><iframe id="game" title="Life RPG"></iframe></div>
 <script>
@@ -30,8 +34,17 @@
     ['keep', 'Iron & Stone Keep', 'Gritty dungeon: cut stone walls, riveted iron frames, bone-white text, torch-orange headings and blood-red banner buttons.'],
   ];
   const bar = document.getElementById('bar'), game = document.getElementById('game'), about = document.getElementById('about');
+  const VARS = { tower: [['tower-moon', 'Moonlit castle'], ['tower-blood', 'Blood moon ruins'], ['tower-sections', 'Section skies']], gear: [['gear-armory', 'Armory'], ['gear-banner', 'Banner hall'], ['gear-campfire', 'Campfire']] };
+  let cur = '', vt = 'tower-moon', vg = 'gear-armory';
+  const varsEl = document.getElementById('vars');
+  function drawVars() {
+    varsEl.innerHTML = cur !== 'realms' ? '' : Object.entries(VARS).map(([k, list]) => '<span>' + (k === 'tower' ? 'Tower:' : 'Gear:') + '</span>' + list.map(([v, l]) => '<button data-v="' + v + '" class="' + (v === vt || v === vg ? 'on' : '') + '">' + l + '</button>').join('')).join('');
+    varsEl.querySelectorAll('button').forEach((b) => b.onclick = () => { if (b.dataset.v.startsWith('tower')) vt = b.dataset.v; else vg = b.dataset.v; pick('realms'); });
+  }
   function pick(id) {
-    game.src = '../index.html' + (id ? '?skin=' + id : '');
+    cur = id;
+    game.src = '../index.html' + (id ? '?skin=' + id + (id === 'realms' ? '&v=' + encodeURIComponent(vt + ' ' + vg) : '') : '');
+    drawVars();
     [...bar.children].forEach((b) => b.classList.toggle('on', b.dataset.id === id));
     about.textContent = SKINS.find((s) => s[0] === id)[2] + ' Tap around inside the phone to see every tab.';
   }

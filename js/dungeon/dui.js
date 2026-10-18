@@ -104,6 +104,7 @@ export function view() {
   const power = powerScore(buildPlayer(dg));
   const next = Math.min(50, dg.climb);
   const nextSec = sectionOf(next);
+  document.body.dataset.sec = nextSec;   // lets a look theme the backdrop to the section you are in
   const nextLocked = !sectionUnlocked(dg, nextSec);
   const bossRec = recommendedPower(nextSec);
   const hero = api.avatarUrl(3);
