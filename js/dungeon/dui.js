@@ -392,22 +392,33 @@ function renderBattle(full = false) {
       <div class="fo-erow-sub"><span class="d-hptext">${fmt(shownHp(e))} / ${fmt(e.maxHp)}</span><span class="d-sts">${statuses(e)}</span></div>
     </div>`).join('');
   const acts = getActions(b);
-  let buttons;
+  const potLeft = POTIONS_PER_FIGHT - b.potionsUsed;
+  let hand;
   if (battle.potionPick) {
-    const pots = acts.filter((a) => a.kind === 'potion');
-    buttons = `${pots.map((a) => `<button class="btn d-act" data-action="d-act" data-kind="potion" data-id="${a.id}" ${a.available && !battle.busy ? '' : 'disabled'}><b>${esc(POTIONS[a.id].name)}</b><span class="small">×${a.count}</span></button>`).join('') || '<p class="muted small">No potions. Buy some at the Potion Shop.</p>'}
-      <button class="btn d-act" data-action="d-potions" data-open="0">Back</button>`;
+    const pots = acts.filter((x) => x.kind === 'potion');
+    hand = `<div class="d-acts">${pots.map((x) => `<button class="btn d-act" data-action="d-act" data-kind="potion" data-id="${x.id}" ${x.available && !battle.busy ? '' : 'disabled'}><b>${esc(POTIONS[x.id].name)}</b><span class="small">×${x.count}</span></button>`).join('') || '<p class="muted small">No potions. Buy some in the Camp.</p>'}
+      <button class="btn d-act" data-action="d-potions" data-open="0">Back to your cards</button></div>`;
   } else {
-    buttons = acts.filter((a) => a.kind === 'move').map((a) => {
-      const mv = a.move;
-      const eff = target && mv.power > 0 ? typeMult(moveType(p, mv), target) : 1;
-      const tag = eff > 1 ? '<span class="d-eff good">Strong!</span>' : eff < 1 ? '<span class="d-eff bad">Weak</span>' : '';
-      return `<button class="btn d-act ${mv.sig ? 'sig' : ''}" data-action="d-act" data-kind="move" data-idx="${a.idx ?? -1}" ${a.available && !battle.busy ? '' : 'disabled'} title="${esc(moveText(mv, p))}">
-        <b>${esc(a.label || mv.name)}</b><span class="small">${mv.power > 0 ? esc(TYPE_NAME[moveType(p, mv)] || '') : 'Utility'}${a.chargesLeft !== null && a.chargesLeft !== undefined ? ` · ${a.chargesLeft}/${mv.charges}` : ''}</span>${tag}</button>`;
-    }).join('');
-    if (acts.some((a) => a.kind === 'block')) buttons += `<button class="btn d-act" data-action="d-act" data-kind="block" ${battle.busy ? 'disabled' : ''}><b>Block</b><span class="small">Shield</span></button>`;
-    const potLeft = POTIONS_PER_FIGHT - b.potionsUsed;
-    if (!acts[0]?.firing) buttons += `<button class="btn d-act" data-action="d-potions" data-open="1" ${battle.busy || potLeft <= 0 ? 'disabled' : ''}><b>Potion</b><span class="small">${potLeft}/${POTIONS_PER_FIGHT} left this fight</span></button>`;
+    const cards = acts.filter((x) => x.kind === 'move' || x.kind === 'block');
+    const n = cards.length, weaponArt = d().equipped.weapon ? gearIcon(d().equipped.weapon, 3) : null;
+    hand = `<div class="tc-hand" style="--ov:${n > 4 ? 30 : 14}px"><span class="tc-deck"></span>${cards.map((x, i) => {
+      const mv = x.move || { name: 'Block', power: 0 };
+      const util = x.kind === 'block' || !(mv.power > 0);
+      const type = util ? 'utility' : moveType(p, mv);
+      const eff = target && !util ? typeMult(type, target) : 1;
+      const off = !x.available || battle.busy;
+      const tilt = i - (n - 1) / 2;
+      const pending = battle.drawSlot === i && battle.busy;
+      const art = util ? typeIcon('utility', 'tc-big') : weaponArt ? `<img src="${weaponArt}" alt="">` : typeIcon(type, 'tc-big');
+      const text = x.kind === 'block' ? 'Shield block' : util ? (mv.parry ? 'Block, then counter' : mv.ward ? 'Magic shield' : mv.cleanse ? 'Cleanse and heal' : mv.brace ? 'Brace for the hit' : 'Defend') : `${TYPE_NAME[type] || ''}${mv.aoe ? ' · hits all' : ''}${mv.bleed ? ' · bleed' : ''}${mv.burn ? ' · burn' : ''}${mv.poison ? ' · poison' : ''}${mv.stun ? ' · stun' : ''}${mv.freeze ? ' · freeze' : ''}`;
+      const pips = x.chargesLeft !== null && x.chargesLeft !== undefined ? `<span class="tc-uses">${Array.from({ length: mv.charges }, (_, k) => `<i class="${k < x.chargesLeft ? 'on' : ''}"></i>`).join('')}</span>` : '';
+      const hint = util && b.enemies.some((e) => e.charging && e.hp > 0) && !off ? 'hint' : '';
+      return `<button class="tc-card ${mv.sig ? 'sig' : ''} ${off ? 'off' : ''} ${pending ? 'pending' : ''} ${hint}" style="--tc:${TYPE_COLOR[type] || '#c8ccd8'};--r:${(tilt * 6).toFixed(1)}deg;--y:${(Math.abs(tilt) * 6).toFixed(1)}px" data-action="${off ? '' : 'd-card'}" data-slot="${i}" data-kind="${x.kind}" data-idx="${x.idx ?? -1}" title="${esc(x.kind === 'block' ? 'Block with your shield' : moveText(mv, p))}">
+        <span class="tc-face"></span><span class="tc-art">${art}</span><span class="tc-ribbon">${esc(x.label || mv.name)}</span><span class="tc-txt">${esc(text)}</span>${pips}
+        <span class="tc-seal">${util ? 'DEF' : Math.round(mv.power * (mv.hits || 1) * 100) + '%'}</span>
+        ${eff > 1 ? '<span class="tc-tag good">STRONG</span>' : eff < 1 ? '<span class="tc-tag bad">WEAK</span>' : ''}${hint ? '<span class="tc-tag hint">BLOCK IT!</span>' : ''}</button>`;
+    }).join('')}</div>
+    <div class="tc-under">${acts[0]?.firing ? '' : `<button class="btn tc-pot" data-action="d-potions" data-open="1" ${battle.busy || potLeft <= 0 ? 'disabled' : ''}>❤ Potions · ${potLeft} left</button>`}<span class="tc-hint">Tap a card, then tap again to play it</span></div>`;
   }
   root.className = 'open fo';
   root.innerHTML = `<div class="d-bg sec-${sec.id}"></div>
@@ -423,7 +434,7 @@ function renderBattle(full = false) {
       <div class="fo-me"><div class="fo-me-top"><b>${esc(S().name)}</b><span class="d-sts">${statuses(p)}${p.ward > 0 ? '<span class="d-st st-ward">ward</span>' : ''}${p.parry ? '<span class="d-st st-ward">parry</span>' : ''}</span></div>
         <div class="d-hpbar me"><span style="width:${(shownHp(p) / p.maxHp * 100).toFixed(1)}%"></span></div><div class="d-hptext">${fmt(shownHp(p))} / ${fmt(p.maxHp)}</div></div>
       <div class="d-log fo-text">${battle.log.slice(-2).map((l) => `<div>${esc(l)}</div>`).join('')}</div>
-      <div class="d-acts">${buttons}</div>
+      ${hand}
     </div>
     <div class="fo-flash"></div><div class="fo-vig"></div>`;
   battle.stops.forEach((st) => st()); battle.stops = [];
@@ -432,7 +443,32 @@ function renderBattle(full = false) {
     if (cv && e.hp > 0) battle.stops.push(mountEnemy(cv, e, e.boss ? 6 : 4));
   }
   if (full) root.scrollTop = 0;
+  if (battle.drawSlot !== undefined && !battle.busy) {
+    const slot = battle.drawSlot; battle.drawSlot = undefined;
+    const card = root.querySelector(`.tc-card[data-slot="${slot}"]`), deck = root.querySelector('.tc-deck');
+    if (card && deck) {
+      const cr = card.getBoundingClientRect(), dr = deck.getBoundingClientRect();
+      card.style.setProperty('--dx', `${dr.left + dr.width / 2 - (cr.left + cr.width / 2)}px`);
+      card.style.setProperty('--dy', `${dr.top + dr.height / 2 - (cr.top + cr.height / 2)}px`);
+      card.classList.add('draw');
+      setTimeout(() => card.classList.remove('draw'), 520);
+    }
+  }
 }
+const TYPE_COLOR = { slashing: '#c8ccd8', piercing: '#d8c890', blunt: '#b8a088', fire: '#ff7a2a', frost: '#7ad0ff', lightning: '#ffe04a', holy: '#fff0a0', poison: '#8ae05a', bleed: '#e8435a', utility: '#6ab0ff' };
+const TYPE_SVG = {
+  slashing: '<path d="M4 20 19 5l1 1L5 21z" fill="#fff"/><path d="M15 4h5v5" stroke="#fff" stroke-width="2" fill="none"/>',
+  piercing: '<path d="M3 21 17 7l-2-2h6v6l-2-2L5 23z" fill="#fff"/>',
+  blunt: '<path d="M4 4h10v6H4z" fill="#fff"/><path d="M8 10h2v12H8z" fill="#fff"/>',
+  fire: '<path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-7 0 3 1 4 2 4 0-4-1-6 1-9z" fill="#fff"/>',
+  frost: '<path d="M11 2h2v20h-2zM2 11h20v2H2zM4.9 6.3l1.4-1.4 12.8 12.8-1.4 1.4zM17.7 4.9l1.4 1.4L6.3 19.1l-1.4-1.4z" fill="#fff"/>',
+  lightning: '<path d="M13 2 4 14h6l-2 8 9-12h-6z" fill="#fff"/>',
+  holy: '<circle cx="12" cy="12" r="5" fill="#fff"/><path d="M11 1h2v5h-2zM11 18h2v5h-2zM1 11h5v2H1zM18 11h5v2h-5z" fill="#fff"/>',
+  poison: '<path d="M12 3c4 6 6 9 6 12a6 6 0 0 1-12 0c0-3 2-6 6-12z" fill="#fff"/><circle cx="10" cy="15" r="1.5" fill="#3a6a1a"/><circle cx="14" cy="16" r="1.2" fill="#3a6a1a"/>',
+  bleed: '<path d="M12 3c4 6 6 9 6 12a6 6 0 0 1-12 0c0-3 2-6 6-12z" fill="#fff"/>',
+  utility: '<path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z" fill="#fff"/>',
+};
+const typeIcon = (t, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24">${TYPE_SVG[t] || TYPE_SVG.slashing}</svg>`;
 const foeName = (e) => `${esc(e.name)}${e.boss && e.phase === 2 ? ' <span class="d-red">ENRAGED</span>' : ''}${e.charging ? ` <span class="fo-telename">⚠ ${esc(e.charging.name)}</span>` : ''}`;
 
 // ---------- battle effects ----------
@@ -703,6 +739,24 @@ export function action(a, el) {
       startRun(f); return true;
     }
     case 'd-target': if (battle && !battle.busy) { const uid = Number(el.dataset.uid); if (battle.b.enemies.find((e) => e.uid === uid && e.hp > 0)) { battle.target = uid; renderBattle(); } } return true;
+    case 'd-card': {
+      if (!battle || battle.busy || battle.cardLock) return true;
+      const root = battleRoot();
+      if (!el.classList.contains('lift')) { root.querySelectorAll('.tc-card').forEach((c) => c.classList.toggle('lift', c === el)); return true; }
+      battle.cardLock = true;
+      el.classList.remove('lift'); el.classList.add('play');
+      const slot = Number(el.dataset.slot), kind = el.dataset.kind, idx = Number(el.dataset.idx);
+      setTimeout(() => {
+        battle.cardLock = false;
+        if (!battle) return;
+        battle.drawSlot = slot;
+        if (kind === 'block') { act({ kind: 'block' }); return; }
+        const acts = getActions(battle.b);
+        const chosen = idx < 0 ? acts[0] : acts.find((x) => x.kind === 'move' && x.idx === idx);
+        if (chosen) act({ kind: 'move', move: chosen.move });
+      }, 300);
+      return true;
+    }
     case 'd-potions': if (battle) { battle.potionPick = el.dataset.open === '1'; renderBattle(); } return true;
     case 'd-act': {
       if (!battle) return true;

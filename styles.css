@@ -1114,3 +1114,39 @@ main { position: relative; z-index: 1; }
 .fo-bossname small { display: block; font: 600 13px var(--body-font); color: #e6dcc4; letter-spacing: 3px; }
 @keyframes fo-bossname { 0% { transform: translateX(-120%); } 20%, 80% { transform: translateX(0); } 100% { transform: translateX(120%); } }
 .fo-me .d-hpbar.me span { background: linear-gradient(#8ae07a, #3a9a2a); }
+
+
+/* ==================== Battle: tarot move cards ==================== */
+.tc-hand { position: relative; display: flex; justify-content: center; align-items: flex-end; height: 178px; padding-top: 16px; margin-bottom: 2px; }
+.tc-card { position: relative; flex: none; width: 104px; height: 152px; margin: 0 calc(-1 * var(--ov, 14px)); padding: 0; border: 0; background: none; cursor: pointer; font: inherit; color: inherit; text-align: center;
+  transform: rotate(var(--r)) translateY(var(--y)); transform-origin: 50% 120%; transition: transform 0.16s; will-change: transform; }
+.tc-card.lift { transform: rotate(0deg) translateY(-24px) scale(1.1); z-index: 5; }
+.tc-card.off { filter: grayscale(0.8) brightness(0.6); cursor: default; }
+.tc-card.pending { opacity: 0; }
+.tc-card.play { animation: tc-play 0.42s forwards cubic-bezier(.5, 0, .7, .3); z-index: 6; pointer-events: none; }
+@keyframes tc-play { 0% { transform: translateY(-24px) scale(1.1); } 70% { transform: translate(50px, -300px) scale(0.7) rotate(16deg); opacity: 1; } 100% { transform: translate(60px, -330px) scale(0.3); opacity: 0; } }
+.tc-card.draw { animation: tc-draw 0.5s cubic-bezier(.2, .8, .3, 1.15) both; z-index: 4; }
+@keyframes tc-draw { 0% { transform: translate(var(--dx), var(--dy)) rotate(0deg) scale(0.4); } 45% { transform: translate(calc(var(--dx) * 0.35), calc(var(--dy) * 0.35 - 26px)) rotate(0deg) scale(0.04, 0.9); } 100% { transform: rotate(var(--r)) translateY(var(--y)); } }
+.tc-card.draw::after { content: ""; position: absolute; inset: 0; z-index: 9; border-radius: 7px; border: 2px solid #c8a24a; background: repeating-linear-gradient(45deg, #6a1e16 0 6px, #4a120c 6px 12px); animation: tc-back 0.5s steps(1) both; }
+@keyframes tc-back { 0%, 44% { opacity: 1; } 45%, 100% { opacity: 0; } }
+.tc-face { position: absolute; inset: 0; border-radius: 7px; background: var(--noise), #efe0bc; border: 2px solid #3a2410; box-shadow: inset 0 0 0 3px #efe0bc, inset 0 0 0 4px #b8862a, inset 0 0 0 6px #efe0bc, inset 0 0 0 7px #6a4a1a, 0 4px 0 #000; }
+.tc-card.sig .tc-face { box-shadow: inset 0 0 0 3px #efe0bc, inset 0 0 0 4px #ffd84a, inset 0 0 0 6px #efe0bc, inset 0 0 0 7px #b8862a, 0 4px 0 #000, 0 0 10px rgba(255, 216, 74, 0.45); }
+.tc-art { position: absolute; left: 11px; right: 11px; top: 11px; height: 68px; border-radius: 36px 36px 4px 4px; border: 2px solid #6a4a1a; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(circle at 50% 70%, color-mix(in srgb, var(--tc) 55%, transparent), transparent 70%), linear-gradient(#2a1c12, #4a3420); }
+.tc-art img { width: 64px; image-rendering: pixelated; }
+.tc-big { width: 32px; height: 32px; }
+.tc-ribbon { position: absolute; left: 3px; right: 3px; top: 75px; padding: 3px 4px; background: #7a1e16; color: #fbe8d0; font: 400 11.5px var(--display-font); line-height: 1.1; clip-path: polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%, 6% 50%); }
+.tc-txt { position: absolute; left: 9px; right: 9px; top: 100px; font-size: 10px; line-height: 1.2; color: #4a3420; }
+.tc-seal { position: absolute; left: 7px; bottom: 6px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 40% 35%, #c8402a, #7a1410 70%); color: #fbe8d0; font: 400 10px var(--display-font); box-shadow: 0 2px 0 #3a0a06; }
+.tc-uses { position: absolute; left: 44px; bottom: 16px; display: flex; gap: 3px; }
+.tc-uses i { width: 7px; height: 7px; border-radius: 50%; background: #3a2410; border: 1px solid #b8862a; }
+.tc-uses i.on { background: #ffd84a; }
+.tc-tag { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); padding: 0 5px; border-radius: 2px; font: 700 10px var(--body-font); letter-spacing: 0.5px; white-space: nowrap; }
+.tc-tag.good { background: #8ae07a; color: #0a1a06; }
+.tc-tag.bad { background: #c84a3a; color: #fff; }
+.tc-tag.hint { background: #6ab0ff; color: #061a2a; animation: d-blink 0.8s infinite; }
+.tc-card.hint .tc-face { box-shadow: inset 0 0 0 3px #efe0bc, inset 0 0 0 4px #6ab0ff, inset 0 0 0 6px #efe0bc, inset 0 0 0 7px #2a5a9a, 0 4px 0 #000, 0 0 12px rgba(106, 176, 255, 0.6); }
+.tc-deck { position: absolute; right: 2px; bottom: -42px; width: 34px; height: 50px; border-radius: 5px; border: 2px solid #c8a24a; background: repeating-linear-gradient(45deg, #6a1e16 0 6px, #4a120c 6px 12px); box-shadow: 2px 2px 0 #1a0806, 4px 4px 0 #c8a24a, 6px 6px 0 #1a0806; }
+.tc-under { display: flex; align-items: center; gap: 10px; min-height: 40px; padding-right: 50px; }
+.tc-pot { min-height: 36px; padding: 4px 14px; border-radius: 999px; font-size: 14px; }
+.tc-hint { font-size: 11px; color: #a89c86; }
