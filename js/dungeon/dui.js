@@ -81,7 +81,7 @@ function statLine(id) {
   const s = itemStats(id, d().upgrades[id] || 0);
   return [s.atk && `+${s.atk} Atk`, s.def && `+${s.def} Def`, s.hp && `+${s.hp} HP`, s.crit && `+${Math.round(s.crit * 100)}% crit`, s.dodge && `+${Math.round(s.dodge * 100)}% dodge`].filter(Boolean).join(' · ');
 }
-const gearImg = (id, cls = '') => `<img class="d-gear ${cls} glow-${DITEMS[id].rarity}" src="${gearIcon(id)}" alt="">`;
+const gearImg = (id, cls = '') => `<img class="d-gear ${cls}" src="${gearIcon(id, cls === 'xl' ? 5 : 3)}" alt="">`;
 const itemName = (id) => `${esc(DITEMS[id].name)}${d().upgrades[id] ? ` <b class="plus">+${d().upgrades[id]}</b>` : ''}`;
 
 // ---------- hub ----------

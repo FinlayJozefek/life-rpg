@@ -1,5 +1,6 @@
 // Dungeon pixel art: enemies, bosses and gear icons.
 // Enemies use the same 16x16 drawing format as pets (8-char rows are mirrored).
+import { gearArtIcon } from './gearart.js';
 import { BASES } from '../pets.js';
 import { DITEMS } from './ddata.js';
 import { drawingIcon, mountDrawing } from '../sprites2.js';
@@ -152,7 +153,8 @@ function paletteFor(it) {
   return PAL[it.section] || PAL[0];
 }
 const gearCache = new Map();
-export function gearIcon(id, scale = 3) {
+// The original simple icons, kept for comparison on dev pages.
+export function gearIconClassic(id, scale = 3) {
   const key = `${id}|${scale}`;
   if (gearCache.has(key)) return gearCache.get(key);
   const it = DITEMS[id];
@@ -160,3 +162,6 @@ export function gearIcon(id, scale = 3) {
   gearCache.set(key, url);
   return url;
 }
+
+// Gear icons in the game: detailed 32px art (js/dungeon/gearart.js).
+export function gearIcon(id, scale = 3) { return gearArtIcon(DITEMS[id], scale); }

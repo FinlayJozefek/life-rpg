@@ -1,4 +1,4 @@
-// TRIAL (dev/gear-art.html only): detailed 32x32 Dungeon gear art.
+// Detailed 32x32 Dungeon gear art.
 // Each item is built from shaded parts (blade, grip, guard, head...) instead of one flat symbol:
 //   section  -> materials (goblin iron + rope, crypt bone + soulfire, runed stone, ice, obsidian + lava)
 //   rarity   -> gems, gold trim, glow, shimmer, sparkles, halo
@@ -368,7 +368,7 @@ export function gearArtIcon(it, scale = 3) {
   const key = `${it.id || it.name}|${it.rarity}|${it.section}|${scale}`;
   if (cache.has(key)) return cache.get(key);
   const { g, aura } = buildGear(it);
-  const pad = aura ? 4 * scale : 0;
+  const pad = 4 * scale;   // same padding for every item so icons line up; Legendary+ glow fills it
   const cv = document.createElement('canvas'); cv.width = cv.height = N * scale + pad * 2;
   const ctx = cv.getContext('2d');
   ctx.translate(pad, pad);
@@ -426,4 +426,3 @@ export function mountGearArt(canvas, it, scale = 4) {
   return () => cancelAnimationFrame(raf);
 }
 
-export const allGear = () => Object.values(DITEMS);
