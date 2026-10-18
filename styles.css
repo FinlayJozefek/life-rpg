@@ -1150,3 +1150,44 @@ main { position: relative; z-index: 1; }
 .tc-under { display: flex; align-items: center; gap: 10px; min-height: 40px; padding-right: 50px; }
 .tc-pot { min-height: 36px; padding: 4px 14px; border-radius: 999px; font-size: 14px; }
 .tc-hint { font-size: 11px; color: #a89c86; }
+
+
+/* ==================== Floor chests ==================== */
+.ch-earned { display: flex; align-items: center; gap: 10px; justify-content: center; margin: 6px auto 10px; padding: 6px 12px; border-radius: 6px; background: rgba(0, 0, 0, 0.35); border: 1px solid #8a6a1a; width: fit-content; }
+.ch-earned img { width: 54px; image-rendering: pixelated; }
+.ch-earned b { display: block; color: #ffd84a; }
+.ch-row { margin: 0 0 10px; padding: 8px; border-radius: 8px; border: 2px dashed #c8a070; background: rgba(0, 0, 0, 0.25); }
+.ch-row-h { font: 400 14px var(--display-font); color: #ffd84a; margin-bottom: 4px; }
+.ch-list { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.ch-btn { position: relative; flex: none; width: 74px; display: flex; flex-direction: column; align-items: center; padding: 4px 2px 6px; border-radius: 8px; border: 2px solid #5a3a12; background: radial-gradient(circle at 50% 35%, rgba(255, 216, 120, 0.25), rgba(0, 0, 0, 0.4) 75%); color: #f4e6c8; cursor: pointer; }
+.ch-btn img { width: 60px; image-rendering: pixelated; animation: ch-wiggle 2.4s ease-in-out infinite; }
+@keyframes ch-wiggle { 0%, 80%, 100% { transform: rotate(0); } 84% { transform: rotate(-6deg); } 88% { transform: rotate(6deg); } 92% { transform: rotate(-3deg); } }
+.ch-n { position: absolute; top: 2px; right: 4px; font: 700 12px var(--display-font); color: #ffd84a; text-shadow: 1px 1px 0 #000; }
+.ch-name { font-size: 10px; line-height: 1.1; text-align: center; }
+.ch-open { text-align: center; }
+.ch-stage { position: relative; height: 150px; display: grid; place-items: center; }
+.ch-stage img { position: absolute; width: 132px; image-rendering: pixelated; }
+.ch-opened { opacity: 0; }
+.ch-open.go .ch-closed { animation: ch-shake 0.9s ease-in-out forwards; }
+.ch-open.go .ch-opened { animation: ch-pop 0.4s 0.9s forwards; }
+@keyframes ch-shake { 0%, 100% { transform: none; } 15%, 45%, 75% { transform: rotate(-7deg) scale(1.04); } 30%, 60%, 90% { transform: rotate(7deg) scale(1.04); } 99% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes ch-pop { 0% { opacity: 1; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+.ch-burst { position: absolute; width: 30px; height: 30px; border-radius: 50%; border: 4px solid #ffe89a; opacity: 0; }
+.ch-open.go .ch-burst { animation: ch-burst 0.6s 0.9s ease-out; }
+@keyframes ch-burst { 0% { opacity: 1; transform: scale(0.5); } 100% { opacity: 0; transform: scale(8); } }
+.ch-reel { position: relative; height: 84px; margin: 6px 0 10px; overflow: hidden; border-radius: 8px; border: 2px solid #c8a24a; background: #120c08; }
+.ch-strip { display: flex; gap: 6px; padding: 6px; width: max-content; transform: translateX(0); }
+.ch-open.go .ch-strip { animation: ch-roll 1.4s 1.0s cubic-bezier(.1, .7, .2, 1) forwards; }
+@keyframes ch-roll { to { transform: translateX(var(--end)); } }
+.ch-pointer { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #ffd84a; box-shadow: 0 0 6px #ffd84a; }
+.ch-cell { flex: none; width: 68px; height: 68px; border-radius: 6px; border: 2px solid var(--rc, #4a4540); background: radial-gradient(circle at 50% 35%, var(--rcb, rgba(255, 255, 255, 0.06)), rgba(0, 0, 0, 0.5) 80%); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ch-cell img { width: 48px; image-rendering: pixelated; }
+.ch-cell b { display: none; }
+.ch-cell.coin { --rc: #8a6a1a; }
+.ch-got { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; opacity: 0; }
+.ch-open.go .ch-got { animation: ch-fade 0.4s 2.4s forwards; }
+@keyframes ch-fade { to { opacity: 1; } }
+.ch-got .ch-cell { width: auto; min-width: 86px; height: auto; padding: 6px 8px; }
+.ch-got .ch-cell b { display: block; font-size: 12px; margin-top: 2px; color: #f4e6c8; }
+.ch-pot { font-size: 34px; color: #e8435a; }
+.ch-btns .btn { margin: 0; }

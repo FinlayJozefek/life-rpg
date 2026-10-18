@@ -165,3 +165,24 @@ export function gearIconClassic(id, scale = 3) {
 
 // Gear icons in the game: detailed 32px art (js/dungeon/gearart.js).
 export function gearIcon(id, scale = 3) { return gearArtIcon(DITEMS[id], scale); }
+
+// ---------- floor chests ----------
+const CHEST_CLOSED = ['........', '........', '........', '..bbbbbb', '.baaaaaa', '.baaaaaa', '.bcccccc', '.bbbbbbd', '.baaaaad', '.bcaaaaa', '.bcaaaaa', '.baaaaaa', '.bcccccc', '.bbbbbbb', '........', '........'];
+const CHEST_OPEN = ['..bbbbbb', '.bcccccc', '.baaaaaa', '.bbbbbbb', '..gggggg', '.bgggggg', '.bcccccc', '.bbbbbbb', '.baaaaaa', '.bcaaaaa', '.bcaaaaa', '.baaaaaa', '.bcccccc', '.bbbbbbb', '........', '........'];
+const CHEST_PAL = {
+  1: { a: '#8a5a2a', b: '#2a1a0a', c: '#6a8a3a', d: '#c8a050' },
+  2: { a: '#5a4a6a', b: '#1a1424', c: '#c8c0d8', d: '#9a6ae0' },
+  3: { a: '#5a5a62', b: '#1a1a20', c: '#4ab0ff', d: '#e07a2a' },
+  4: { a: '#6a9ac0', b: '#1a2a44', c: '#e8f4ff', d: '#3a6a9a' },
+  5: { a: '#3a1a1a', b: '#0a0404', c: '#ff6a1a', d: '#ffc94a' },
+};
+const chestCache = new Map();
+export function chestIcon(key, { open = false, scale = 3 } = {}) {
+  const ck = `${key}|${open}|${scale}`;
+  if (chestCache.has(ck)) return chestCache.get(ck);
+  const sec = Number(key[0]), boss = key.endsWith('b');
+  const pal = { ...CHEST_PAL[sec], g: '#ffe89a', ...(boss ? { c: '#ffc94a', d: '#e8435a' } : {}) };
+  const url = drawingIcon({ pal, half: open ? CHEST_OPEN : CHEST_CLOSED }, { scale });
+  chestCache.set(ck, url);
+  return url;
+}

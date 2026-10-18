@@ -7,9 +7,10 @@ import {
   newDungeon, startDungeon, cryptsProgress, cryptsLevel, sectionOf, floorInSection, sectionStart, sectionUnlocked, canPlay,
   buildPlayer, powerScore, recommendedPower, floorPlan, enemyXp, enemyCoins, rollEnemyDrops, rollBossDrops, materialFor,
   itemStats, weaponMoves, activeSet, sellPrice, buyPrice, upgradeCost, MAX_PLUS, blacksmithStock, XP, SECTION_XP, SECTION_FUDGE,
+  chestKey, chestName, rollChest,
 } from './dgame.js';
 import { createBattle, takeTurn, getActions, aliveEnemies, typeMult, moveType } from './engine.js';
-import { gearIcon, mountEnemy, enemyIcon, BOSS_AURA, TOWER_PAL, towerTexture } from './dart.js';
+import { gearIcon, mountEnemy, enemyIcon, BOSS_AURA, TOWER_PAL, towerTexture, chestIcon } from './dart.js';
 import { uiIcon } from '../uiicons.js';
 import { bestForSlot, bestGear } from './dbot.js';
 import { mountGearArt } from './gearart.js';
@@ -224,7 +225,9 @@ function campBag() {
   const tiles = list.map((id) => `<button class="d-tile r-${DITEMS[id].rarity}-bg ${isWorn(dg, id) ? 'worn' : ''}" data-action="d-item" data-id="${id}">${tileArt(id)}${dg.upgrades[id] ? `<span class="d-tup">+${dg.upgrades[id]}</span>` : ''}${dg.inv[id] > 1 ? `<span class="d-tn">×${dg.inv[id]}</span>` : ''}</button>`).join('');
   const empties = Math.max(0, (5 - (list.length % 5)) % 5 + (list.length < 10 ? 5 : 0));
   const mats = Object.entries(dg.materials).filter(([, n]) => n > 0).map(([m, n]) => `${esc(MATERIALS[m].name)} ×${n}`).join(' · ') || 'none yet';
-  return `<div class="d-flt">${BAG_FILTERS.map(([k, l]) => `<button class="${bagFilter === k ? 'on' : ''}" data-action="d-bagf" data-f="${k}">${l}</button>`).join('')}</div>
+  const chests = Object.entries(dg.chests || {}).filter(([, n]) => n > 0).sort(([a], [b]) => a.localeCompare(b));
+  const chestRow = chests.length ? `<div class="ch-row"><div class="ch-row-h">Chests to open</div><div class="ch-list">${chests.map(([k, n]) => `<button class="ch-btn" data-action="d-chest" data-key="${k}"><img src="${chestIcon(k, { scale: 3 })}" alt=""><span class="ch-n">×${n}</span><span class="ch-name">${esc(chestName(k).replace(' Chest', ''))}</span></button>`).join('')}</div></div>` : '';
+  return `${chestRow}<div class="d-flt">${BAG_FILTERS.map(([k, l]) => `<button class="${bagFilter === k ? 'on' : ''}" data-action="d-bagf" data-f="${k}">${l}</button>`).join('')}</div>
     <div class="d-flt"><button class="${!bagSec ? 'on' : ''}" data-action="d-bags" data-s="0">Every section</button>${SECTIONS.map((s) => `<button class="${bagSec === s.id ? 'on' : ''}" data-action="d-bags" data-s="${s.id}"><img src="${enemyIcon(s.boss, 1)}" alt="">${esc(s.name)}</button>`).join('')}</div>
     <div class="d-cap"><span>${list.length} item${list.length === 1 ? '' : 's'} · best first</span><span>${mats}</span></div>
     <div class="d-bag">${tiles}${'<div class="d-tile empty"></div>'.repeat(empties)}</div>
@@ -288,6 +291,51 @@ function campPotions() {
       <span class="small muted">${pt.heal ? `Heals ${Math.round(pt.heal * 100)}%` : esc(pt.text)}</span><span class="small">You have <b>${dg.potions[k] || 0}</b></span>
       <div class="d-pbuy"><button class="d-price ${coins >= pt.price ? '' : 'no'}" data-action="d-potion-buy" data-id="${k}" data-n="1" ${coins >= pt.price ? '' : 'disabled'}>${coinImg()}${fmt(pt.price)}</button><button class="d-price ${coins >= pt.price * 5 ? '' : 'no'}" data-action="d-potion-buy" data-id="${k}" data-n="5" ${coins >= pt.price * 5 ? '' : 'disabled'}>${coinImg()}${fmt(pt.price * 5)} ×5</button></div></div>`).join('')}</div>`;
 }
+
+// ---------- opening a chest ----------
+function openChest(key) {
+  const dg = d();
+  if (!(dg.chests?.[key] > 0)) { api.closeModal(); return; }
+  dg.chests[key]--;
+  const r = rollChest(key);
+  S().coins += r.coins;
+  for (const id of r.items) { dg.inv[id] = (dg.inv[id] || 0) + 1; dg.seen[id] = true; }
+  const mat = materialFor(Number(key[0]));
+  if (r.mats) dg.materials[mat] = (dg.materials[mat] || 0) + r.mats;
+  if (r.potion) dg.potions[r.potion] = (dg.potions[r.potion] || 0) + 1;
+  api.persist();
+  // the reel: random rewards whizz past, then it lands on what you actually got
+  const coinIc = uiIcon('coin', 'color', 3);
+  const got = [
+    `<div class="ch-cell coin"><img src="${coinIc}" alt=""><b>${fmt(r.coins)}</b></div>`,
+    ...r.items.map((id) => `<div class="ch-cell r-${DITEMS[id].rarity}-bg"><img src="${gearIcon(id, 3)}" alt=""><b class="r-${DITEMS[id].rarity}">${esc(DITEMS[id].name)}</b></div>`),
+    ...(r.mats ? [`<div class="ch-cell"><img src="${uiIcon('gem', 'color', 3)}" alt=""><b>${r.mats} ${esc(MATERIALS[mat].name)}</b></div>`] : []),
+    ...(r.potion ? [`<div class="ch-cell"><span class="ch-pot">❤</span><b>${esc(POTIONS[r.potion].name)}</b></div>`] : []),
+  ];
+  const pool = DITEMS_BY_SECTION_UI(Number(key[0]));
+  const filler = Array.from({ length: 14 }, () => { const id = pool[Math.floor(Math.random() * pool.length)]; return Math.random() < 0.35 ? `<div class="ch-cell coin"><img src="${coinIc}" alt=""></div>` : `<div class="ch-cell r-${DITEMS[id].rarity}-bg"><img src="${gearIcon(id, 3)}" alt=""></div>`; });
+  const best = r.items.length ? DITEMS[r.items[0]].rarity : 'common';
+  const left = dg.chests[key];
+  api.openModal(`<div class="ch-open">
+      <h2>${esc(chestName(key))}</h2>
+      <div class="ch-stage"><img class="ch-closed" src="${chestIcon(key, { scale: 6 })}" alt=""><img class="ch-opened" src="${chestIcon(key, { open: true, scale: 6 })}" alt=""><i class="ch-burst"></i></div>
+      <div class="ch-reel"><div class="ch-strip">${filler.join('')}${got[r.items.length ? 1 : 0]}</div><i class="ch-pointer"></i></div>
+      <div class="ch-got">${got.join('')}</div>
+    </div>
+    <div class="btn-col ch-btns">${left > 0 ? `<button class="btn primary" data-action="d-chest" data-key="${key}">Open another (${left} left)</button>` : ''}<button class="btn" data-action="close">Done</button></div>`);
+  const root = document.getElementById('modal-root');
+  const strip = root.querySelector('.ch-strip');
+  requestAnimationFrame(() => {
+    root.querySelector('.ch-open').classList.add('go');
+    const cell = strip.lastElementChild;
+    const reel = root.querySelector('.ch-reel');
+    strip.style.setProperty('--end', `${-(cell.offsetLeft - reel.clientWidth / 2 + cell.offsetWidth / 2)}px`);
+  });
+  api.sfx.charge?.(3, 900);
+  setTimeout(() => { api.sfx.dropSound(['common', 'uncommon', 'rare', 'epic', 'legendary'].indexOf(best)); if (['epic', 'legendary'].includes(best)) api.confetti({ count: 80, duration: 1600 }); }, 2300);
+  api.render();
+}
+const DITEMS_BY_SECTION_UI = (sec) => Object.values(DITEMS).filter((i) => i.section === sec && !i.shopOnly && !i.grindDrop).map((i) => i.id);
 
 // ---------- item sheet: compare with what you wear ----------
 function showItem(id) {
@@ -636,6 +684,9 @@ function grantRewards(won, { fled = false } = {}) {
   if (run.mats) dg.materials[mat] = (dg.materials[mat] || 0) + run.mats;
   for (const id of run.drops) { dg.inv[id] = (dg.inv[id] || 0) + 1; dg.seen[id] = true; }
   if (won) {
+    dg.chests ||= {};
+    run.chest = chestKey(run.floor);
+    dg.chests[run.chest] = (dg.chests[run.chest] || 0) + 1;
     dg.cleared[run.floor] = true;
     if (floorInSection(run.floor) === 10) dg.bossKills[k] = (dg.bossKills[k] || 0) + 1;
     if (run.floor === dg.climb) dg.climb = Math.min(50, run.floor + 1);
@@ -667,6 +718,7 @@ function finishRun(won) {
     root.innerHTML = `<div class="d-bg sec-${sectionOf(fellFrom)}"></div><div class="d-result">
       <h2>${boss ? `${esc(SECTIONS[sectionOf(fellFrom) - 1].name)} conquered!` : `Floor ${fellFrom} cleared!`}</h2>
       ${first ? '<p class="boost center">First clear bonus!</p>' : ''}
+      ${run.chest ? `<div class="ch-earned"><img src="${chestIcon(run.chest, { scale: 4 })}" alt=""><div><b>+1 ${esc(chestName(run.chest))}</b><span class="small muted">Open it in Camp › Bag</span></div></div>` : ''}
       ${summary}
       <div class="btn-row">${canPlay(dg, fellFrom + 1) && fellFrom < 50 ? `<button class="btn primary" data-action="d-floor" data-floor="${fellFrom + 1}">Next floor</button>` : ''}<button class="btn" data-action="d-leave">Back to the tower</button></div>
     </div>`;
@@ -757,6 +809,7 @@ export function action(a, el) {
       }, 300);
       return true;
     }
+    case 'd-chest': openChest(el.dataset.key); return true;
     case 'd-potions': if (battle) { battle.potionPick = el.dataset.open === '1'; renderBattle(); } return true;
     case 'd-act': {
       if (!battle) return true;

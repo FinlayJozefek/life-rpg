@@ -37,7 +37,7 @@ export function newDungeon() {
   return {
     started: false, xp: 0, climb: 1, highest: 1, cleared: {}, bossKills: {},
     inv: {}, upgrades: {}, equipped: { weapon: null, helmet: null, chest: null, legs: null, boots: null, offhand: null },
-    materials: {}, potions: {}, kills: 0, deaths: 0, seen: {},
+    materials: {}, potions: {}, kills: 0, deaths: 0, seen: {}, chests: {},
   };
 }
 export function startDungeon(d) {
@@ -264,4 +264,28 @@ export function rarelLoadout(section) {
 export function recommendedPower(section) {
   const gate = section < 5 ? SECTIONS[section].crypts - 1 : 33;
   return powerScore(buildPlayer(newDungeon(), { equipped: rarelLoadout(section), level: gate, upgrades: {}, potions: {} }));
+}
+
+// ---------- floor chests ----------
+// Every floor you clear gives a chest from that section; boss floors give a boss chest.
+// key: "3" = Stone Depths chest, "3b" = Stone Depths boss chest
+export const chestKey = (floor) => `${sectionOf(floor)}${floorInSection(floor) === 10 ? 'b' : ''}`;
+export const chestInfo = (key) => ({ sec: Number(key[0]), boss: key.endsWith('b') });
+export const chestName = (key) => { const { sec, boss } = chestInfo(key); return `${SECTIONS[sec - 1].name}${boss ? ' Boss' : ''} Chest`; };
+const CHEST_ITEM = { false: { chance: 0.32, odds: [['common', 0.55], ['uncommon', 0.32], ['rare', 0.11], ['epic', 0.02]] }, true: { chance: 1, odds: [['rare', 0.64], ['epic', 0.33], ['legendary', 0.03]] } };
+// Roll what is inside. Never the shop-only Masterworks or the 1-in-2,000 final-boss weapons.
+export function rollChest(key, rng = Math.random) {
+  const { sec, boss } = chestInfo(key);
+  const S = SECTION_SCALE[sec - 1];
+  const out = { coins: Math.round((boss ? 8 : 2.6) * S * ((boss ? 1 : 0.8) + rng() * (boss ? 0.5 : 0.8))), items: [], mats: 0, potion: null };
+  const t = CHEST_ITEM[boss];
+  if (rng() < t.chance) {
+    let r = rng(), rar = t.odds[t.odds.length - 1][0];
+    for (const [k, p] of t.odds) { if (r < p) { rar = k; break; } r -= p; }
+    const pool = DITEMS_BY_SECTION[sec].filter((i) => i.rarity === rar && !i.shopOnly && !i.grindDrop);
+    if (pool.length) out.items.push(pool[Math.floor(rng() * pool.length)].id);
+  }
+  if (rng() < (boss ? 1 : 0.5)) out.mats = boss ? 2 + Math.floor(rng() * 3) : 1 + (rng() < 0.3 ? 1 : 0);
+  if (rng() < (boss ? 0.4 : 0.15)) out.potion = boss ? (rng() < 0.5 ? 'hp-large' : 'hp-medium') : (rng() < 0.6 ? 'hp-small' : 'hp-medium');
+  return out;
 }
