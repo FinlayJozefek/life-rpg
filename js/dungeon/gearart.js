@@ -262,15 +262,32 @@ function boots(g, it, m, R) {
 }
 function shield(g, it, m, R, rnd) {
   const ramp = it._ramp || m.metal;
-  const rows = (y) => (y < 3 || y > 29 ? null : y < 13 ? 12 : 12 * Math.sqrt(Math.max(0, 1 - ((y - 13) / 17) ** 2)));
-  sym(g, rows, ramp);
+  // round buckler, tall tower shield / bulwark, otherwise a heater shield
+  const shape = /coffin/i.test(it.name) ? 'coffin' : /plank/i.test(it.name) ? 'plank' : /buckler/i.test(it.name) ? 'round' : /tower|bulwark|aegis/i.test(it.name) ? 'tower' : 'heater';
+  const wooden = /plank|wooden|coffin/i.test(it.name);
+  const rows = shape === 'round' ? (y) => { const d = 13 ** 2 - (y - 16) ** 2; return d < 0 ? null : Math.sqrt(d); }
+    : shape === 'coffin' ? (y) => (y < 2 || y > 30 ? null : y < 9 ? 6 + (y - 2) * 0.85 : 12 - (y - 9) * 0.3)
+    : shape === 'plank' ? (y) => (y < 3 || y > 29 ? null : 9 - (y % 7 === 0 ? 1 : 0))
+    : shape === 'tower' ? (y) => (y < 2 || y > 30 ? null : y < 4 ? 8 + (y - 2) * 1.5 : y > 26 ? 11 - (y - 26) * 1.5 : 11)
+    : (y) => (y < 3 || y > 29 ? null : y < 13 ? 12 : 12 * Math.sqrt(Math.max(0, 1 - ((y - 13) / 17) ** 2)));
+  const top = shape === 'round' ? 3.3 : shape === 'heater' ? 4.3 : 3.3;
+  const ramp2 = wooden ? m.wood.concat([mix(m.wood[2], '#ffffff', 0.25)]) : ramp;
+  sym(g, rows, ramp2);
+  if (wooden) g.fill((x, y) => { const r = rows(Math.floor(y)); return r != null && Math.abs(x - 16) < r - 1 && Math.floor(x) % 5 === 1 ? m.wood[0] : null; });
   // rim
-  g.fill((x, y) => { const r = rows(Math.floor(y)); if (r == null) return null; const dx = Math.abs(x - 16); const rim = r - dx < 1.3 || y < 4.3; return rim ? (R >= 3 ? TRIM[2] : ramp[3]) : null; });
+  g.fill((x, y) => { const r = rows(Math.floor(y)); if (r == null) return null; const dx = Math.abs(x - 16); if (dx > r) return null; const rim = r - dx < 1.3 || y < top; return rim ? (R >= 3 ? TRIM[2] : wooden ? m.metal[1] : ramp[3]) : null; });
   // emblem per section
   const em = { notch: '#6ab03a', soul: '#b48cff', rune: '#4ad0ff', ice: '#ffffff', lava: '#ff6a1a', rust: '#8a5a3a' }[m.fx];
-  g.fill((x, y) => (Math.abs(x - 16) < 1 && y > 7 && y < 24 ? em : null));
-  g.fill((x, y) => (Math.abs(y - 13) < 1 && Math.abs(x - 16) < 6 ? em : null));
-  if (GEM[RAR[R]] && R >= 2) gemAt(g, 16, 13, 2, GEM[RAR[R]]);
+  if (shape === 'plank') {
+    for (const [nx, ny] of [[10, 7], [22, 7], [10, 25], [22, 25]]) g.fill((x, y) => (Math.hypot(x - nx, y - ny) < 0.8 ? m.metal[3] : null));
+  } else if (shape === 'round') {
+    g.fill((x, y) => { const d = Math.hypot(x - 16, y - 16); return d < 4.5 ? shade(R >= 3 ? TRIM : ramp, ((x - 16) + (y - 16)) / 6) : d < 5.5 ? em : null; });
+  } else {
+    const cy = shape === 'tower' ? 15 : 13;
+    g.fill((x, y) => (Math.abs(x - 16) < 1 && y > 6 && y < (shape === 'tower' ? 27 : 24) ? em : null));
+    g.fill((x, y) => (Math.abs(y - cy) < 1 && Math.abs(x - 16) < 6 ? em : null));
+  }
+  if (GEM[RAR[R]] && R >= 2) gemAt(g, 16, shape === 'round' ? 16 : shape === 'tower' ? 15 : 13, 2, GEM[RAR[R]]);
 }
 function tome(g, it, m, R) {
   const cover = it.dtype === 'fire' ? ['#3a0e0a', '#7a1e14', '#a83a22', '#d86a3a'] : it.dtype === 'lightning' ? ['#0e2a3a', '#1e4a6a', '#3a7aa0', '#7ab8e0'] : ['#2a0e3a', '#4a1e6a', '#6a3a9a', '#9a6ad0'];
