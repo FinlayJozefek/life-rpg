@@ -185,6 +185,25 @@ const powerNow = () => powerScore(buildPlayer(dg));
 const powerWith = (id) => powerScore(buildPlayer(dg, { equipped: { ...dg.equipped, [DITEMS[id].slot]: id } }));
 const statText = (id) => { const s = itemStats(id, dg.upgrades[id] || 0); return [s.atk && `${s.atk} Atk`, s.def && `${s.def} Def`, s.hp && `${s.hp} HP`, s.crit && `+${Math.round(s.crit * 100)}% crit`].filter(Boolean).join(' · '); };
 const next = Math.min(50, dg.climb), nsec = SECTIONS[sectionOf(next) - 1];
+// "Best" = highest chance to beat this section's boss with that piece on; Power breaks ties.
+const bossFloor = nsec.id * 10;
+// win chance counts (in 5% steps, once it is 10%+) so simulation noise never beats a real Power gain
+function scoreOf(eq) { const d2 = { ...dg, equipped: eq }; const c = winChance(d2, bossFloor, 200); return (c >= 0.1 ? Math.floor(c * 20) : 0) * 1e6 + powerScore(buildPlayer(d2)); }
+function bestFor(slot, eq = dg.equipped) {
+  let best = eq[slot], bestScore = scoreOf(eq);
+  for (const id of owned().filter((i) => DITEMS[i].slot === slot && i !== eq[slot])) {
+    const sc = scoreOf({ ...eq, [slot]: id });
+    if (sc > bestScore) { best = id; bestScore = sc; }
+  }
+  return best;
+}
+function equipBestAll() {
+  const before = { ...dg.equipped };
+  let eq = { ...dg.equipped };
+  for (let pass = 0; pass < 2; pass++) for (const slot of GEAR_SLOTS_D) eq = { ...eq, [slot]: bestFor(slot, eq) };   // 2 passes so set bonuses can click in
+  dg.equipped = eq;
+  return GEAR_SLOTS_D.filter((s) => before[s] !== eq[s]).map((s) => DITEMS[eq[s]].name);
+}
 const fmt = (n) => Math.round(n).toLocaleString('en-GB');
 
 let dir = '1', tab = 'gear', filter = 'all', fSec = 0, forgeSel = null, stops = [];
@@ -210,7 +229,8 @@ function sheet(id) {
     <div class="small" style="margin-top:4px">Power <b class="${pw > 0 ? 'up2' : pw < 0 ? 'dn2' : ''}">${pw > 0 ? '+' : ''}${fmt(pw)}</b> ${isEq(id) ? '<span class="eq2">EQUIPPED</span>' : ''}</div></div></div>
     <table class="cmpt"><tr><td class="muted small">vs ${cur ? DITEMS[cur].name : 'empty slot'}</td><td class="muted small">this</td><td class="muted small">change</td></tr>${row('atk', 'Attack')}${row('def', 'Defence')}${row('hp', 'Health')}${row('crit', 'Crit', true)}</table>
     ${odds}
-    <div class="acts"><button class="btn primary" data-fake="Equipped">${isEq(id) ? 'Unequip' : 'Equip'}</button><button class="btn" data-go="forge" data-id="${id}">Upgrade</button><button class="btn" data-fake="Sold">Sell</button></div></div>`;
+    <div class="acts" style="margin-bottom:8px"><button class="btn primary" data-best="${it.slot}">⚡ Equip best ${SLOT_NAME_D[it.slot].toLowerCase()}</button></div>
+    <div class="acts"><button class="btn" data-equip="${id}">${isEq(id) ? 'Unequip' : 'Equip'}</button><button class="btn" data-go="forge" data-id="${id}">Upgrade</button><button class="btn" data-fake="Sold">Sell</button></div></div>`;
   s.classList.add('on'); mountCards(s);
 }
 
@@ -230,7 +250,7 @@ function campGear() {
     <div class="hero"><img class="px" src="${hero}"><div class="pw">${fmt(powerScore(p))}</div><div class="pwl">Power</div></div>
     <div class="doll-col">${slotBtn('weapon')}${slotBtn('offhand')}${slotBtn('boots')}</div></div>
     <div class="chips2"><span>Atk <b>${fmt(p.atk)}</b></span><span>Def <b>${fmt(p.def)}</b></span><span>HP <b>${fmt(p.maxHp)}</b></span><span>Crit <b>${Math.round(p.crit * 100)}%</b></span>${p.dodge ? `<span>Dodge <b>${Math.round(p.dodge * 100)}%</b></span>` : ''}</div>
-    ${oddsBox()}<p class="small muted center" style="margin-top:10px">Tap a slot to compare, upgrade or swap.</p>`;
+    ${oddsBox()}<button class="btn primary wide" data-bestall style="margin-top:10px">⚡ Equip best gear</button><p class="small muted center" style="margin-top:8px">Picks what gives you the best chance against the ${nsec.name} boss. Tap a slot to compare, upgrade or swap.</p>`;
 }
 const FILT = [['all', 'All'], ['weapon', 'Weapons'], ['armour', 'Armour'], ['offhand', 'Off-hand']];
 function bagFilter(id) { const s = DITEMS[id].slot; return filter === 'all' || (filter === 'armour' ? ['helmet', 'chest', 'legs', 'boots'].includes(s) : s === filter); }
@@ -292,7 +312,7 @@ function lrow(id, right, act = 'item') {
 function delta(id) { if (isEq(id)) return '<span class="eq2">WEARING</span>'; const d = powerWith(id) - powerNow(); return `<span class="${d > 0 ? 'up2' : d < 0 ? 'dn2' : 'muted'}">${d > 0 ? '▲ +' : d < 0 ? '▼ ' : ''}${fmt(d)}</span><br><span class="muted" style="font-size:10px;font-weight:400">power</span>`; }
 function listGear() {
   const p = buildPlayer(dg);
-  return `<div class="chips2" style="justify-content:flex-start;margin-top:4px"><span>Power <b>${fmt(powerScore(p))}</b></span><span>Atk <b>${fmt(p.atk)}</b></span><span>Def <b>${fmt(p.def)}</b></span><span>HP <b>${fmt(p.maxHp)}</b></span></div>${oddsBox()}
+  return `<div class="chips2" style="justify-content:flex-start;margin-top:4px"><span>Power <b>${fmt(powerScore(p))}</b></span><span>Atk <b>${fmt(p.atk)}</b></span><span>Def <b>${fmt(p.def)}</b></span><span>HP <b>${fmt(p.maxHp)}</b></span></div>${oddsBox()}<button class="btn primary wide" data-bestall style="margin-top:8px;min-height:38px">⚡ Equip best gear</button>
     <div class="grp">Wearing</div>${GEAR_SLOTS_D.map((s) => dg.equipped[s] ? lrow(dg.equipped[s], '<span class="muted">Change ›</span>') : `<div class="lrow"><span class="t"><b class="muted">${SLOT_NAME_D[s]}</b><span>Empty</span></span></div>`).join('')}`;
 }
 function listBag() {
@@ -329,7 +349,7 @@ function render() {
   const y = phone.querySelector('.scr')?.scrollTop || 0;
   phone.innerHTML = (dir === '1' ? renderCamp() : renderLists()) + '<div class="sheet2"></div><div class="toast2"></div>';
   mountCards(phone);
-  document.getElementById('blurb').textContent = BLURB[dir] + ' (Uses your test save. Buttons are pretend.)';
+  document.getElementById('blurb').textContent = BLURB[dir] + ' (Uses your test save. Equipping works here but is not saved; other buttons are pretend.)';
   const scr = phone.querySelector('.scr'); if (scr && keepScroll) scr.scrollTop = y;
   keepScroll = false;
 }
@@ -344,6 +364,17 @@ phone.addEventListener('click', (e) => {
   if (t.dataset.forge) { forgeSel = t.dataset.forge; tab = 'forge'; keepScroll = dir === '1'; render(); if (dir === '2') toast('Upgraded (pretend)'); return; }
   if (t.dataset.go === 'forge') { forgeSel = t.dataset.id; tab = 'forge'; render(); return; }
   if (t.dataset.item) { sheet(t.dataset.item); return; }
+  if (t.dataset.best) {
+    const slot = t.dataset.best, was = dg.equipped[slot], b = bestFor(slot);
+    dg.equipped = { ...dg.equipped, [slot]: b }; keepScroll = true; render();
+    toast(b === was ? 'You are already wearing the best ' + SLOT_NAME_D[slot].toLowerCase() : 'Equipped ' + DITEMS[b].name); return;
+  }
+  if (t.dataset.bestall !== undefined) {
+    t.textContent = 'Thinking…'; t.disabled = true;
+    setTimeout(() => { const changed = equipBestAll(); keepScroll = true; render(); toast(changed.length ? 'Swapped in: ' + changed.join(', ') : 'Already wearing your best gear'); }, 30);
+    return;
+  }
+  if (t.dataset.equip) { const id = t.dataset.equip, sl = DITEMS[id].slot; dg.equipped = { ...dg.equipped, [sl]: dg.equipped[sl] === id ? null : id }; keepScroll = true; render(); toast(dg.equipped[sl] ? 'Equipped ' + DITEMS[id].name : 'Unequipped'); return; }
   if (t.dataset.strike !== undefined) {
     const an = phone.querySelector('#anvil');
     for (let i = 0; i < 14; i++) { const s = document.createElement('i'); s.className = 'spark'; s.style.left = '50%'; s.style.top = '45%'; s.style.setProperty('--dx', (Math.random() * 160 - 80) + 'px'); s.style.setProperty('--dy', (Math.random() * -110 - 10) + 'px'); an.appendChild(s); setTimeout(() => s.remove(), 800); }
