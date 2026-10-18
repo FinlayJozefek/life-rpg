@@ -313,27 +313,51 @@ function openChest(key) {
     ...(r.potion ? [`<div class="ch-cell"><span class="ch-pot">❤</span><b>${esc(POTIONS[r.potion].name)}</b></div>`] : []),
   ];
   const pool = DITEMS_BY_SECTION_UI(Number(key[0]));
-  const filler = Array.from({ length: 14 }, () => { const id = pool[Math.floor(Math.random() * pool.length)]; return Math.random() < 0.35 ? `<div class="ch-cell coin"><img src="${coinIc}" alt=""></div>` : `<div class="ch-cell r-${DITEMS[id].rarity}-bg"><img src="${gearIcon(id, 3)}" alt=""></div>`; });
+  // CS:GO-style reel: ~50 random rewards, the real one sits at LAND, and the strip glides there over a few seconds
+  const LAND = 44, AFTER = 6;
+  const cellFor = () => { const id = pool[Math.floor(Math.random() * pool.length)]; return Math.random() < 0.3 ? `<div class="ch-cell coin"><img src="${coinIc}" alt=""></div>` : `<div class="ch-cell r-${DITEMS[id].rarity}-bg"><img src="${gearIcon(id, 3)}" alt=""></div>`; };
+  const strip = [...Array.from({ length: LAND }, cellFor), got[r.items.length ? 1 : 0].replace('ch-cell', 'ch-cell win'), ...Array.from({ length: AFTER }, cellFor)];
   const best = r.items.length ? DITEMS[r.items[0]].rarity : 'common';
   const left = dg.chests[key];
   const tier = chestInfo(key).tier;
   api.openModal(`<div class="ch-open tier-${tier}">
       <h2 style="color:${CHEST_TIERS[tier].colour}">${esc(chestName(key))}</h2>
       <div class="ch-stage"><img class="ch-closed" src="${chestIcon(key, { scale: 6 })}" alt=""><img class="ch-opened" src="${chestIcon(key, { open: true, scale: 6 })}" alt=""><i class="ch-burst"></i></div>
-      <div class="ch-reel"><div class="ch-strip">${filler.join('')}${got[r.items.length ? 1 : 0]}</div><i class="ch-pointer"></i></div>
+      <div class="ch-reel"><div class="ch-strip">${strip.join('')}</div><i class="ch-pointer"></i></div>
       <div class="ch-got">${got.join('')}</div>
     </div>
     <div class="btn-col ch-btns">${left > 0 ? `<button class="btn primary" data-action="d-chest" data-key="${key}">Open another (${left} left)</button>` : ''}<button class="btn" data-action="close">Done</button></div>`);
   const root = document.getElementById('modal-root');
-  const strip = root.querySelector('.ch-strip');
-  requestAnimationFrame(() => {
-    root.querySelector('.ch-open').classList.add('go');
-    const cell = strip.lastElementChild;
-    const reel = root.querySelector('.ch-reel');
-    strip.style.setProperty('--end', `${-(cell.offsetLeft - reel.clientWidth / 2 + cell.offsetWidth / 2)}px`);
-  });
-  api.sfx.charge?.(3, 900);
-  setTimeout(() => { api.sfx.dropSound(['common', 'uncommon', 'rare', 'epic', 'legendary'].indexOf(best)); if (['epic', 'legendary'].includes(best) || tier === 'g' || tier === 'a') api.confetti({ count: tier === 'a' ? 220 : 90, duration: tier === 'a' ? 2600 : 1600 }); if (tier === 'a') api.flash?.('#b48cff88'); }, 2300);
+  const box = root.querySelector('.ch-open'), stripEl = root.querySelector('.ch-strip'), reel = root.querySelector('.ch-reel');
+  box.classList.add('go');
+  const openDelay = tier === 'a' ? 1300 : 900;
+  setTimeout(() => {
+    if (!stripEl.isConnected) return;
+    const win = stripEl.querySelector('.win');
+    const cellW = win.offsetWidth + 6;
+    // stop somewhere inside the winning cell, not always dead centre
+    const end = -(win.offsetLeft - reel.clientWidth / 2 + win.offsetWidth / 2 + (Math.random() - 0.5) * win.offsetWidth * 0.7);
+    const dur = tier === 'a' ? 5200 : 4300;
+    const anim = stripEl.animate([{ transform: 'translateX(0px)' }, { transform: `translateX(${end}px)` }], { duration: dur, easing: 'cubic-bezier(0.08, 0.6, 0.12, 1)', fill: 'forwards' });
+    // a tick each time a new item passes the line
+    let lastIdx = -1;
+    const tick = () => {
+      if (!stripEl.isConnected || anim.playState === 'finished') return;
+      const x = new DOMMatrixReadOnly(getComputedStyle(stripEl).transform).m41;
+      const idx = Math.floor((reel.clientWidth / 2 - x - 6) / cellW);
+      if (idx !== lastIdx) { lastIdx = idx; api.sfx.tick?.(); }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    anim.finished.then(() => {
+      if (!box.isConnected) return;
+      win.classList.add('landed');
+      box.classList.add('done');
+      api.sfx.dropSound(['common', 'uncommon', 'rare', 'epic', 'legendary'].indexOf(best));
+      if (['epic', 'legendary'].includes(best) || tier === 'g' || tier === 'a') api.confetti({ count: tier === 'a' ? 220 : 90, duration: tier === 'a' ? 2600 : 1600 });
+      if (tier === 'a') api.flash?.('#b48cff88');
+    });
+  }, openDelay);
   api.render();
 }
 const DITEMS_BY_SECTION_UI = (sec) => Object.values(DITEMS).filter((i) => i.section === sec && !i.shopOnly && !i.grindDrop).map((i) => i.id);

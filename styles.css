@@ -1177,15 +1177,12 @@ main { position: relative; z-index: 1; }
 @keyframes ch-burst { 0% { opacity: 1; transform: scale(0.5); } 100% { opacity: 0; transform: scale(8); } }
 .ch-reel { position: relative; height: 84px; margin: 6px 0 10px; overflow: hidden; border-radius: 8px; border: 2px solid #c8a24a; background: #120c08; }
 .ch-strip { display: flex; gap: 6px; padding: 6px; width: max-content; transform: translateX(0); }
-.ch-open.go .ch-strip { animation: ch-roll 1.4s 1.0s cubic-bezier(.1, .7, .2, 1) forwards; }
-@keyframes ch-roll { to { transform: translateX(var(--end)); } }
 .ch-pointer { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #ffd84a; box-shadow: 0 0 6px #ffd84a; }
 .ch-cell { flex: none; width: 68px; height: 68px; border-radius: 6px; border: 2px solid var(--rc, #4a4540); background: radial-gradient(circle at 50% 35%, var(--rcb, rgba(255, 255, 255, 0.06)), rgba(0, 0, 0, 0.5) 80%); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .ch-cell img { width: 48px; image-rendering: pixelated; }
 .ch-cell b { display: none; }
 .ch-cell.coin { --rc: #8a6a1a; }
 .ch-got { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; opacity: 0; }
-.ch-open.go .ch-got { animation: ch-fade 0.4s 2.4s forwards; }
 @keyframes ch-fade { to { opacity: 1; } }
 .ch-got .ch-cell { width: auto; min-width: 86px; height: auto; padding: 6px 8px; }
 .ch-got .ch-cell b { display: block; font-size: 12px; margin-top: 2px; color: #f4e6c8; }
@@ -1208,7 +1205,18 @@ main { position: relative; z-index: 1; }
 @keyframes ch-aura { 0% { opacity: 0; transform: scale(0.4) rotate(0deg); } 30% { opacity: 1; } 100% { opacity: 0.55; transform: scale(1.1) rotate(90deg); } }
 .ch-open.go.tier-a .ch-closed { animation: ch-shake-big 1.3s ease-in-out forwards; }
 .ch-open.go.tier-a .ch-opened, .ch-open.go.tier-a .ch-burst { animation-delay: 1.3s; }
-.ch-open.go.tier-a .ch-strip { animation-delay: 1.4s; }
-.ch-open.go.tier-a .ch-got { animation-delay: 2.8s; }
 .ch-open.tier-a .ch-burst { border-color: #7af0ff; border-width: 7px; }
 @keyframes ch-shake-big { 0%, 100% { transform: none; } 10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg) scale(1.08) translateY(-4px); } 20%, 40%, 60%, 80% { transform: rotate(10deg) scale(1.08) translateY(-4px); } 99% { opacity: 1; } 100% { opacity: 0; } }
+
+/* chest reel (driven by JS so it rolls on every phone) */
+.ch-strip { will-change: transform; }
+.ch-cell.win.landed { animation: ch-win 0.9s ease-in-out infinite alternate; }
+@keyframes ch-win { from { box-shadow: 0 0 0 2px #ffd84a; } to { box-shadow: 0 0 0 3px #ffd84a, 0 0 18px #ffd84a; } }
+.ch-open.done .ch-got { animation: ch-fade 0.4s forwards; }
+.ch-reel::before, .ch-reel::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40px; z-index: 2; pointer-events: none; }
+.ch-reel::before { left: 0; background: linear-gradient(90deg, #120c08, transparent); }
+.ch-reel::after { right: 0; background: linear-gradient(-90deg, #120c08, transparent); }
+.ch-pointer { z-index: 3; }
+.ch-pointer::before, .ch-pointer::after { content: ""; position: absolute; left: -5px; border: 6px solid transparent; }
+.ch-pointer::before { top: 0; border-top-color: #ffd84a; }
+.ch-pointer::after { bottom: 0; border-bottom-color: #ffd84a; }

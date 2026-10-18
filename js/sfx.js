@@ -115,4 +115,7 @@ export function hit(crit = false, onPlayer = false) {
   if (crit) note(N(15), { dur: 0.12, vol: 0.06, type: 'square' });
 }
 
+// a short click as each item passes the line on a chest reel
+export function tick() { note(N(22), { dur: 0.025, vol: 0.035, type: 'square' }); }
+
 export function chime() { [15, 22].forEach((s, i) => note(N(s), { at: i * 0.1, dur: 0.35, vol: 0.07, type: 'sine' })); }
