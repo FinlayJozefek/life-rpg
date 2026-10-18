@@ -7,7 +7,7 @@ import {
   newDungeon, startDungeon, cryptsProgress, cryptsLevel, sectionOf, floorInSection, sectionStart, sectionUnlocked, canPlay,
   buildPlayer, powerScore, recommendedPower, floorPlan, enemyXp, enemyCoins, rollEnemyDrops, rollBossDrops, materialFor,
   itemStats, weaponMoves, activeSet, sellPrice, buyPrice, upgradeCost, MAX_PLUS, blacksmithStock, XP, SECTION_XP, SECTION_FUDGE,
-  chestKey, chestName, chestInfo, rollChest, CHEST_TIERS, CHEST_ORDER, chestOdds,
+  chestKey, chestName, chestInfo, rollChest, CHEST_TIERS, CHEST_ORDER, chestOdds, floorLayout,
 } from './dgame.js';
 import { createBattle, takeTurn, getActions, aliveEnemies, typeMult, moveType } from './engine.js';
 import { gearIcon, mountEnemy, enemyIcon, BOSS_AURA, TOWER_PAL, towerTexture, chestIcon } from './dart.js';
@@ -295,7 +295,9 @@ function campPotions() {
 // chest odds for a floor, as little coloured chips
 function oddsChips(floor) {
   const pct = (p) => (p >= 0.1 ? Math.round(p * 100) : Math.round(p * 1000) / 10) + '%';
-  return `<div class="odds-row"><span class="odds-lbl">Chest odds:</span>${chestOdds(floor).map(([k, p]) => `<span class="odds-chip" style="--oc:${CHEST_TIERS[k].colour}">${CHEST_TIERS[k].name} <b>${pct(p)}</b></span>`).join('')}</div>`;
+  const lay = floorLayout(floor), n = lay.reduce((x, y) => x + y, 0);
+  const what = lay.length === 1 && floorInSection(floor) === 10 ? 'Boss fight' : `${lay.length} fights · ${n} enemies`;
+  return `<div class="odds-row"><span class="odds-lbl">${what} · Chest odds:</span>${chestOdds(floor).map(([k, p]) => `<span class="odds-chip" style="--oc:${CHEST_TIERS[k].colour}">${CHEST_TIERS[k].name} <b>${pct(p)}</b></span>`).join('')}</div>`;
 }
 
 // ---------- in-game question windows ----------

@@ -167,16 +167,18 @@ export function makeBoss(section) {
 }
 
 // A floor = 2-3 fights in a row (Health carries between them). Floor 10 of each section is the boss.
+// How many enemies each fight on a floor has. Fixed per floor so replays are just as hard every time;
+// which monsters turn up still varies. Builds up through each section (about the same total as before).
+const LAYOUT = { 1: [1, 1], 2: [1, 1], 3: [1, 2], 4: [2, 1], 5: [1, 2, 1], 6: [1, 2, 1], 7: [2, 1, 2], 8: [2, 2, 1], 9: [2, 2, 2] };
+export const floorLayout = (floor) => (floorInSection(floor) === 10 ? [1] : LAYOUT[floorInSection(floor)]);
 export function floorPlan(floor, rng = Math.random) {
   const k = sectionOf(floor), fis = floorInSection(floor);
   const sec = SECTIONS[k - 1];
   if (fis === 10) return [[makeBoss(k)]];
   const stage = fis <= 3 ? 0 : fis <= 5 ? 1 : fis <= 7 ? 2 : 3;
   const roster = FAMILY_ROSTER[sec.family][stage];
-  const fights = fis <= 3 ? 2 : fis <= 6 ? (rng() < 0.5 ? 2 : 3) : 3;
   const plan = [];
-  for (let i = 0; i < fights; i++) {
-    const n = fis <= 2 ? 1 : fis <= 6 ? (rng() < 0.55 ? 1 : 2) : (rng() < 0.5 ? 2 : rng() < 0.85 ? 1 : 3);
+  for (const n of floorLayout(floor)) {
     const group = [];
     for (let j = 0; j < n; j++) {
       // now and then an enemy from another family wanders in (e.g. goblin grave-robbers in the Crypt)
