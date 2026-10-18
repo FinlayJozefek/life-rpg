@@ -267,25 +267,46 @@ export function recommendedPower(section) {
 }
 
 // ---------- floor chests ----------
-// Every floor you clear gives a chest from that section; boss floors give a boss chest.
-// key: "3" = Stone Depths chest, "3b" = Stone Depths boss chest
-export const chestKey = (floor) => `${sectionOf(floor)}${floorInSection(floor) === 10 ? 'b' : ''}`;
-export const chestInfo = (key) => ({ sec: Number(key[0]), boss: key.endsWith('b') });
-export const chestName = (key) => { const { sec, boss } = chestInfo(key); return `${SECTIONS[sec - 1].name}${boss ? ' Boss' : ''} Chest`; };
-const CHEST_ITEM = { false: { chance: 0.32, odds: [['common', 0.55], ['uncommon', 0.32], ['rare', 0.11], ['epic', 0.02]] }, true: { chance: 1, odds: [['rare', 0.64], ['epic', 0.33], ['legendary', 0.03]] } };
+// Every floor you clear gives a chest from that section, and the chest rolls a rarity.
+// key: section, "b" for a boss chest, then the tier letter. "3i" = Iron Stone Depths chest, "5ba" = Ancient Infernal Spire boss chest.
+export const CHEST_TIERS = {
+  w: { name: 'Wooden', colour: '#c8a070' },
+  i: { name: 'Iron', colour: '#c8ccd8' },
+  g: { name: 'Gold', colour: '#ffd84a' },
+  a: { name: 'Ancient', colour: '#b48cff' },
+};
+const TIER_ODDS = { false: [['w', 0.7], ['i', 0.22], ['g', 0.07], ['a', 0.01]], true: [['g', 0.9], ['a', 0.1]] };
+const pick = (odds, rng) => { let r = rng(); for (const [k, p] of odds) { if (r < p) return k; r -= p; } return odds[odds.length - 1][0]; };
+export function chestKey(floor, rng = Math.random) {
+  const boss = floorInSection(floor) === 10;
+  return `${sectionOf(floor)}${boss ? 'b' : ''}${pick(TIER_ODDS[boss], rng)}`;
+}
+// older saves stored "5" / "5b" without a tier
+export const chestInfo = (key) => { const boss = key.includes('b'); const t = key.replace(/^\d+b?/, '') || (boss ? 'g' : 'w'); return { sec: Number(key[0]), boss, tier: t }; };
+export const chestName = (key) => { const { sec, boss, tier } = chestInfo(key); return `${CHEST_TIERS[tier].name} ${SECTIONS[sec - 1].name}${boss ? ' Boss' : ''} Chest`; };
+export const CHEST_ORDER = ['a', 'g', 'i', 'w'];
+// what each tier holds
+const LOOT = {
+  w: { coins: 1, gear: 0.32, odds: [['common', 0.55], ['uncommon', 0.32], ['rare', 0.11], ['epic', 0.02]], mats: [0.5, 1, 2], potion: 0.15 },
+  i: { coins: 1.5, gear: 0.5, odds: [['common', 0.3], ['uncommon', 0.4], ['rare', 0.25], ['epic', 0.05]], mats: [0.75, 1, 2], potion: 0.25 },
+  g: { coins: 2.5, gear: 1, odds: [['rare', 0.7], ['epic', 0.27], ['legendary', 0.03]], mats: [1, 2, 3], potion: 0.4 },
+  a: { coins: 5, gear: 1, odds: [['epic', 0.85], ['legendary', 0.15]], mats: [1, 3, 5], potion: 0.6 },
+  bg: { coins: 1, gear: 1, odds: [['rare', 0.64], ['epic', 0.33], ['legendary', 0.03]], mats: [1, 2, 4], potion: 0.4 },
+  ba: { coins: 2, gear: 1, odds: [['epic', 0.7], ['legendary', 0.3]], mats: [1, 4, 6], potion: 0.6 },
+};
 // Roll what is inside. Never the shop-only Masterworks or the 1-in-2,000 final-boss weapons.
 export function rollChest(key, rng = Math.random) {
-  const { sec, boss } = chestInfo(key);
+  const { sec, boss, tier } = chestInfo(key);
+  const L = LOOT[boss ? `b${tier}` : tier] || LOOT.w;
   const S = SECTION_SCALE[sec - 1];
-  const out = { coins: Math.round((boss ? 8 : 2.6) * S * ((boss ? 1 : 0.8) + rng() * (boss ? 0.5 : 0.8))), items: [], mats: 0, potion: null };
-  const t = CHEST_ITEM[boss];
-  if (rng() < t.chance) {
-    let r = rng(), rar = t.odds[t.odds.length - 1][0];
-    for (const [k, p] of t.odds) { if (r < p) { rar = k; break; } r -= p; }
+  const out = { coins: Math.round((boss ? 8 : 2.6) * S * L.coins * ((boss ? 1 : 0.8) + rng() * (boss ? 0.5 : 0.8))), items: [], mats: 0, potion: null };
+  if (rng() < L.gear) {
+    const rar = pick(L.odds, rng);
     const pool = DITEMS_BY_SECTION[sec].filter((i) => i.rarity === rar && !i.shopOnly && !i.grindDrop);
     if (pool.length) out.items.push(pool[Math.floor(rng() * pool.length)].id);
   }
-  if (rng() < (boss ? 1 : 0.5)) out.mats = boss ? 2 + Math.floor(rng() * 3) : 1 + (rng() < 0.3 ? 1 : 0);
-  if (rng() < (boss ? 0.4 : 0.15)) out.potion = boss ? (rng() < 0.5 ? 'hp-large' : 'hp-medium') : (rng() < 0.6 ? 'hp-small' : 'hp-medium');
+  const [mChance, mLo, mHi] = L.mats;
+  if (rng() < mChance) out.mats = mLo + Math.floor(rng() * (mHi - mLo + 1));
+  if (rng() < L.potion) out.potion = boss || tier === 'g' || tier === 'a' ? (rng() < 0.5 ? 'hp-large' : 'hp-medium') : (rng() < 0.6 ? 'hp-small' : 'hp-medium');
   return out;
 }

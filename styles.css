@@ -1191,3 +1191,24 @@ main { position: relative; z-index: 1; }
 .ch-got .ch-cell b { display: block; font-size: 12px; margin-top: 2px; color: #f4e6c8; }
 .ch-pot { font-size: 34px; color: #e8435a; }
 .ch-btns .btn { margin: 0; }
+
+/* chest rarities */
+.ch-btn.tier-i { border-color: #8a92a8; }
+.ch-btn.tier-g { border-color: #c8962a; background: radial-gradient(circle at 50% 35%, rgba(255, 216, 74, 0.45), rgba(0, 0, 0, 0.4) 75%); box-shadow: 0 0 10px rgba(255, 216, 74, 0.35); }
+.ch-btn.tier-a { border-color: #b48cff; background: radial-gradient(circle at 50% 35%, rgba(180, 140, 255, 0.5), rgba(0, 0, 0, 0.45) 75%); box-shadow: 0 0 12px rgba(180, 140, 255, 0.55); }
+.ch-btn.tier-a img { filter: drop-shadow(0 0 6px #7af0ff); }
+.ch-name b { display: block; font-size: 10px; letter-spacing: 0.5px; }
+.ch-earned.tier-g { border-color: #ffd84a; box-shadow: 0 0 12px rgba(255, 216, 74, 0.4); }
+.ch-earned.tier-a { border-color: #b48cff; box-shadow: 0 0 16px rgba(180, 140, 255, 0.6); }
+.ch-open.tier-i .ch-burst { border-color: #e8ecf8; }
+.ch-open.tier-g .ch-burst { border-color: #ffd84a; border-width: 6px; }
+.ch-open.tier-g .ch-stage::before, .ch-open.tier-a .ch-stage::before { content: ""; position: absolute; width: 180px; height: 180px; border-radius: 50%; opacity: 0; background: radial-gradient(circle, rgba(255, 216, 74, 0.55), transparent 65%); }
+.ch-open.tier-a .ch-stage::before { background: radial-gradient(circle, rgba(180, 140, 255, 0.7), rgba(122, 240, 255, 0.25) 45%, transparent 68%); }
+.ch-open.go.tier-g .ch-stage::before, .ch-open.go.tier-a .ch-stage::before { animation: ch-aura 1.6s 0.9s ease-out forwards; }
+@keyframes ch-aura { 0% { opacity: 0; transform: scale(0.4) rotate(0deg); } 30% { opacity: 1; } 100% { opacity: 0.55; transform: scale(1.1) rotate(90deg); } }
+.ch-open.go.tier-a .ch-closed { animation: ch-shake-big 1.3s ease-in-out forwards; }
+.ch-open.go.tier-a .ch-opened, .ch-open.go.tier-a .ch-burst { animation-delay: 1.3s; }
+.ch-open.go.tier-a .ch-strip { animation-delay: 1.4s; }
+.ch-open.go.tier-a .ch-got { animation-delay: 2.8s; }
+.ch-open.tier-a .ch-burst { border-color: #7af0ff; border-width: 7px; }
+@keyframes ch-shake-big { 0%, 100% { transform: none; } 10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg) scale(1.08) translateY(-4px); } 20%, 40%, 60%, 80% { transform: rotate(10deg) scale(1.08) translateY(-4px); } 99% { opacity: 1; } 100% { opacity: 0; } }

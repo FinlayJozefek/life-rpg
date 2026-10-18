@@ -7,7 +7,7 @@ import {
   newDungeon, startDungeon, cryptsProgress, cryptsLevel, sectionOf, floorInSection, sectionStart, sectionUnlocked, canPlay,
   buildPlayer, powerScore, recommendedPower, floorPlan, enemyXp, enemyCoins, rollEnemyDrops, rollBossDrops, materialFor,
   itemStats, weaponMoves, activeSet, sellPrice, buyPrice, upgradeCost, MAX_PLUS, blacksmithStock, XP, SECTION_XP, SECTION_FUDGE,
-  chestKey, chestName, rollChest,
+  chestKey, chestName, chestInfo, rollChest, CHEST_TIERS, CHEST_ORDER,
 } from './dgame.js';
 import { createBattle, takeTurn, getActions, aliveEnemies, typeMult, moveType } from './engine.js';
 import { gearIcon, mountEnemy, enemyIcon, BOSS_AURA, TOWER_PAL, towerTexture, chestIcon } from './dart.js';
@@ -225,8 +225,8 @@ function campBag() {
   const tiles = list.map((id) => `<button class="d-tile r-${DITEMS[id].rarity}-bg ${isWorn(dg, id) ? 'worn' : ''}" data-action="d-item" data-id="${id}">${tileArt(id)}${dg.upgrades[id] ? `<span class="d-tup">+${dg.upgrades[id]}</span>` : ''}${dg.inv[id] > 1 ? `<span class="d-tn">×${dg.inv[id]}</span>` : ''}</button>`).join('');
   const empties = Math.max(0, (5 - (list.length % 5)) % 5 + (list.length < 10 ? 5 : 0));
   const mats = Object.entries(dg.materials).filter(([, n]) => n > 0).map(([m, n]) => `${esc(MATERIALS[m].name)} ×${n}`).join(' · ') || 'none yet';
-  const chests = Object.entries(dg.chests || {}).filter(([, n]) => n > 0).sort(([a], [b]) => a.localeCompare(b));
-  const chestRow = chests.length ? `<div class="ch-row"><div class="ch-row-h">Chests to open</div><div class="ch-list">${chests.map(([k, n]) => `<button class="ch-btn" data-action="d-chest" data-key="${k}"><img src="${chestIcon(k, { scale: 3 })}" alt=""><span class="ch-n">×${n}</span><span class="ch-name">${esc(chestName(k).replace(' Chest', ''))}</span></button>`).join('')}</div></div>` : '';
+  const chests = Object.entries(dg.chests || {}).filter(([, n]) => n > 0).sort(([a], [b]) => CHEST_ORDER.indexOf(chestInfo(a).tier) - CHEST_ORDER.indexOf(chestInfo(b).tier) || b.localeCompare(a));
+  const chestRow = chests.length ? `<div class="ch-row"><div class="ch-row-h">Chests to open</div><div class="ch-list">${chests.map(([k, n]) => `<button class="ch-btn tier-${chestInfo(k).tier}" data-action="d-chest" data-key="${k}"><img src="${chestIcon(k, { scale: 3 })}" alt=""><span class="ch-n">×${n}</span><span class="ch-name"><b style="color:${CHEST_TIERS[chestInfo(k).tier].colour}">${CHEST_TIERS[chestInfo(k).tier].name}</b> ${esc(chestName(k).replace(' Chest', '').replace(/^\w+ /, ''))}</span></button>`).join('')}</div></div>` : '';
   return `${chestRow}<div class="d-flt">${BAG_FILTERS.map(([k, l]) => `<button class="${bagFilter === k ? 'on' : ''}" data-action="d-bagf" data-f="${k}">${l}</button>`).join('')}</div>
     <div class="d-flt"><button class="${!bagSec ? 'on' : ''}" data-action="d-bags" data-s="0">Every section</button>${SECTIONS.map((s) => `<button class="${bagSec === s.id ? 'on' : ''}" data-action="d-bags" data-s="${s.id}"><img src="${enemyIcon(s.boss, 1)}" alt="">${esc(s.name)}</button>`).join('')}</div>
     <div class="d-cap"><span>${list.length} item${list.length === 1 ? '' : 's'} · best first</span><span>${mats}</span></div>
@@ -316,8 +316,9 @@ function openChest(key) {
   const filler = Array.from({ length: 14 }, () => { const id = pool[Math.floor(Math.random() * pool.length)]; return Math.random() < 0.35 ? `<div class="ch-cell coin"><img src="${coinIc}" alt=""></div>` : `<div class="ch-cell r-${DITEMS[id].rarity}-bg"><img src="${gearIcon(id, 3)}" alt=""></div>`; });
   const best = r.items.length ? DITEMS[r.items[0]].rarity : 'common';
   const left = dg.chests[key];
-  api.openModal(`<div class="ch-open">
-      <h2>${esc(chestName(key))}</h2>
+  const tier = chestInfo(key).tier;
+  api.openModal(`<div class="ch-open tier-${tier}">
+      <h2 style="color:${CHEST_TIERS[tier].colour}">${esc(chestName(key))}</h2>
       <div class="ch-stage"><img class="ch-closed" src="${chestIcon(key, { scale: 6 })}" alt=""><img class="ch-opened" src="${chestIcon(key, { open: true, scale: 6 })}" alt=""><i class="ch-burst"></i></div>
       <div class="ch-reel"><div class="ch-strip">${filler.join('')}${got[r.items.length ? 1 : 0]}</div><i class="ch-pointer"></i></div>
       <div class="ch-got">${got.join('')}</div>
@@ -332,7 +333,7 @@ function openChest(key) {
     strip.style.setProperty('--end', `${-(cell.offsetLeft - reel.clientWidth / 2 + cell.offsetWidth / 2)}px`);
   });
   api.sfx.charge?.(3, 900);
-  setTimeout(() => { api.sfx.dropSound(['common', 'uncommon', 'rare', 'epic', 'legendary'].indexOf(best)); if (['epic', 'legendary'].includes(best)) api.confetti({ count: 80, duration: 1600 }); }, 2300);
+  setTimeout(() => { api.sfx.dropSound(['common', 'uncommon', 'rare', 'epic', 'legendary'].indexOf(best)); if (['epic', 'legendary'].includes(best) || tier === 'g' || tier === 'a') api.confetti({ count: tier === 'a' ? 220 : 90, duration: tier === 'a' ? 2600 : 1600 }); if (tier === 'a') api.flash?.('#b48cff88'); }, 2300);
   api.render();
 }
 const DITEMS_BY_SECTION_UI = (sec) => Object.values(DITEMS).filter((i) => i.section === sec && !i.shopOnly && !i.grindDrop).map((i) => i.id);
@@ -718,7 +719,7 @@ function finishRun(won) {
     root.innerHTML = `<div class="d-bg sec-${sectionOf(fellFrom)}"></div><div class="d-result">
       <h2>${boss ? `${esc(SECTIONS[sectionOf(fellFrom) - 1].name)} conquered!` : `Floor ${fellFrom} cleared!`}</h2>
       ${first ? '<p class="boost center">First clear bonus!</p>' : ''}
-      ${run.chest ? `<div class="ch-earned"><img src="${chestIcon(run.chest, { scale: 4 })}" alt=""><div><b>+1 ${esc(chestName(run.chest))}</b><span class="small muted">Open it in Camp › Bag</span></div></div>` : ''}
+      ${run.chest ? `<div class="ch-earned tier-${chestInfo(run.chest).tier}"><img src="${chestIcon(run.chest, { scale: 4 })}" alt=""><div><b style="color:${CHEST_TIERS[chestInfo(run.chest).tier].colour}">+1 ${esc(chestName(run.chest))}</b><span class="small muted">Open it in Camp › Bag</span></div></div>` : ''}
       ${summary}
       <div class="btn-row">${canPlay(dg, fellFrom + 1) && fellFrom < 50 ? `<button class="btn primary" data-action="d-floor" data-floor="${fellFrom + 1}">Next floor</button>` : ''}<button class="btn" data-action="d-leave">Back to the tower</button></div>
     </div>`;

@@ -177,11 +177,18 @@ const CHEST_PAL = {
   5: { a: '#3a1a1a', b: '#0a0404', c: '#ff6a1a', d: '#ffc94a' },
 };
 const chestCache = new Map();
+const TIER_PAL = {
+  w: {},
+  i: { c: '#c8ccd8', d: '#8a92a8' },
+  g: { c: '#ffc94a', d: '#e8435a' },
+  a: { a: '#2a1a3a', b: '#0a0614', c: '#7af0ff', d: '#b48cff' },
+};
 export function chestIcon(key, { open = false, scale = 3 } = {}) {
   const ck = `${key}|${open}|${scale}`;
   if (chestCache.has(ck)) return chestCache.get(ck);
-  const sec = Number(key[0]), boss = key.endsWith('b');
-  const pal = { ...CHEST_PAL[sec], g: '#ffe89a', ...(boss ? { c: '#ffc94a', d: '#e8435a' } : {}) };
+  const sec = Number(key[0]), boss = key.includes('b');
+  const tier = key.replace(/^\d+b?/, '') || (boss ? 'g' : 'w');
+  const pal = { ...CHEST_PAL[sec], g: tier === 'a' ? '#c8f8ff' : '#ffe89a', ...TIER_PAL[tier] };
   const url = drawingIcon({ pal, half: open ? CHEST_OPEN : CHEST_CLOSED }, { scale });
   chestCache.set(ck, url);
   return url;
