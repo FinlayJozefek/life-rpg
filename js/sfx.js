@@ -5,6 +5,7 @@ let muted = false;
 try { muted = localStorage.getItem('liferpg.pref.muted') === '1'; } catch {}
 
 export const isMuted = () => muted;
+export const audioCtx = () => ctx;   // shared with the background music
 export function setMuted(m) { muted = m; try { localStorage.setItem('liferpg.pref.muted', m ? '1' : '0'); } catch {} }
 
 export function unlock() {

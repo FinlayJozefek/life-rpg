@@ -1254,3 +1254,6 @@ main { position: relative; z-index: 1; }
 body, .coin-pill, .streak-pill, .stat-num, .d-dpow, .d-hptext, .d-pop, .tc-seal, .d-price, .d-chip, .ch-cell b { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; }
 /* numbers in the clean text font (bold) so they are always easy to read; titles keep the metal font */
 .stat-num, .d-dpow, .d-pop, .tc-seal, .ch-n, .d-anvil-lv .plus, .lvl, .count, .d-chip { font-family: var(--body-font) !important; font-weight: 800; }
+
+/* dealing the hand at the start of a fight: the back shows until each card flips */
+.tc-card.dealing::after { animation-delay: inherit; }

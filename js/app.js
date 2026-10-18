@@ -10,6 +10,7 @@ import { mountAvatar, mountPet, outfitIcon, petIcon, avatarDataUrl } from './spr
 import { startAutoUpdate } from './updates.js';
 import { checkProgress, questsFor, rewardText, ACH_BADGE, ACHIEVEMENTS, TITLES, TITLE, titleLabel, bestDrops } from './engage.js';
 import * as sfx from './sfx.js';
+import * as music from './music.js';
 import { drawCard } from './card.js';
 import * as dungeon from './dungeon/dui.js';
 import { uiIcon, symbolRows, symbolPal } from './uiicons.js';
@@ -282,7 +283,8 @@ function viewSettings() {
     </section>
     <section class="panel">
       <h2>Sound</h2>
-      <button class="btn" data-action="toggle-sound">${ic('sound', 'btn-ic')} ${sfx.isMuted() ? 'Sound off: tap to turn on' : 'Sound on: tap to mute'}</button>
+      <div class="btn-col"><button class="btn" data-action="toggle-sound">${ic('sound', 'btn-ic')} ${sfx.isMuted() ? 'Sound effects off: tap to turn on' : 'Sound effects on: tap to mute'}</button>
+      <button class="btn" data-action="toggle-music">${ic('sound', 'btn-ic')} ${music.isOn() ? 'Music on: tap to turn off' : 'Music off: tap to turn on'}</button></div>
     </section>
     <section class="panel">
       <h2>How it works</h2>
@@ -875,6 +877,7 @@ async function restore(file) {
 // ---------- Events ----------
 document.addEventListener('click', (e) => {
   sfx.unlock();   // phones only allow sound after a tap
+  music.start();
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const a = el.dataset.action;
@@ -907,6 +910,7 @@ document.addEventListener('click', (e) => {
     case 'set-title': state.title = el.dataset.id || null; persist(); render(); showTitles(); break;
     case 'profile-card': showProfileCard(); break;
     case 'share-card': shareCard(); break;
+    case 'toggle-music': music.setOn(!music.isOn()); render(); break;
     case 'toggle-sound': sfx.setMuted(!sfx.isMuted()); if (!sfx.isMuted()) { sfx.unlock(); sfx.chime(); } render(); break;
     case 'equip-best': {
       for (const t of GEAR_SLOTS) if (canUpgrade(el.dataset.skill, t)) state.equipped[t] = bestGear(el.dataset.skill, t);
@@ -1017,7 +1021,7 @@ const TAB_ICONS = { home: 'helmet', skills: 'swords', quests: 'scroll', dungeon:
 
 // The Dungeon game mode gets the shared helpers it needs.
 dungeon.init({
-  state: () => state, persist, render, openModal, closeModal, toast, esc, fmt, sfx, confetti, shake, flash, vibrate,
+  state: () => state, persist, render, openModal, closeModal, toast, esc, fmt, sfx, music, confetti, shake, flash, vibrate,
   avatarUrl: (scale = 3) => avatarDataUrl({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, scale),
   avatarImg: () => `<img class="d-faller-img" src="${avatarDataUrl({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, 4)}" alt="">`,
 });

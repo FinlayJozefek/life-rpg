@@ -461,7 +461,8 @@ function startFight() {
   const p = buildPlayer(dg);
   if (run.hp !== null) p.hp = Math.min(run.hp, p.maxHp);
   const b = createBattle(p, run.plan[run.idx], { isBoss: floorInSection(run.floor) === 10, reviveUsed: run.reviveUsed, scale: scaleFor(sectionOf(run.floor)) });
-  battle = { b, target: b.enemies[0].uid, busy: false, log: [], stops: [], potionPick: false };
+  battle = { b, target: b.enemies[0].uid, busy: false, log: [], stops: [], potionPick: false, deal: true };
+  api.music?.setMood('battle');
   const intro = b.enemies.length > 1 ? `${b.enemies.length} enemies appear!` : `${b.enemies[0].name} appears!`;
   battle.log.push(b.isBoss ? `The ${b.enemies[0].name} blocks your path!` : intro);
   renderBattle(true);
@@ -544,6 +545,25 @@ function renderBattle(full = false) {
     if (cv && e.hp > 0) battle.stops.push(mountEnemy(cv, e, e.boss ? 6 : 4));
   }
   if (full) root.scrollTop = 0;
+  if (battle.deal && !battle.potionPick) {
+    // deal the hand: cards fly out of the deck one after another and flip face up
+    battle.deal = false;
+    const deck = root.querySelector('.tc-deck');
+    const cards = [...root.querySelectorAll('.tc-card')];
+    if (deck && cards.length) {
+      battle.cardLock = true;
+      const dr = deck.getBoundingClientRect();
+      cards.forEach((card, i) => {
+        const cr = card.getBoundingClientRect();
+        card.style.setProperty('--dx', `${dr.left + dr.width / 2 - (cr.left + cr.width / 2)}px`);
+        card.style.setProperty('--dy', `${dr.top + dr.height / 2 - (cr.top + cr.height / 2)}px`);
+        card.style.animationDelay = `${0.25 + i * 0.13}s`;
+        card.classList.add('draw', 'dealing');
+        setTimeout(() => api.sfx.tick?.(), 250 + i * 130);
+      });
+      setTimeout(() => { cards.forEach((c) => { c.classList.remove('draw', 'dealing'); c.style.animationDelay = ''; }); if (battle) battle.cardLock = false; }, 250 + cards.length * 130 + 520);
+    }
+  }
   if (battle.drawSlot !== undefined && !battle.busy) {
     const slot = battle.drawSlot; battle.drawSlot = undefined;
     const card = root.querySelector(`.tc-card[data-slot="${slot}"]`), deck = root.querySelector('.tc-deck');
@@ -798,6 +818,7 @@ function finishRun(won) {
 }
 
 function closeBattle() {
+  api.music?.setMood('calm');
   const root = document.getElementById('d-battle');
   if (root) { root.classList.remove('open'); root.innerHTML = ''; }
   battle?.stops.forEach((s) => s());
