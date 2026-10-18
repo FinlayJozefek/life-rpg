@@ -301,7 +301,7 @@ function replayWindow(f) {
       <div class="q-ico"><img src="${boss ? enemyIcon(SECTIONS[sectionOf(f) - 1].boss, 3) : chestIcon(`${sectionOf(f)}w`, { scale: 4 })}" alt=""></div>
       <h2>Replay floor ${f}?</h2>
       <p>You've already cleared this floor. Replaying it is a good way to farm <b>coins, gear, materials and another chest</b>.</p>
-      <p class="q-note">Note: replaying won't move you up the tower. Your climb stays at <b>floor ${climb}</b>. To keep climbing, take on floor ${climb}.</p>
+      <p class="q-note">Note: replaying won't move you up the tower, and if you're defeated here you won't fall. Your climb stays at <b>floor ${climb}</b>. To keep climbing, take on floor ${climb}.</p>
     </div>
     <div class="btn-col">
       <button class="btn primary" data-action="d-floor-go" data-floor="${f}">Replay floor ${f}</button>
@@ -767,14 +767,16 @@ function grantRewards(won, { fled = false } = {}) {
   } else if (!fled) {
     dg.deaths++;
     // fall back to the start of the section you're climbing (not when farming an earlier section)
-    if (sectionOf(run.floor) === sectionOf(dg.climb)) dg.climb = sectionStart(run.floor);
+    // fall back to the start of the section only when dying on a floor you have not beaten yet
+    if (!dg.cleared[run.floor] && sectionOf(run.floor) === sectionOf(dg.climb)) dg.climb = sectionStart(run.floor);
   }
   return { first, mat };
 }
 
 function finishRun(won) {
   const fellFrom = run.floor;
-  const fallTo = !won && sectionOf(fellFrom) === sectionOf(d().climb) ? sectionStart(fellFrom) : null;
+  const wasCleared = !!d().cleared[fellFrom];
+  const fallTo = !won && !wasCleared && sectionOf(fellFrom) === sectionOf(d().climb) ? sectionStart(fellFrom) : null;
   const { first, mat } = grantRewards(won);
   const dg = d();
   api.persist();
@@ -805,7 +807,7 @@ function finishRun(won) {
     root.innerHTML = `<div class="d-bg sec-${sectionOf(fellFrom)} dark"></div><div class="d-result">
       <div class="d-fall"><div class="d-fall-floors">${floors.map((f) => `<div>${f}</div>`).join('')}</div><div class="d-faller">${api.avatarImg()}</div></div>
       <h2>You were defeated…</h2>
-      <p class="center">${to ? `You tumble down the tower to <b>floor ${to}</b>.` : 'You crawl back to the tower entrance.'} You keep everything you found.</p>
+      <p class="center">${to ? `You tumble down the tower to <b>floor ${to}</b>.` : wasCleared ? `You'd already beaten this floor, so you don't fall. Your climb stays at <b>floor ${Math.min(50, d().climb)}</b>.` : 'You crawl back to the tower entrance.'} You keep everything you found.</p>
       ${summary}
       <div class="btn-row"><button class="btn primary" data-action="d-leave">Back to the tower</button></div>
     </div>`;
