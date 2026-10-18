@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gear art trial</title>
+<!-- Dev-only page: trial redesign of Dungeon weapon and armour art. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding-bottom: 40px; }
+  main { max-width: 980px; padding-left: 8px; padding-right: 8px; }
+  .panel { padding: 12px; }
+  .px { image-rendering: pixelated; display: block; margin: 0 auto; }
+  .cmp { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .cmp-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1.2fr; align-items: center; gap: 8px; padding: 8px; background: var(--panel-2); border: 2px solid var(--line); }
+  .cmp-row .nm b { display: block; }
+  .cmp-row img.old { width: 66px; }
+  .cmp-row img.nw { width: 96px; max-width: 100%; }
+  .cmp-head { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1.2fr; gap: 8px; font: 700 12px var(--display-font); color: var(--gold); text-align: center; padding: 0 8px; }
+  .card { width: 100%; max-width: 104px; aspect-ratio: 1; margin: 0 auto; display: grid; place-items: center; border-radius: 12px; position: relative; overflow: hidden; }
+  .card canvas { width: 96%; height: 96%; image-rendering: pixelated; }
+  .card::after { content: ''; position: absolute; inset: 0; border-radius: 12px; border: 2px solid var(--rc); box-shadow: inset 0 0 14px var(--rc); pointer-events: none; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .cell { width: calc(33.3% - 7px); max-width: 120px; text-align: center; font-size: 11px; color: var(--muted); }
+  .cell b { display: block; color: var(--text); font-size: 12px; }
+  .grid-all { display: grid; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 6px; }
+  .grid-all div { text-align: center; font-size: 10px; color: var(--muted); line-height: 1.15; }
+  .grid-all img { width: 72px; }
+  h3.sec { margin-top: 18px; }
+  @media (max-width: 560px) { .cmp-row, .cmp-head { grid-template-columns: 1fr 1fr 1fr; } .cmp-row .nm { grid-column: 1 / -1; } .cmp-head span:first-child { display: none; } }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="brand">Gear art trial</div><div class="muted small">nothing here is in the game yet</div></header>
+<main>
+  <section class="panel">
+    <h2>Before → after</h2>
+    <p class="muted small">Left: what the game draws now (one shape per weapon type, recoloured). Middle: the new detailed art. Right: the new art in a rarity card with live effects: Epic+ shimmer, Legendary+ glow, Mythic sparkles, Divine halo rays.</p>
+    <div class="cmp-head"><span></span><span>Now</span><span>New</span><span>New + effects</span></div>
+    <div class="cmp" id="cmp"></div>
+  </section>
+  <section class="panel">
+    <h2>Each section has its own materials</h2>
+    <p class="muted small">The same Rare sword from each part of the tower: crude goblin iron with rope grip, crypt bone-silver, dark stone with glowing runes, ice crystal, obsidian with lava.</p>
+    <div class="row" id="mats"></div>
+  </section>
+  <section class="panel">
+    <h2>Rarity makes it fancier</h2>
+    <p class="muted small">One sword climbing the rarities: Rare adds a gem, Epic gold trim and a shimmer, Legendary a glow, Mythic sparkles, Divine light rays.</p>
+    <div class="row" id="ladder"></div>
+  </section>
+  <section class="panel">
+    <h2>Every weapon and armour type</h2>
+    <div class="row" id="types"></div>
+  </section>
+  <section class="panel">
+    <h2>Every Dungeon item in the new style</h2>
+    <div id="all"></div>
+  </section>
+</main>
+<script type="module">
+import { DITEMS, SECTIONS, RAR_NAME } from '../js/dungeon/ddata.js';
+import { gearIcon } from '../js/dungeon/dart.js';
+import { gearArtIcon, mountGearArt } from '../js/dungeon/gearart.js';
+
+const RC = { common: '#8a8a84', uncommon: '#5fbf5a', rare: '#4a90e2', epic: '#a35ae0', legendary: '#f0a020', mythic: '#e8435a', divine: '#fff1a8' };
+const SEC_BG = { 0: '#2a2620', 1: '#1e2a16', 2: '#221a34', 3: '#1e1e24', 4: '#16283e', 5: '#2a0e0a' };
+const tag = (r) => `<span class="rtag r-${r}">${RAR_NAME[r]}</span>`;
+function card(it, size = 100) {
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
+  wrap.style.cssText = `--rc:${RC[it.rarity]};background:radial-gradient(circle at 50% 40%, ${SEC_BG[it.section] || '#222'}, #07060c 75%)`;
+  const cv = document.createElement('canvas');
+  wrap.appendChild(cv);
+  mountGearArt(cv, it, 3);
+  return wrap;
+}
+
+// before / after
+const SHOW = ['d1.rusty-dagger', 'd1.goblin-bane-axe', 'd2.blessed-longsword', 'd3.earthshaker-maul', 'd3.golemheart-plate', 'd4.wyrmscale-helm', 'd4.wyrmfang-bow', 'd4.blizzard-staff', 'd5.dread-plate', 'd5.demonbane-blade', 'd5.crown-of-the-phoenix', 'd5.wings-of-the-seraph'];
+const cmp = document.getElementById('cmp');
+for (const id of SHOW) {
+  const it = DITEMS[id]; if (!it) continue;
+  const row = document.createElement('div'); row.className = 'cmp-row';
+  row.innerHTML = `<div class="nm"><b>${it.name}</b>${tag(it.rarity)} <span class="muted small">${SECTIONS[it.section - 1]?.name || ''}</span></div>
+    <img class="px old" src="${gearIcon(id, 3)}" alt=""><img class="px nw" src="${gearArtIcon(it, 3)}" alt=""><div class="slot"></div>`;
+  row.querySelector('.slot').appendChild(card(it));
+  cmp.appendChild(row);
+}
+
+// materials: same rare sword per section
+const mats = document.getElementById('mats');
+const secNames = ['Starter', ...SECTIONS.map((s) => s.name)];
+for (let s = 0; s <= 5; s++) {
+  const it = { name: 'Trial Blade', slot: 'weapon', weaponType: 'sword', kind: 'sword', section: s, rarity: s === 0 ? 'common' : 'rare' };
+  const c = document.createElement('div'); c.className = 'cell';
+  c.appendChild(card(it)); c.insertAdjacentHTML('beforeend', `<b>${secNames[s]}</b>`);
+  mats.appendChild(c);
+}
+
+// rarity ladder
+const ladder = document.getElementById('ladder');
+for (const r of ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine']) {
+  const it = { name: 'Ladder Sword', slot: 'weapon', weaponType: 'sword', kind: 'sword', section: 3, rarity: r };
+  const c = document.createElement('div'); c.className = 'cell';
+  c.appendChild(card(it)); c.insertAdjacentHTML('beforeend', `<b>${tag(r)}</b>`);
+  ladder.appendChild(c);
+}
+
+// every type
+const types = document.getElementById('types');
+const TYPES = [['sword', 'weapon'], ['dagger', 'weapon'], ['axe', 'weapon'], ['hammer', 'weapon'], ['spear', 'weapon'], ['bow', 'weapon'], ['staff', 'weapon'], ['gauntlet', 'weapon'],
+  ['helmet', 'helmet'], ['chest', 'chest'], ['legs', 'legs'], ['boots', 'boots'], ['shield', 'offhand'], ['tome', 'offhand'], ['lantern', 'offhand'], ['relic', 'offhand']];
+for (const [k, slot] of TYPES) {
+  const it = { name: 'Type ' + k, slot, weaponType: slot === 'weapon' ? k : null, kind: k, section: 4, rarity: 'epic' };
+  const c = document.createElement('div'); c.className = 'cell';
+  c.appendChild(card(it)); c.insertAdjacentHTML('beforeend', `<b>${k[0].toUpperCase() + k.slice(1)}</b>`);
+  types.appendChild(c);
+}
+
+// everything, static
+const all = document.getElementById('all');
+const order = ['divine', 'mythic', 'legendary', 'epic', 'rare', 'uncommon', 'common'];
+for (let s = 0; s <= 5; s++) {
+  const items = Object.values(DITEMS).filter((i) => i.section === s).sort((a, b) => order.indexOf(a.rarity) - order.indexOf(b.rarity));
+  if (!items.length) continue;
+  all.insertAdjacentHTML('beforeend', `<h3 class="sec">${secNames[s]}</h3><div class="grid-all">${items.map((i) => `<div><img class="px" src="${gearArtIcon(i, 3)}" alt=""><span class="r-${i.rarity}">${i.name}</span></div>`).join('')}</div>`);
+}
+</script>
+</body>
+</html>
