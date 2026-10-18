@@ -395,6 +395,7 @@ export function mountGearArt(canvas, it, scale = 4) {
   let raf = 0, t0 = performance.now();
   const frame = (now) => {
     const t = (now - t0) / 1000;
+    if (!canvas.isConnected && t > 0.3) return;   // removed from the page: stop animating
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.translate(pad, pad);

@@ -1,4 +1,4 @@
-// Dungeon screens: tower hub, battles, floor results, gear, Blacksmith and Potion Shop.
+// Dungeon screens: tower hub, battles, floor results, and the Camp (gear, bag, forge, shop, potions).
 // app.js calls init() once with shared helpers, view() to draw the tab, action() for clicks.
 import {
   SECTIONS, FAMILIES, BOSSES, DITEMS, POTIONS, MATERIALS, RAR_NAME, TYPE_NAME, SETS, SLOT_NAME_D, GEAR_SLOTS_D, POTIONS_PER_FIGHT, SECTION_SCALE,
@@ -11,14 +11,15 @@ import {
 import { createBattle, takeTurn, getActions, aliveEnemies, typeMult, moveType } from './engine.js';
 import { gearIcon, mountEnemy, enemyIcon, BOSS_AURA, TOWER_PAL, towerTexture } from './dart.js';
 import { uiIcon } from '../uiicons.js';
-import { winChance, oddsLabel } from './dbot.js';
+import { winChance, oddsLabel, bestForSlot, bestGear } from './dbot.js';
+import { mountGearArt } from './gearart.js';
 
 let api = null;          // helpers from app.js
-let sub = 'hub';         // hub | gear | smith | potions
+let sub = 'hub';         // hub | camp
 let battle = null;       // current fight UI state
 let run = null;          // current floor run
-let smithMode = 'buy';   // buy | upgrade
-const openFold = {};     // which section folder is open in each list: { pack, buy, upgrade }
+let campTab = 'gear';    // gear | bag | forge | shop | potions
+let bagFilter = 'all', bagSec = 0, shopSec = 0, forgeSel = null;
 
 export function init(helpers) { api = helpers; }
 const S = () => api.state();
@@ -97,9 +98,7 @@ export function view() {
       <p class="hint">You'll get a starter kit: Rusty Sword, Leather Cap, Tattered Tunic, Worn Boots and 3 Health Potions.</p>
     </section>`;
   }
-  if (sub === 'gear') return viewGear();
-  if (sub === 'smith') return viewSmith();
-  if (sub === 'potions') return viewPotions();
+  if (sub === 'camp') return viewCamp();
   const cp = cryptsProgress(dg.xp);
   const power = powerScore(buildPlayer(dg));
   const next = Math.min(50, dg.climb);
@@ -140,9 +139,9 @@ export function view() {
       <div class="d-spire"><div class="d-flag"></div><div class="d-roof"></div></div>${segs}<div class="d-ground"><div class="d-door"></div></div>
     </div><p class="hint d-tower-hint">Tap a glowing window to replay that floor and farm gear. If you fall, you drop to the start of the section but keep everything you found.</p></div>
     <div class="d-bar">${oddsHtml(dg)}<div class="d-bar-row">
-      <button class="d-hubbtn" data-action="d-sub" data-sub="gear"><img src="${uiIcon('swords', 'color', 3)}" alt="">Gear</button>
-      <button class="d-hubbtn" data-action="d-sub" data-sub="smith"><img src="${uiIcon('anvil', 'color', 3)}" alt="">Smith</button>
-      <button class="d-hubbtn" data-action="d-sub" data-sub="potions"><img src="${uiIcon('potion', 'color', 3)}" alt="">Potions</button>
+      <button class="d-hubbtn" data-action="d-camp" data-tab="gear"><img src="${uiIcon('chest', 'color', 3)}" alt="">Camp</button>
+      <button class="d-hubbtn" data-action="d-camp" data-tab="shop"><img src="${uiIcon('anvil', 'color', 3)}" alt="">Shop</button>
+      <button class="d-hubbtn" data-action="d-camp" data-tab="potions"><img src="${uiIcon('potion', 'color', 3)}" alt="">Potions</button>
       ${go}
     </div></div>`;
 }
@@ -173,160 +172,187 @@ function oddsHtml(dg) {
   </div>`;
 }
 
-// ---------- section folders ----------
-// One fold-out row per tower section; only one is open at a time. groups: [{ key, title, sub, icon, locked, count, body }]
-function folders(list, groups, fallback) {
-  if (!(list in openFold)) openFold[list] = fallback;
-  return groups.map((g) => {
-    const open = openFold[list] === g.key && !g.locked;
-    return `<div class="d-fold ${open ? 'open' : ''} ${g.locked ? 'locked' : ''}">
-      <button class="d-fold-head" ${g.locked ? 'disabled' : `data-action="d-fold" data-list="${list}" data-key="${g.key}"`}>
-        <span class="d-fold-icon">${g.icon}</span>
-        <span class="d-fold-title"><b>${g.title}</b><span class="small muted">${g.sub}</span></span>
-        <span class="d-fold-count">${g.locked ? '🔒' : g.count}</span><span class="d-fold-chev">${g.locked ? '' : '›'}</span>
-      </button>
-      ${open ? `<div class="d-fold-body">${g.body}</div>` : ''}
-    </div>`;
-  }).join('');
-}
+// ---------- Camp: gear, bag, forge, shop and potions in one screen ----------
 const RAR_ORDER = ['divine', 'mythic', 'legendary', 'epic', 'rare', 'uncommon', 'common'];
 const byRarity = (a, b) => RAR_ORDER.indexOf(DITEMS[a].rarity) - RAR_ORDER.indexOf(DITEMS[b].rarity);
 const homeSection = (id) => Math.max(1, DITEMS[id].section);   // starter kit lives with section 1
-const secIcon = (k) => `<img src="${enemyIcon(SECTIONS[k - 1].boss, 2)}" alt="">`;
+const ownedIds = (dg) => Object.keys(dg.inv).filter((id) => dg.inv[id] > 0).sort(byRarity);
+const isWorn = (dg, id) => dg.equipped[DITEMS[id].slot] === id;
+const tileArt = (id) => `<img src="${gearIcon(id, 3)}" alt="">`;
+const artCanvas = (id) => `<canvas data-art="${id}"></canvas>`;
+// Animated art (cards, anvil, item sheet) is mounted after the HTML lands on the page.
+function mountArt() {
+  document.querySelectorAll('canvas[data-art]:not([data-live])').forEach((cv) => { cv.dataset.live = '1'; mountGearArt(cv, DITEMS[cv.dataset.art], 3); });
+}
+const CAMP_TABS = [['gear', 'Gear', 'swords'], ['bag', 'Bag', 'chest'], ['forge', 'Forge', 'anvil'], ['shop', 'Shop', 'coin'], ['potions', 'Potions', 'potion']];
+const BAG_FILTERS = [['all', 'All'], ['weapon', 'Weapons'], ['armour', 'Armour'], ['offhand', 'Off-hand']];
+const inFilter = (id) => { const s = DITEMS[id].slot; return bagFilter === 'all' || (bagFilter === 'armour' ? ['helmet', 'chest', 'legs', 'boots'].includes(s) : s === bagFilter); };
 
-// ---------- gear ----------
-function viewGear() {
+function viewCamp() {
+  const body = { gear: campGear, bag: campBag, forge: campForge, shop: campShop, potions: campPotions }[campTab]();
+  setTimeout(() => { mountArt(); document.querySelectorAll('.d-flt .on, .d-strip .sel').forEach((b) => { b.parentElement.scrollLeft = b.offsetLeft - b.parentElement.clientWidth / 2 + b.clientWidth / 2; }); }, 0);
+  return `<div class="d-camp">
+    <div class="d-camp-head"><button class="btn d-back" data-action="d-sub" data-sub="hub">‹ Tower</button><h2>Camp</h2></div>
+    <div class="d-ctabs">${CAMP_TABS.map(([k, l, ic]) => `<button class="${campTab === k ? 'on' : ''}" data-action="d-camp" data-tab="${k}"><img src="${uiIcon(ic, 'color', 3)}" alt="">${l}</button>`).join('')}</div>
+    <div class="d-camp-body">${body}</div>
+  </div>`;
+}
+
+function dollSlot(dg, slot) {
+  const id = dg.equipped[slot];
+  if (!id) return `<button class="d-dslot empty" disabled><span class="d-dlbl">${SLOT_NAME_D[slot]}</span></button>`;
+  return `<button class="d-dslot r-${DITEMS[id].rarity}-bg" data-action="d-item" data-id="${id}">${tileArt(id)}${dg.upgrades[id] ? `<span class="d-dplus">+${dg.upgrades[id]}</span>` : ''}<span class="d-dlbl">${SLOT_NAME_D[slot]}</span></button>`;
+}
+function campGear() {
   const dg = d();
   const p = buildPlayer(dg);
   const set = activeSet(dg.equipped);
-  const slots = GEAR_SLOTS_D.map((slot) => {
-    const id = dg.equipped[slot];
-    return `<button class="d-slot" ${id ? `data-action="d-item" data-id="${id}"` : 'disabled'}>
-      <span class="d-slot-icon">${id ? gearImg(id) : ''}</span>
-      <span class="d-slot-text"><span class="slot-label">${SLOT_NAME_D[slot]}</span><span class="gear-name">${id ? itemName(id) : '<span class="muted">Empty</span>'}</span><span class="small muted">${id ? statLine(id) : ''}</span></span>
-    </button>`;
-  }).join('');
-  const owned = Object.keys(dg.inv).filter((id) => dg.inv[id] > 0).sort(byRarity);
-  const invRow = (id) => {
-    const eq = Object.values(dg.equipped).includes(id);
-    return `<button class="d-inv r-border-${DITEMS[id].rarity}" data-action="d-item" data-id="${id}">
-      ${gearImg(id)}<span class="d-inv-text"><b>${itemName(id)}</b>${dg.inv[id] > 1 ? ` <span class="muted">x${dg.inv[id]}</span>` : ''}${eq ? ' <span class="eq">E</span>' : ''}<br>
-      <span class="small">${rarTag(DITEMS[id].rarity)} <span class="muted">${SLOT_NAME_D[DITEMS[id].slot]} · ${statLine(id)}</span></span></span></button>`;
-  };
-  const pack = folders('pack', SECTIONS.map((sec) => {
-    const ids = owned.filter((id) => homeSection(id) === sec.id);
-    return { key: sec.id, title: esc(sec.name), sub: ids.length ? `${ids.length} item${ids.length > 1 ? 's' : ''}` : 'nothing yet', icon: secIcon(sec.id), count: ids.length,
-      locked: !ids.length && !sectionUnlocked(dg, sec.id), body: ids.map(invRow).join('') || '<p class="muted small">Nothing from here yet.</p>' };
-  }), Math.max(1, ...owned.map(homeSection)));
-  const mats = Object.entries(dg.materials).filter(([, n]) => n > 0).map(([m, n]) => `${esc(MATERIALS[m].name)} ×${n}`).join(' · ') || 'none yet';
-  const pots = Object.entries(dg.potions).filter(([, n]) => n > 0).map(([k, n]) => `${esc(POTIONS[k].name)} ×${n}`).join(' · ') || 'none';
-  return `
-    <section class="panel">
-      <button class="btn d-back" data-action="d-sub" data-sub="hub">‹ Tower</button>
-      <h2>Dungeon gear</h2>
-      <div class="d-stats"><span>Power <b>${fmt(powerScore(p))}</b></span><span>Atk <b>${p.atk}</b></span><span>Def <b>${p.def}</b></span><span>HP <b>${p.maxHp}</b></span><span>Crit <b>${Math.round(p.crit * 100)}%</b></span>${p.dodge ? `<span>Dodge <b>${Math.round(p.dodge * 100)}%</b></span>` : ''}</div>
-      ${oddsHtml(dg)}
-      ${set ? `<p class="boost small">Set bonus · ${esc(SETS[set].name)}: ${esc(SETS[set].text)}</p>` : '<p class="muted small">Wear all 4 armour pieces of a section\'s Epic set for a set bonus.</p>'}
-      <div class="d-slots">${slots}</div>
-      <h3>Moves</h3>
-      <ul class="d-moves">${p.moves.map((mv) => `<li><b>${esc(mv.name)}</b>${mv.sig ? ' <span class="new">SIGNATURE</span>' : ''}<br><span class="small muted">${moveText(mv, p)}</span></li>`).join('')}</ul>
-    </section>
-    <section class="panel"><h2>Backpack</h2><p class="small muted">Materials: ${mats}<br>Potions: ${pots}</p><div class="d-folds">${pack}</div></section>`;
+  return `<div class="d-doll">
+      <div class="d-dcol">${dollSlot(dg, 'helmet')}${dollSlot(dg, 'chest')}${dollSlot(dg, 'legs')}</div>
+      <div class="d-dhero"><img src="${api.avatarUrl(4)}" alt=""><div class="d-dpow">${fmt(powerScore(p))}</div><div class="d-dpowl">Power</div></div>
+      <div class="d-dcol">${dollSlot(dg, 'weapon')}${dollSlot(dg, 'offhand')}${dollSlot(dg, 'boots')}</div>
+    </div>
+    <div class="d-chips"><span>Atk <b>${fmt(p.atk)}</b></span><span>Def <b>${fmt(p.def)}</b></span><span>HP <b>${fmt(p.maxHp)}</b></span><span>Crit <b>${Math.round(p.crit * 100)}%</b></span>${p.dodge ? `<span>Dodge <b>${Math.round(p.dodge * 100)}%</b></span>` : ''}</div>
+    ${oddsHtml(dg)}
+    <button class="btn primary wide d-bestall" data-action="d-best-all">⚡ Equip best gear</button>
+    <p class="hint center">Picks what gives you the best chance against the ${esc(SECTIONS[sectionOf(Math.min(50, dg.climb)) - 1].name)} boss. Tap a slot to compare, upgrade or swap.</p>
+    ${set ? `<p class="boost small center">Set bonus · ${esc(SETS[set].name)}: ${esc(SETS[set].text)}</p>` : ''}
+    <h3>Moves</h3>
+    <ul class="d-moves">${p.moves.map((mv) => `<li><b>${esc(mv.name)}</b>${mv.sig ? ' <span class="new">SIGNATURE</span>' : ''}<br><span class="small muted">${moveText(mv, p)}</span></li>`).join('')}</ul>`;
 }
 
+function campBag() {
+  const dg = d();
+  const list = ownedIds(dg).filter(inFilter).filter((id) => !bagSec || homeSection(id) === bagSec);
+  const tiles = list.map((id) => `<button class="d-tile r-${DITEMS[id].rarity}-bg" data-action="d-item" data-id="${id}">${tileArt(id)}${isWorn(dg, id) ? '<span class="d-te">E</span>' : ''}${dg.upgrades[id] ? `<span class="d-tup">+${dg.upgrades[id]}</span>` : ''}${dg.inv[id] > 1 ? `<span class="d-tn">×${dg.inv[id]}</span>` : ''}</button>`).join('');
+  const empties = Math.max(0, (5 - (list.length % 5)) % 5 + (list.length < 10 ? 5 : 0));
+  const mats = Object.entries(dg.materials).filter(([, n]) => n > 0).map(([m, n]) => `${esc(MATERIALS[m].name)} ×${n}`).join(' · ') || 'none yet';
+  return `<div class="d-flt">${BAG_FILTERS.map(([k, l]) => `<button class="${bagFilter === k ? 'on' : ''}" data-action="d-bagf" data-f="${k}">${l}</button>`).join('')}</div>
+    <div class="d-flt"><button class="${!bagSec ? 'on' : ''}" data-action="d-bags" data-s="0">Every section</button>${SECTIONS.map((s) => `<button class="${bagSec === s.id ? 'on' : ''}" data-action="d-bags" data-s="${s.id}"><img src="${enemyIcon(s.boss, 1)}" alt="">${esc(s.name)}</button>`).join('')}</div>
+    <div class="d-cap"><span>${list.length} item${list.length === 1 ? '' : 's'} · best first</span><span>${mats}</span></div>
+    <div class="d-bag">${tiles}${'<div class="d-tile empty"></div>'.repeat(empties)}</div>
+    ${list.length ? '' : '<p class="muted center">Nothing here yet. Climb and farm floors to find gear.</p>'}`;
+}
+
+function campForge() {
+  const dg = d();
+  const list = ownedIds(dg);
+  if (!list.length) return '<p class="muted">No gear yet.</p>';
+  if (!forgeSel || !(dg.inv[forgeSel] > 0)) forgeSel = dg.equipped.weapon || list[0];
+  const it = DITEMS[forgeSel], plus = dg.upgrades[forgeSel] || 0;
+  const strip = `<div class="d-strip">${list.map((id) => `<button class="d-tile r-${DITEMS[id].rarity}-bg ${id === forgeSel ? 'sel' : ''}" data-action="d-forge-sel" data-id="${id}">${tileArt(id)}${dg.upgrades[id] ? `<span class="d-tup">+${dg.upgrades[id]}</span>` : ''}</button>`).join('')}</div>`;
+  const pips = `<div class="d-pips">${Array.from({ length: MAX_PLUS }, (_, i) => `<i class="${i < plus ? 'on' : i === plus ? 'nx' : ''}"></i>`).join('')}</div>`;
+  if (plus >= MAX_PLUS) {
+    return `${strip}<div class="d-anvil" id="d-anvil">${artCanvas(forgeSel)}<div class="d-anvil-lv">${esc(it.name)} <span class="plus">+${plus}</span></div>${pips}<p class="d-gold">Fully upgraded. Nothing more the hammer can do.</p></div>`;
+  }
+  const c = upgradeCost(forgeSel, plus), have = dg.materials[c.material] || 0;
+  const a = itemStats(forgeSel, plus), b = itemStats(forgeSel, plus + 1);
+  const ok = S().coins >= c.coins && have >= c.count;
+  const diffs = [['atk', 'Atk'], ['def', 'Def'], ['hp', 'HP']].filter(([k]) => a[k]).map(([k, l]) => `<span>${l} ${fmt(a[k])} → <b>${fmt(b[k])}</b></span>`).join('');
+  return `${strip}<div class="d-anvil" id="d-anvil">${artCanvas(forgeSel)}
+      <div class="d-anvil-lv">${esc(it.name)} <span class="plus">+${plus}</span> → <span class="d-gold">+${plus + 1}</span></div>
+      ${pips}<div class="d-diff">${diffs}</div>
+      <div class="d-cost"><span class="${S().coins >= c.coins ? '' : 'bad'}">${fmt(c.coins)} coins</span><span class="${have >= c.count ? '' : 'bad'}">${esc(MATERIALS[c.material].name)} ${have}/${c.count}</span></div>
+      <button class="btn primary wide" data-action="d-upgrade" data-id="${forgeSel}" ${ok ? '' : 'disabled'}>Strike the anvil!</button>
+      ${ok ? '' : `<p class="hint">${have < c.count ? `Farm ${esc(SECTIONS[Math.max(1, it.section) - 1].name)} for more ${esc(MATERIALS[c.material].name)}.` : 'Not enough coins yet.'}</p>`}
+    </div>
+    <p class="hint center">Each strike adds 6% to the item's stats, up to +${MAX_PLUS}.</p>`;
+}
+
+function campShop() {
+  const dg = d();
+  const coins = S().coins;
+  const stock = blacksmithStock(dg);
+  const feat = stock.filter((i) => i.shopOnly).sort((x, y) => byRarity(x.id, y.id));
+  const secs = SECTIONS.filter((s) => stock.some((i) => i.section === s.id && !i.shopOnly));
+  const sel = shopSec && secs.some((s) => s.id === shopSec) ? shopSec : secs[secs.length - 1]?.id;
+  const basic = stock.filter((i) => !i.shopOnly && i.section === sel).sort((x, y) => byRarity(x.id, y.id) || GEAR_SLOTS_D.indexOf(x.slot) - GEAR_SLOTS_D.indexOf(y.slot));
+  const price = (i) => `<button class="d-price ${coins >= buyPrice(i.id) ? '' : 'no'}" data-action="d-buy" data-id="${i.id}" ${coins >= buyPrice(i.id) ? '' : 'disabled'}>${fmt(buyPrice(i.id))}</button>`;
+  return `<div class="d-smith"><img src="${uiIcon('anvil', 'color', 4)}" alt=""><div class="d-bubble">${feat.length ? 'Masterworks fresh off the anvil. Not cheap, but nothing out there drops like these.' : 'Common steel for common folk. Reach the Stone Depths and I\'ll forge you something special.'}</div></div>
+    ${feat.length ? `<h4 class="d-sh">✦ Masterworks</h4><div class="d-feat">${feat.map((i) => `<div class="d-fcard r-${i.rarity}-bg">
+        <button class="d-fart" data-action="d-item" data-id="${i.id}">${artCanvas(i.id)}</button>
+        <div class="d-fname">${esc(i.name)}</div>${rarTag(i.rarity)} <span class="small muted">${SLOT_NAME_D[i.slot]}</span>
+        <div class="d-fpass">${esc(passiveText(i).join(' · ') || statLine(i.id))}</div>
+        ${dg.inv[i.id] ? '<div class="small muted">Owned</div>' : ''}${price(i)}</div>`).join('')}</div>` : ''}
+    <h4 class="d-sh">Everyday gear</h4>
+    <div class="d-flt">${secs.map((s) => `<button class="${s.id === sel ? 'on' : ''}" data-action="d-shops" data-s="${s.id}"><img src="${enemyIcon(s.boss, 1)}" alt="">${esc(s.name)}</button>`).join('')}</div>
+    <div class="d-stock">${basic.map((i) => `<div class="d-scard r-${i.rarity}-bg"><button class="d-sart" data-action="d-item" data-id="${i.id}">${tileArt(i.id)}</button><div class="d-sname">${esc(i.name)}</div>${dg.inv[i.id] ? '<div class="small muted">Owned</div>' : ''}${price(i)}</div>`).join('')}</div>`;
+}
+
+const POTION_COL = { 'hp-small': '#ff6a7a', 'hp-medium': '#e8435a', 'hp-large': '#c8203a', strength: '#ff9a3a', ironskin: '#9aa3b8', fortune: '#ffd84a' };
+function campPotions() {
+  const dg = d();
+  const coins = S().coins;
+  // what the battle offers first: healing potions, then the rest, up to the per-fight limit
+  const packed = Object.entries(dg.potions).filter(([, n]) => n > 0).sort(([a], [b]) => (POTIONS[b].heal || 0) - (POTIONS[a].heal || 0)).flatMap(([k, n]) => Array(n).fill(k)).slice(0, POTIONS_PER_FIGHT);
+  return `<p class="small muted center" style="margin:0">You can drink up to ${POTIONS_PER_FIGHT} per fight; each one uses your turn.</p>
+    <div class="d-pack">${Array.from({ length: POTIONS_PER_FIGHT }, (_, i) => packed[i] ? `<div class="f" style="color:${POTION_COL[packed[i]]}">${POTIONS[packed[i]].heal ? '❤' : '✦'}</div>` : '<div>+</div>').join('')}</div>
+    <div class="d-shelf">${Object.entries(POTIONS).map(([k, pt]) => `<div class="d-pcard" style="--pc:${POTION_COL[k]}"><div class="d-pic">${pt.heal ? '❤' : '✦'}</div><b>${esc(pt.name)}</b>
+      <span class="small muted">${pt.heal ? `Heals ${Math.round(pt.heal * 100)}%` : esc(pt.text)}</span><span class="small">You have <b>${dg.potions[k] || 0}</b></span>
+      <div class="d-pbuy"><button class="d-price ${coins >= pt.price ? '' : 'no'}" data-action="d-potion-buy" data-id="${k}" data-n="1" ${coins >= pt.price ? '' : 'disabled'}>${fmt(pt.price)}</button><button class="d-price ${coins >= pt.price * 5 ? '' : 'no'}" data-action="d-potion-buy" data-id="${k}" data-n="5" ${coins >= pt.price * 5 ? '' : 'disabled'}>×5</button></div></div>`).join('')}</div>`;
+}
+
+// ---------- item sheet: compare with what you wear ----------
 function showItem(id) {
   const dg = d();
   const it = DITEMS[id];
-  const eq = dg.equipped[it.slot] === id;
+  const owned = dg.inv[id] > 0;
+  const eq = isWorn(dg, id);
   const plus = dg.upgrades[id] || 0;
-  const moves = it.slot === 'weapon' ? weaponMoves(id, dg.equipped.offhand) : null;
+  const cur = dg.equipped[it.slot];
   const p = buildPlayer(dg);
-  const passive = passiveText(it);
+  const a = itemStats(id, plus), b = cur && !eq ? itemStats(cur, dg.upgrades[cur] || 0) : null;
+  const row = (k, lab, pct) => {
+    const x = a[k] || 0, y = b ? b[k] || 0 : null;
+    if (!x && !y) return '';
+    const f = (v) => (pct ? `${Math.round(v * 100)}%` : fmt(v));
+    const dlt = y === null ? '' : x - y;
+    return `<tr><td>${lab}</td><td>${f(x)}</td>${b ? `<td class="${dlt > 0 ? 'd-good' : dlt < 0 ? 'd-red' : 'muted'}">${dlt === 0 ? '–' : `${dlt > 0 ? '▲' : '▼'} ${f(Math.abs(dlt))}`}</td>` : ''}</tr>`;
+  };
+  const powDelta = eq ? 0 : powerScore(buildPlayer(dg, { equipped: { ...dg.equipped, [it.slot]: id } })) - powerScore(p);
   const nf = nextFloor(dg);
   let oddsLine = '';
   if (!nf.locked) {
     const now = winChance(dg, nf.f);
-    const swapped = { ...dg.equipped, [it.slot]: eq ? null : id };
-    const then = winChance({ ...dg, equipped: swapped }, nf.f);
+    const then = winChance({ ...dg, equipped: { ...dg.equipped, [it.slot]: eq ? null : id } }, nf.f);
     const who = nf.boss ? `the ${esc(BOSSES[nf.sec.boss].name)}` : `floor ${nf.f}`;
     const cls = then > now + 0.005 ? 'd-good' : then < now - 0.005 ? 'd-red' : 'muted';
-    oddsLine = `<p class="small">${eq ? 'Unequipping' : 'Equipping'} this: chance to beat ${who} <b>${pctText(now)}%</b> → <b class="${cls}">${pctText(then)}%</b></p>`;
+    oddsLine = `<p class="small">${eq ? 'Taking this off' : 'Wearing this'}: chance to beat ${who} <b>${pctText(now)}%</b> → <b class="${cls}">${pctText(then)}%</b></p>`;
   }
-  api.openModal(`<div class="item-detail">
-      ${gearImg(id, 'xl')}
-      <h2>${itemName(id)}</h2>
-      <div>${rarTag(it.rarity)} <span class="muted">${SLOT_NAME_D[it.slot]}${it.weaponType ? ` · ${esc(it.weaponType)}` : ''}${it.section ? ` · ${esc(SECTIONS[it.section - 1].name)}` : ''}</span></div>
-      <p>${statLine(id)}</p>
-      ${it.grindDrop ? `<p class="small d-gold">Ultra-rare: 1 in ${fmt(Math.round(1 / it.grindDrop))} kills from ${esc(SECTIONS[it.section - 1].name)} enemies (floors ${(it.section - 1) * 10 + 1}–${it.section * 10 - 1}), or a lucky boss drop.</p>` : ''}
+  const passive = passiveText(it);
+  const moves = it.slot === 'weapon' ? weaponMoves(id, dg.equipped.offhand) : null;
+  const inStock = blacksmithStock(dg).some((i) => i.id === id);
+  api.openModal(`<div class="d-sheet">
+      <div class="d-sheet-top"><div class="d-sheet-art r-${it.rarity}-bg">${artCanvas(id)}</div>
+        <div><h2>${itemName(id)}</h2>${rarTag(it.rarity)} <span class="small muted">${SLOT_NAME_D[it.slot]}${it.weaponType ? ` · ${esc(it.weaponType)}` : ''} · ${it.section ? esc(SECTIONS[it.section - 1].name) : 'Starter kit'}</span>
+        <div class="small" style="margin-top:4px">${eq ? '<span class="d-gold">WEARING</span>' : `Power <b class="${powDelta > 0 ? 'd-good' : powDelta < 0 ? 'd-red' : ''}">${powDelta > 0 ? '+' : ''}${fmt(powDelta)}</b>`}</div></div>
+      </div>
+      <table class="d-cmp">${b ? `<tr class="muted small"><td>vs ${esc(DITEMS[cur].name)}</td><td>this</td><td>change</td></tr>` : ''}${row('atk', 'Attack')}${row('def', 'Defence')}${row('hp', 'Health')}${row('crit', 'Crit', true)}${row('dodge', 'Dodge', true)}</table>
       ${oddsLine}
+      ${it.grindDrop ? `<p class="small d-gold">Ultra-rare: 1 in ${fmt(Math.round(1 / it.grindDrop))} kills from ${esc(SECTIONS[it.section - 1].name)} enemies, or a lucky boss drop.</p>` : ''}
       ${passive.length ? `<p class="boost small">${passive.map(esc).join('<br>')}</p>` : ''}
       ${it.set ? `<p class="small muted">Part of the ${esc(SETS[it.set].name)} set (4 pieces: ${esc(SETS[it.set].text)})</p>` : ''}
       ${moves ? `<ul class="d-moves left">${moves.map((mv) => `<li><b>${esc(mv.name)}</b>${mv.sig ? ' <span class="new">SIGNATURE</span>' : ''}<br><span class="small muted">${moveText(mv, { ...p, dtype: it.dtype || p.dtype })}</span></li>`).join('')}</ul>` : ''}
-      <p class="small muted">Owned ×${dg.inv[id] || 0} · sells for ${fmt(sellPrice(id))} coins${plus < MAX_PLUS ? ` · upgrade at the Blacksmith (+${plus} → +${plus + 1})` : ' · fully upgraded'}</p>
+      ${owned ? `<p class="small muted">Owned ×${dg.inv[id]} · sells for ${fmt(sellPrice(id))} coins · ${plus < MAX_PLUS ? `+${plus} of +${MAX_PLUS}` : 'fully upgraded'}</p>` : ''}
     </div>
     <div class="btn-col">
-      <button class="btn primary" data-action="d-equip" data-id="${id}">${eq ? 'Unequip' : `Equip (${SLOT_NAME_D[it.slot]})`}</button>
-      ${(dg.inv[id] || 0) > (eq ? 1 : 0) ? `<button class="btn" data-action="d-sell" data-id="${id}">Sell 1 (+${fmt(sellPrice(id))} coins)</button>` : ''}
+      ${owned ? `<button class="btn primary" data-action="d-best" data-slot="${it.slot}">⚡ Equip best ${SLOT_NAME_D[it.slot].toLowerCase()}</button>
+      <div class="d-acts"><button class="btn" data-action="d-equip" data-id="${id}">${eq ? 'Unequip' : 'Equip'}</button><button class="btn" data-action="d-to-forge" data-id="${id}">Upgrade</button>${(dg.inv[id] || 0) > (eq ? 1 : 0) ? `<button class="btn" data-action="d-sell" data-id="${id}">Sell</button>` : ''}</div>`
+        : inStock ? `<button class="btn primary" data-action="d-buy" data-id="${id}" ${S().coins >= buyPrice(id) ? '' : 'disabled'}>Buy for ${fmt(buyPrice(id))} coins</button>` : ''}
       <button class="btn" data-action="close">Close</button>
     </div>`);
+  setTimeout(mountArt, 0);
 }
 
-// ---------- Blacksmith ----------
-function viewSmith() {
-  const dg = d();
-  const coins = S().coins;
-  const cur = sectionOf(Math.min(50, dg.climb));
-  const stock = blacksmithStock(dg);
-  const buyRow = (it) => `<div class="d-shop-row ${it.shopOnly ? `d-exclusive r-border-${it.rarity}` : ''}">${gearImg(it.id)}<span class="d-inv-text"><b>${esc(it.name)}</b>${dg.inv[it.id] ? ' <span class="muted small">(owned)</span>' : ''}<br><span class="small">${rarTag(it.rarity)} <span class="muted">${SLOT_NAME_D[it.slot]} · ${statLine(it.id)}</span></span>
-      ${it.shopOnly && passiveText(it).length ? `<br><span class="small boost">${esc(passiveText(it).join(' · '))}</span>` : ''}</span>
-    <button class="btn" data-action="d-buy" data-id="${it.id}" ${coins >= buyPrice(it.id) ? '' : 'disabled'}>${fmt(buyPrice(it.id))}</button></div>`;
-  const upRow = (id) => {
-    const plus = dg.upgrades[id] || 0;
-    if (plus >= MAX_PLUS) return `<div class="d-shop-row">${gearImg(id)}<span class="d-inv-text"><b>${itemName(id)}</b><br><span class="small muted">Fully upgraded</span></span></div>`;
-    const c = upgradeCost(id, plus);
-    const have = dg.materials[c.material] || 0;
-    const ok = coins >= c.coins && have >= c.count;
-    return `<div class="d-shop-row">${gearImg(id)}<span class="d-inv-text"><b>${itemName(id)}</b> → <b class="plus">+${plus + 1}</b><br><span class="small muted">${fmt(c.coins)} coins + ${c.count} ${esc(MATERIALS[c.material].name)} <span class="${have >= c.count ? '' : 'd-red'}">(have ${have})</span></span></span>
-      <button class="btn" data-action="d-upgrade" data-id="${id}" ${ok ? '' : 'disabled'}>Upgrade</button></div>`;
-  };
-  let body;
-  if (smithMode === 'buy') {
-    body = folders('buy', SECTIONS.map((sec) => {
-      const items = stock.filter((i) => i.section === sec.id);
-      const exclusive = items.filter((i) => i.shopOnly).sort((x, y) => byRarity(x.id, y.id));
-      const basic = items.filter((i) => !i.shopOnly);
-      const hasExcl = Object.values(DITEMS).some((i) => i.shopOnly && i.section === sec.id);
-      return { key: sec.id, title: esc(sec.name), icon: secIcon(sec.id), count: items.length, locked: !sectionUnlocked(dg, sec.id),
-        sub: hasExcl ? '<span class="d-gold">Legendary & Mythic for sale</span>' : 'Common & Uncommon',
-        body: (exclusive.length ? `<h4 class="d-fold-h">Masterworks · only sold here</h4>${exclusive.map(buyRow).join('')}<h4 class="d-fold-h">Everyday gear</h4>` : '') + basic.map(buyRow).join('') };
-    }), cur);
-  } else {
-    const owned = Object.keys(dg.inv).filter((id) => dg.inv[id] > 0).sort(byRarity);
-    body = folders('upgrade', SECTIONS.map((sec) => {
-      const ids = owned.filter((id) => homeSection(id) === sec.id);
-      return { key: sec.id, title: esc(sec.name), icon: secIcon(sec.id), count: ids.length, locked: !ids.length && !sectionUnlocked(dg, sec.id),
-        sub: `uses ${esc(MATERIALS[materialFor(sec.id)].name)} · you have ${dg.materials[materialFor(sec.id)] || 0}`,
-        body: ids.map(upRow).join('') || '<p class="muted small">No gear from here yet.</p>' };
-    }), cur);
+function sparks() {
+  const an = document.getElementById('d-anvil');
+  if (!an) return;
+  for (let i = 0; i < 16; i++) {
+    const s = document.createElement('i'); s.className = 'd-spark';
+    s.style.setProperty('--dx', `${Math.random() * 180 - 90}px`); s.style.setProperty('--dy', `${Math.random() * -120 - 10}px`);
+    an.appendChild(s); setTimeout(() => s.remove(), 800);
   }
-  return `<section class="panel"><button class="btn d-back" data-action="d-sub" data-sub="hub">‹ Tower</button>
-      <h2>Blacksmith</h2><p class="small muted">Coins: <b class="coin">${fmt(coins)}</b> (shared with your life skills).</p>
-      <div class="d-seg-toggle"><button class="${smithMode === 'buy' ? 'on' : ''}" data-action="d-smith-mode" data-mode="buy">Buy</button><button class="${smithMode === 'upgrade' ? 'on' : ''}" data-action="d-smith-mode" data-mode="upgrade">Upgrade</button></div>
-      ${smithMode === 'upgrade' ? `<p class="small muted">Each upgrade adds 6% to an item's stats, up to +${MAX_PLUS}, using the material from that item's section.</p>` : ''}
-      <div class="d-folds">${body}</div></section>`;
-}
-
-// ---------- Potion Shop ----------
-function viewPotions() {
-  const dg = d();
-  const coins = S().coins;
-  const rows = Object.entries(POTIONS).map(([id, pt]) => `<div class="d-shop-row"><span class="d-potion">${pt.heal ? '❤' : '✦'}</span>
-    <span class="d-inv-text"><b>${esc(pt.name)}</b> <span class="muted">×${dg.potions[id] || 0}</span><br><span class="small muted">${pt.heal ? `Heals ${Math.round(pt.heal * 100)}% of your Health` : esc(pt.text)}</span></span>
-    <button class="btn" data-action="d-potion-buy" data-id="${id}" data-n="1" ${coins >= pt.price ? '' : 'disabled'}>${fmt(pt.price)}</button>
-    <button class="btn" data-action="d-potion-buy" data-id="${id}" data-n="5" ${coins >= pt.price * 5 ? '' : 'disabled'}>×5</button></div>`).join('');
-  return `<section class="panel"><button class="btn d-back" data-action="d-sub" data-sub="hub">‹ Tower</button>
-    <h2>Potion Shop</h2><p class="small muted">Coins: <b class="coin">${fmt(coins)}</b>. You can drink up to ${POTIONS_PER_FIGHT} potions per fight, and drinking one uses your whole turn.</p>
-    <div class="d-shop">${rows}</div></section>`;
+  an.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(3px)' }, { transform: 'translateY(0)' }], { duration: 160 });
 }
 
 // ---------- runs & battles ----------
@@ -609,9 +635,30 @@ export function action(a, el) {
       api.toast('Starter kit added to your Dungeon gear');
       return true;
     }
-    case 'd-fold': { const k = Number(el.dataset.key); openFold[el.dataset.list] = openFold[el.dataset.list] === k ? null : k; api.render(); return true; }
-    case 'd-smith-mode': smithMode = el.dataset.mode; api.render(); return true;
     case 'd-sub': sub = el.dataset.sub; api.render(); window.scrollTo(0, 0); return true;
+    case 'd-camp': sub = 'camp'; campTab = el.dataset.tab; api.render(); window.scrollTo(0, 0); return true;
+    case 'd-bagf': bagFilter = el.dataset.f; api.render(); return true;
+    case 'd-bags': bagSec = Number(el.dataset.s); api.render(); return true;
+    case 'd-shops': shopSec = Number(el.dataset.s); api.render(); return true;
+    case 'd-forge-sel': forgeSel = el.dataset.id; api.render(); return true;
+    case 'd-to-forge': forgeSel = el.dataset.id; sub = 'camp'; campTab = 'forge'; api.closeModal(); api.render(); window.scrollTo(0, 0); return true;
+    case 'd-best': {
+      const slot = el.dataset.slot, was = dg.equipped[slot], best = bestForSlot(dg, slot);
+      dg.equipped[slot] = best; api.persist(); api.closeModal(); api.render();
+      api.toast(best === was ? `You're already wearing your best ${SLOT_NAME_D[slot].toLowerCase()}` : `Equipped ${DITEMS[best].name}`);
+      return true;
+    }
+    case 'd-best-all': {
+      el.textContent = 'Thinking…'; el.disabled = true;
+      setTimeout(() => {
+        const before = { ...dg.equipped };
+        dg.equipped = bestGear(dg);
+        const changed = GEAR_SLOTS_D.filter((k) => before[k] !== dg.equipped[k] && dg.equipped[k]).map((k) => DITEMS[dg.equipped[k]].name);
+        api.persist(); api.render();
+        api.toast(changed.length ? `Swapped in: ${changed.join(', ')}` : 'Already wearing your best gear');
+      }, 30);
+      return true;
+    }
     case 'd-floor': {
       const f = Number(el.dataset.floor);
       closeBattle();
@@ -662,6 +709,7 @@ export function action(a, el) {
       if (S().coins < price) return true;
       S().coins -= price; dg.inv[id] = (dg.inv[id] || 0) + 1; dg.seen[id] = true;
       api.persist(); api.render(); api.toast(`Bought ${DITEMS[id].name}`);
+      if (document.getElementById('modal-root')?.classList.contains('open')) showItem(id);   // now you can equip it
       return true;
     }
     case 'd-upgrade': {
@@ -669,6 +717,7 @@ export function action(a, el) {
       if (plus >= MAX_PLUS || S().coins < c.coins || (dg.materials[c.material] || 0) < c.count) return true;
       S().coins -= c.coins; dg.materials[c.material] -= c.count; dg.upgrades[id] = plus + 1;
       api.persist(); api.render(); api.sfx.chime(); api.toast(`${DITEMS[id].name} is now +${plus + 1}`);
+      setTimeout(sparks, 0);
       return true;
     }
     case 'd-potion-buy': {

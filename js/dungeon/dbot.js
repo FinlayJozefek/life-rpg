@@ -2,8 +2,8 @@
 // The estimate plays the next floor a few hundred times with your real gear, level and potions,
 // using the "smart" bot (guards big attacks, uses type matchups, drinks potions in time).
 import { createBattle, takeTurn, getActions, aliveEnemies, typeMult, moveType } from './engine.js';
-import { buildPlayer, floorPlan, cryptsLevel, sectionOf, floorInSection, SECTION_FUDGE } from './dgame.js';
-import { POTIONS, SECTION_SCALE } from './ddata.js';
+import { buildPlayer, powerScore, floorPlan, cryptsLevel, sectionOf, floorInSection, SECTION_FUDGE } from './dgame.js';
+import { POTIONS, SECTION_SCALE, DITEMS, GEAR_SLOTS_D } from './ddata.js';
 
 function healPotion(acts) {
   return acts.filter((a) => a.kind === 'potion' && a.available && POTIONS[a.id].heal).sort((a, b) => POTIONS[b.id].heal - POTIONS[a.id].heal)[0];
@@ -90,4 +90,28 @@ export function oddsLabel(c) {
   if (c >= 0.2) return { text: 'Risky', cls: 'odds-risky' };
   if (c > 0) return { text: 'Very unlikely', cls: 'odds-bad' };
   return { text: 'No chance yet', cls: 'odds-bad' };
+}
+
+// ---------- "Equip best" ----------
+// Best = highest chance to beat the current section's boss (counted in 5% steps once it is 10%+,
+// so simulation noise never beats a real gain), then the most Power.
+function gearScore(d, eq, bossFloor) {
+  const d2 = { ...d, equipped: eq };
+  const c = winChance(d2, bossFloor, 200);
+  return (c >= 0.1 ? Math.floor(c * 20) : 0) * 1e6 + powerScore(buildPlayer(d2));
+}
+export function bestForSlot(d, slot, eq = d.equipped) {
+  const bossFloor = sectionOf(Math.min(50, d.climb)) * 10;
+  let best = eq[slot], bestScore = gearScore(d, eq, bossFloor);
+  for (const id of Object.keys(d.inv)) {
+    if (!(d.inv[id] > 0) || DITEMS[id].slot !== slot || id === eq[slot]) continue;
+    const sc = gearScore(d, { ...eq, [slot]: id }, bossFloor);
+    if (sc > bestScore) { best = id; bestScore = sc; }
+  }
+  return best;
+}
+export function bestGear(d) {
+  let eq = { ...d.equipped };
+  for (let pass = 0; pass < 2; pass++) for (const slot of GEAR_SLOTS_D) eq = { ...eq, [slot]: bestForSlot(d, slot, eq) };   // 2 passes so set bonuses can click in
+  return eq;
 }
