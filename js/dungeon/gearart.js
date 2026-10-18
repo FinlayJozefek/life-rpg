@@ -7,9 +7,9 @@ import { DITEMS } from './ddata.js';
 
 const N = 32;
 const RAR = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'];
-const GEM = { rare: '#4a90e2', epic: '#b06af0', legendary: '#ffb02e', mythic: '#ff4a6a', divine: '#fff4b0' };
+export const GEM = { rare: '#4a90e2', epic: '#b06af0', legendary: '#ffb02e', mythic: '#ff4a6a', divine: '#fff4b0' };
 const AURA = { legendary: '#ffb02e', mythic: '#ff4a6a', divine: '#fff1a8' };
-const TRIM = ['#7a5a12', '#c8962a', '#ffd84a', '#fff4b0'];      // gold ramp dark -> highlight
+export const TRIM = ['#7a5a12', '#c8962a', '#ffd84a', '#fff4b0'];      // gold ramp dark -> highlight
 
 // Materials per section: metal ramp (dark -> highlight), grip ramp, accent, special
 export const MAT = {

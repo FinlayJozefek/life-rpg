@@ -652,10 +652,11 @@ function normGear(gear) {
 
 // Build the avatar as a static grid. Returns { grid, look } where `look` is the
 // highest-rarity piece worn (it drives the aura and Mythic effects).
-export function buildAvatar(gearIn) {
+export function buildAvatar(gearIn, extra = null) {
   const gear = normGear(gearIn);
   const g = new Grid(AW, AH);
   g.oy = OY;
+  extra?.behind?.(g, { ramp, adj });   // e.g. wings behind the body
   const Lb = gear.body ? outfitLook(gear.body) : null;
   const Lf = gear.feet ? { ...outfitLook(gear.feet), underRobe: Lb?.arch === 'robe' } : null;
   const Lh = gear.head ? outfitLook(gear.head) : null;
@@ -665,6 +666,7 @@ export function buildAvatar(gearIn) {
   const looks = [Lb, Lf, Lh].filter(Boolean).sort((a, b) => b.tier - a.tier);
   drawHead(g, looks.find((l) => l.tier >= 5 && l.eyes) || null, !!Lh);
   if (Lh) { drawHat(g, Lh); if (Lh.tier < 5) hatDetail(g, Lh); }
+  extra?.over?.(g, { ramp, adj });     // e.g. Dungeon armour on top
   g.oy = 0;
   g.outline();
   return { grid: g, look: looks[0] || null };
@@ -765,8 +767,9 @@ export function mountAvatar(canvas, gear, { scale = 6, animate = true } = {}) {
 
 // Static icon of an outfit item: the relevant part of the avatar wearing it.
 // Static picture of the character wearing `gear` (for the dungeon fall animation etc.).
-export function avatarDataUrl(gear, scale = 4) {
-  const { grid } = buildAvatar(gear);
+// extra: { behind(g), over(g) } lets the Dungeon draw armour onto the avatar
+export function avatarDataUrl(gear, scale = 4, extra = null) {
+  const { grid } = buildAvatar(gear, extra);
   const src = grid.toCanvas(0);
   const cv = document.createElement('canvas'); cv.width = AW * scale; cv.height = AH * scale;
   const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;

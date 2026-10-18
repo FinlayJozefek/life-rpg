@@ -108,7 +108,7 @@ export function view() {
   document.body.dataset.sec = nextSec;   // lets a look theme the backdrop to the section you are in
   const nextLocked = !sectionUnlocked(dg, nextSec);
   const bossRec = recommendedPower(nextSec);
-  const hero = api.avatarUrl(3);
+  const hero = api.dAvatarUrl(3);
   const segs = SECTIONS.map((sec, k) => {
     const locked = !sectionUnlocked(dg, sec.id);
     const floors = Array.from({ length: 10 }, (_, i) => {
@@ -207,7 +207,7 @@ function campGear() {
   const set = activeSet(dg.equipped);
   return `<div class="d-doll">
       <div class="d-dcol">${dollSlot(dg, 'helmet')}${dollSlot(dg, 'chest')}${dollSlot(dg, 'legs')}</div>
-      <div class="d-dhero"><img src="${api.avatarUrl(4)}" alt=""><div class="d-dpow">${fmt(powerScore(p))}</div><div class="d-dpowl">Power</div></div>
+      <div class="d-dhero"><img src="${api.dAvatarUrl(4)}" alt=""><div class="d-dpow">${fmt(powerScore(p))}</div><div class="d-dpowl">Power</div></div>
       <div class="d-dcol">${dollSlot(dg, 'weapon')}${dollSlot(dg, 'offhand')}${dollSlot(dg, 'boots')}</div>
     </div>
     <div class="d-chips"><span>Atk <b>${fmt(p.atk)}</b></span><span>Def <b>${fmt(p.def)}</b></span><span>HP <b>${fmt(p.maxHp)}</b></span><span>Crit <b>${Math.round(p.crit * 100)}%</b></span>${p.dodge ? `<span>Dodge <b>${Math.round(p.dodge * 100)}%</b></span>` : ''}</div>
@@ -491,7 +491,7 @@ function renderBattle(full = false) {
   const sec = SECTIONS[sectionOf(run.floor) - 1];
   const target = b.enemies.find((e) => e.uid === battle.target && e.hp > 0) || aliveEnemies(b)[0];
   if (target) battle.target = target.uid;
-  battle.hero ||= api.avatarUrl(4);
+  battle.hero ||= api.dAvatarUrl(4);
   const statuses = statusChips;
   const foes = b.enemies.map((e) => `<button class="d-enemy fo-foe ${shownHp(e) <= 0 ? 'dead' : ''} ${e.uid === battle.target ? 'targeted' : ''} ${e.boss ? 'boss' : ''} ${e.charging ? 'tele' : ''}" data-action="d-target" data-uid="${e.uid}" data-e="${e.uid}">
       <span class="fo-mark">▼</span>${e.charging ? '<span class="fo-bang">!</span><span class="fo-warn"></span>' : ''}
@@ -814,7 +814,7 @@ function finishRun(won) {
     const floors = [];
     for (let f = fellFrom; f >= (to || fellFrom); f--) floors.push(f);
     root.innerHTML = `<div class="d-bg sec-${sectionOf(fellFrom)} dark"></div><div class="d-result">
-      <div class="d-fall"><div class="d-fall-floors">${floors.map((f) => `<div>${f}</div>`).join('')}</div><div class="d-faller">${api.avatarImg()}</div></div>
+      <div class="d-fall"><div class="d-fall-floors">${floors.map((f) => `<div>${f}</div>`).join('')}</div><div class="d-faller"><img class="d-faller-img" src="${api.dAvatarUrl(4)}" alt=""></div></div>
       <h2>You were defeated…</h2>
       <p class="center">${to ? `You tumble down the tower to <b>floor ${to}</b>.` : wasCleared ? `You'd already beaten this floor, so you don't fall. Your climb stays at <b>floor ${Math.min(50, d().climb)}</b>.` : 'You crawl back to the tower entrance.'} You keep everything you found.</p>
       ${summary}
