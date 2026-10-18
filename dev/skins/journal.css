@@ -1,0 +1,58 @@
+/* Skin trial: Adventurer's Journal. Parchment pages on a leather-bound book, ink text, wax-seal buttons. */
+@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import url('_reset.css');
+
+:root {
+  --bg: #2a1a10;
+  --panel: #eadcbc;
+  --panel-2: #e0cfa8;
+  --line: #a8875a;
+  --deep: #d4c094;
+  --topbar-bg: #3a2414;
+  --tabbar: #3a2414;
+  --text: #3a2814;
+  --muted: #7a6040;
+  --gold: #8a4a12;
+  --gold-dark: #6a3a10;
+  --gold-bg: #e8d098;
+  --accent: #2f6a2a;
+  --primary: #8e2418;
+  --primary-line: #5a140c;
+  --bar-1: #6a8a3a;
+  --bar-2: #4a6a22;
+  --c-common: #6a6458; --c-uncommon: #2f7a2a; --c-rare: #1f5aa8; --c-epic: #6a2a9a; --c-legendary: #a8600a; --c-mythic: #a81e34; --c-divine: #8a7a1a;
+  --display-font: 'IM Fell English SC', Georgia, serif;
+  --body-font: 'Crimson Pro', Georgia, serif;
+  --paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .3 0 0 0 0 .12 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --leather: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='turbulence' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+body { font-family: var(--body-font); font-size: 17px; background: var(--leather), #3a2414; }
+.topbar { background: var(--leather), #4a2c16; border-bottom: 3px double #c8a46a; }
+.brand { font-family: var(--display-font); font-size: 24px; font-weight: 400; color: #f0d9a8; letter-spacing: 1px; }
+.coin-pill, .streak-pill { background: #f0dcae; border: 1px solid #6a3a10 !important; color: #5a2e0c; border-radius: 4px; }
+h2 { font-family: var(--display-font); font-weight: 400; font-size: 24px; color: #5a2e0c; border-bottom: 1px solid #a8875a; padding-bottom: 4px; }
+h3 { font-family: var(--display-font); font-weight: 400; color: #6a3a10; font-size: 18px; }
+/* parchment page with a deckled, ink-ruled edge */
+.panel, .sheet { background: var(--paper), #eadcbc; border: 1px solid #8a6a3e; border-radius: 3px; box-shadow: 0 0 0 4px #eadcbc, 0 0 0 5px #8a6a3e, 3px 5px 0 5px rgba(0, 0, 0, 0.35); margin: 6px 6px 22px; }
+.sheet { border-radius: 3px 3px 0 0; }
+.btn { border-radius: 3px; border: 1px solid #8a6a3e; background: #e8d6ae; color: #3a2814; font-family: var(--body-font); font-weight: 600; }
+.btn.primary { background: #8e2418; border-color: #5a140c; color: #fbe8d0; border-radius: 999px; box-shadow: inset 0 0 0 2px #b8402a, inset 0 0 0 4px #8e2418; }
+.bar { background: #d4c094; border: 1px solid #8a6a3e; border-radius: 2px; }
+.tabbar { background: var(--leather), #3a2414; border-top: 3px double #c8a46a; }
+.tabbar button { color: #c8a878; font-family: var(--body-font); font-weight: 600; }
+.tabbar button.on { color: #fff0c8; }
+.tabbar button.on span { filter: none; }
+.muted { color: var(--muted); }
+.tile, .d-tile, .d-dslot, .d-scard, .d-fcard, .d-sheet-art, .d-anvil { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15); }
+.d-ctabs { background: #3a2414; border-bottom: 3px double #c8a46a; }
+.d-ctabs button { color: #c8a878; }
+.d-ctabs button.on { color: #fff0c8; border-bottom-color: #c8a46a; }
+.d-chips span, .d-flt button { background: #e8d6ae; border-color: #a8875a; color: #5a3a1a; }
+.d-chip { background: #e8d6ae; border-color: #a8875a; color: #2f6a2a; }
+.d-bar { background: linear-gradient(transparent, #2a1a10 30%); }
+.d-hubbtn { background: #e8d6ae; border-color: #8a6a3e; color: #3a2814; }
+.odds-good .d-odds-top b, .odds-good .d-odds-word, .d-odds-boss .odds-good { color: #2f6a2a; }
+.odds-ok .d-odds-top b, .odds-ok .d-odds-word, .d-odds-boss .odds-ok { color: #8a5a0a; }
+.odds-risky .d-odds-top b, .odds-risky .d-odds-word, .d-odds-boss .odds-risky { color: #a8480a; }
+.odds-bad .d-odds-top b, .odds-bad .d-odds-word, .d-odds-boss .odds-bad { color: #9a1e1e; }
+.d-odds-sub b, .d-odds-sub { color: #5a4028; }

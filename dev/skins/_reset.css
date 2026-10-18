@@ -1,0 +1,10 @@
+/* Shared by the rustic skin trials: switch off the Astral sky, glass, glows and gradients. */
+body::before, body::after { display: none !important; }
+.panel, .sheet { background-image: none; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+.panel > h2::after { display: none; }
+.topbar, .tabbar { -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+.tabbar button.on::before { display: none; }
+.brand, h2, .tabbar button.on { text-shadow: none; }
+.btn, .btn.primary { box-shadow: none; text-shadow: none; }
+.bar > span { box-shadow: none; }
+.coin-pill, .streak-pill { box-shadow: none; }

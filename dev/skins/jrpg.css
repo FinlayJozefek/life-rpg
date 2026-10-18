@@ -1,0 +1,50 @@
+/* Skin trial: Classic JRPG. The old-school blue menu windows with white borders and a hand cursor. */
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+@import url('_reset.css');
+
+:root {
+  --bg: #000000;
+  --panel: #10288a;
+  --panel-2: #1a38a8;
+  --line: #e8e8f0;
+  --deep: #061450;
+  --topbar-bg: #000000;
+  --tabbar: #000000;
+  --text: #ffffff;
+  --muted: #b8c4f0;
+  --gold: #ffe45a;
+  --gold-dark: #c8a020;
+  --gold-bg: #10288a;
+  --accent: #7af0ff;
+  --primary: #1a38a8;
+  --primary-line: #ffffff;
+  --bar-1: #7af0ff;
+  --bar-2: #2a8ae0;
+  --display-font: 'DotGothic16', monospace;
+  --body-font: 'DotGothic16', monospace;
+}
+body { font-family: var(--body-font); font-size: 15px; background: #000; }
+.topbar { background: #000; border-bottom: 0; }
+.brand { font-family: var(--display-font); font-size: 22px; color: #fff; letter-spacing: 2px; }
+h2 { font-family: var(--display-font); font-weight: 400; font-size: 20px; color: #fff; letter-spacing: 1px; }
+h3 { font-family: var(--display-font); font-weight: 400; color: var(--gold); }
+/* the window: deep blue fade, white rounded frame, thin black outer edge */
+.panel, .sheet, .coin-pill, .streak-pill {
+  background: linear-gradient(180deg, #2848c8 0%, #10288a 55%, #081a68 100%);
+  border: 3px solid #f0f0f8; border-radius: 8px;
+  box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #6a7ad0;
+}
+.coin-pill, .streak-pill { border-width: 2px !important; border-radius: 6px; color: #fff; }
+.btn { border: 2px solid #f0f0f8; border-radius: 6px; background: linear-gradient(180deg, #2848c8, #10288a); color: #fff; font-family: var(--body-font); box-shadow: 0 0 0 1px #000; }
+.btn.primary { color: var(--gold); background: linear-gradient(180deg, #3a5ae0, #1a38a8); }
+.btn.primary::before { content: '▶'; margin-right: 6px; font-size: 0.8em; animation: jrpg-cursor 0.8s steps(2) infinite; }
+@keyframes jrpg-cursor { 50% { transform: translateX(3px); } }
+.bar { background: #000; border: 2px solid #f0f0f8; border-radius: 3px; }
+.tabbar { background: #000; border-top: 3px solid #f0f0f8; }
+.tabbar button { color: #8a96c8; font-family: var(--body-font); }
+.tabbar button.on { color: #fff; }
+.tabbar button.on::after { content: '▶'; position: absolute; left: 4px; top: 20px; color: #fff; font-size: 11px; animation: jrpg-cursor 0.8s steps(2) infinite; }
+.d-ctabs { background: #000; border-bottom: 3px solid #f0f0f8; }
+.d-odds { background: linear-gradient(180deg, #2848c8, #10288a); border: 3px solid #f0f0f8; border-radius: 8px; }
+.d-hubbtn { background: linear-gradient(180deg, #2848c8, #10288a); border: 2px solid #f0f0f8; }
+.d-chips span, .d-flt button, .d-chip { background: #081a68; border-color: #f0f0f8; }
