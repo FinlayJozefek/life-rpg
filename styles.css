@@ -1257,3 +1257,10 @@ body, .coin-pill, .streak-pill, .stat-num, .d-dpow, .d-hptext, .d-pop, .tc-seal,
 
 /* dealing the hand at the start of a fight: the back shows until each card flips */
 .tc-card.dealing::after { animation-delay: inherit; }
+
+/* chest odds chips */
+.odds-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; max-width: 616px; margin: 0 auto 6px; font-size: 11px; }
+.odds-lbl { color: #e6dcc4; font-weight: 700; text-shadow: 0 1px 2px #000; }
+.odds-chip { padding: 1px 7px; border-radius: 999px; border: 1px solid var(--oc); background: rgba(10, 8, 6, 0.85); color: var(--oc); white-space: nowrap; }
+.odds-chip b { color: #fff; }
+.q-win .odds-row { margin: 4px 0 10px; }

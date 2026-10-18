@@ -275,11 +275,18 @@ export const CHEST_TIERS = {
   g: { name: 'Gold', colour: '#ffd84a' },
   a: { name: 'Ancient', colour: '#b48cff' },
 };
-const TIER_ODDS = { false: [['w', 0.7], ['i', 0.22], ['g', 0.07], ['a', 0.01]], true: [['g', 0.9], ['a', 0.1]] };
+// Higher floors in a section give better chests: odds slide from floor 1 to floor 9; the boss floor is always Gold or Ancient.
+const LOW = { w: 0.8, i: 0.16, g: 0.035, a: 0.005 }, HIGH = { w: 0.5, i: 0.32, g: 0.14, a: 0.04 };
+export function chestOdds(floor) {
+  const fis = floorInSection(floor);
+  if (fis === 10) return [['g', 0.9], ['a', 0.1]];
+  const t = (fis - 1) / 8;
+  return ['w', 'i', 'g', 'a'].map((k) => [k, LOW[k] + (HIGH[k] - LOW[k]) * t]);
+}
 const pick = (odds, rng) => { let r = rng(); for (const [k, p] of odds) { if (r < p) return k; r -= p; } return odds[odds.length - 1][0]; };
 export function chestKey(floor, rng = Math.random) {
   const boss = floorInSection(floor) === 10;
-  return `${sectionOf(floor)}${boss ? 'b' : ''}${pick(TIER_ODDS[boss], rng)}`;
+  return `${sectionOf(floor)}${boss ? 'b' : ''}${pick(chestOdds(floor), rng)}`;
 }
 // older saves stored "5" / "5b" without a tier
 export const chestInfo = (key) => { const boss = key.includes('b'); const t = key.replace(/^\d+b?/, '') || (boss ? 'g' : 'w'); return { sec: Number(key[0]), boss, tier: t }; };

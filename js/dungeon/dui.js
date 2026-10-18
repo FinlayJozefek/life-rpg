@@ -7,7 +7,7 @@ import {
   newDungeon, startDungeon, cryptsProgress, cryptsLevel, sectionOf, floorInSection, sectionStart, sectionUnlocked, canPlay,
   buildPlayer, powerScore, recommendedPower, floorPlan, enemyXp, enemyCoins, rollEnemyDrops, rollBossDrops, materialFor,
   itemStats, weaponMoves, activeSet, sellPrice, buyPrice, upgradeCost, MAX_PLUS, blacksmithStock, XP, SECTION_XP, SECTION_FUDGE,
-  chestKey, chestName, chestInfo, rollChest, CHEST_TIERS, CHEST_ORDER,
+  chestKey, chestName, chestInfo, rollChest, CHEST_TIERS, CHEST_ORDER, chestOdds,
 } from './dgame.js';
 import { createBattle, takeTurn, getActions, aliveEnemies, typeMult, moveType } from './engine.js';
 import { gearIcon, mountEnemy, enemyIcon, BOSS_AURA, TOWER_PAL, towerTexture, chestIcon } from './dart.js';
@@ -141,7 +141,7 @@ export function view() {
     <div class="d-tower-wrap"><div class="d-tower">
       <div class="d-spire"><div class="d-flag"></div><div class="d-roof"></div></div>${segs}<div class="d-ground"><div class="d-door"></div></div>
     </div><p class="hint d-tower-hint">Tap a glowing window to replay that floor and farm gear. If you fall, you drop to the start of the section but keep everything you found.</p></div>
-    <div class="d-bar">${matchupHtml(dg)}<div class="d-bar-row">
+    <div class="d-bar">${matchupHtml(dg)}${nextLocked ? '' : oddsChips(next)}<div class="d-bar-row">
       <button class="d-hubbtn" data-action="d-camp" data-tab="gear"><img src="${uiIcon('chest', 'color', 3)}" alt="">Camp</button>
       <button class="d-hubbtn" data-action="d-camp" data-tab="shop"><img src="${uiIcon('anvil', 'color', 3)}" alt="">Shop</button>
       <button class="d-hubbtn" data-action="d-camp" data-tab="potions"><img src="${uiIcon('potion', 'color', 3)}" alt="">Potions</button>
@@ -292,6 +292,12 @@ function campPotions() {
       <div class="d-pbuy"><button class="d-price ${coins >= pt.price ? '' : 'no'}" data-action="d-potion-buy" data-id="${k}" data-n="1" ${coins >= pt.price ? '' : 'disabled'}>${coinImg()}${fmt(pt.price)}</button><button class="d-price ${coins >= pt.price * 5 ? '' : 'no'}" data-action="d-potion-buy" data-id="${k}" data-n="5" ${coins >= pt.price * 5 ? '' : 'disabled'}>${coinImg()}${fmt(pt.price * 5)} ×5</button></div></div>`).join('')}</div>`;
 }
 
+// chest odds for a floor, as little coloured chips
+function oddsChips(floor) {
+  const pct = (p) => (p >= 0.1 ? Math.round(p * 100) : Math.round(p * 1000) / 10) + '%';
+  return `<div class="odds-row"><span class="odds-lbl">Chest odds:</span>${chestOdds(floor).map(([k, p]) => `<span class="odds-chip" style="--oc:${CHEST_TIERS[k].colour}">${CHEST_TIERS[k].name} <b>${pct(p)}</b></span>`).join('')}</div>`;
+}
+
 // ---------- in-game question windows ----------
 function replayWindow(f) {
   const dg = d();
@@ -301,6 +307,7 @@ function replayWindow(f) {
       <div class="q-ico"><img src="${boss ? enemyIcon(SECTIONS[sectionOf(f) - 1].boss, 3) : chestIcon(`${sectionOf(f)}w`, { scale: 4 })}" alt=""></div>
       <h2>Replay floor ${f}?</h2>
       <p>You've already cleared this floor. Replaying it is a good way to farm <b>coins, gear, materials and another chest</b>.</p>
+      ${oddsChips(f)}
       <p class="q-note">Note: replaying won't move you up the tower, and if you're defeated here you won't fall. Your climb stays at <b>floor ${climb}</b>. To keep climbing, take on floor ${climb}.</p>
     </div>
     <div class="btn-col">
