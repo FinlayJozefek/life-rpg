@@ -1,0 +1,77 @@
+/* Skin trial: Pixel Arcana. Leans into the pixel art: chunky pixel frames, pixel font, arcane sparkles. */
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Silkscreen:wght@400;700&display=swap');
+
+:root {
+  --bg: #120a24;
+  --glow: #2e1650;
+  --panel: #1c1236;
+  --panel-2: #281a4a;
+  --line: #6a4ab0;
+  --deep: #0a0618;
+  --shadow: #000;
+  --topbar-bg: #120a24;
+  --tabbar: #0a0618;
+  --text: #f4eaff;
+  --muted: #a894d4;
+  --gold: #ffd84a;
+  --gold-dark: #b8861a;
+  --gold-bg: #2a1e0a;
+  --accent: #6af0ff;
+  --primary: #2a8ac0;
+  --primary-line: #6af0ff;
+  --bar-1: #8af8ff;
+  --bar-2: #2a8ac0;
+  --display-font: 'Silkscreen', monospace;
+}
+body {
+  font-family: 'Pixelify Sans', system-ui, sans-serif; font-size: 16px;
+  background: radial-gradient(circle at 50% -10%, #3a1a6a 0%, #120a24 55%);
+  background-attachment: fixed;
+}
+/* pixel sparkles (square, stepped blink) */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(#fff, #fff), linear-gradient(#ffd84a, #ffd84a), linear-gradient(#6af0ff, #6af0ff), linear-gradient(#fff, #fff),
+    linear-gradient(#c89aff, #c89aff), linear-gradient(#fff, #fff), linear-gradient(#ffd84a, #ffd84a);
+  background-size: 3px 3px; background-repeat: no-repeat;
+  background-position: 12% 20%, 78% 14%, 40% 62%, 88% 70%, 22% 88%, 60% 30%, 6% 50%;
+  animation: sparkle 1.6s steps(2) infinite;
+}
+/* faint scanlines */
+body::after { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px); }
+@keyframes sparkle { 50% { opacity: 0.2; } }
+main { position: relative; z-index: 1; }
+
+.topbar { border-bottom: 4px solid #000; box-shadow: 0 4px 0 var(--line); backdrop-filter: none; }
+.brand { font-family: 'Silkscreen', monospace; font-weight: 700; font-size: 20px; color: var(--gold); text-shadow: 3px 3px 0 #000, 0 0 10px rgba(255, 216, 74, 0.4); }
+
+h2 { font-size: 18px; color: var(--gold); text-shadow: 2px 2px 0 #000; text-transform: uppercase; }
+h3 { font-size: 13px; color: var(--accent); text-shadow: 2px 2px 0 #000; text-transform: uppercase; }
+
+/* panels: chunky stepped pixel frame */
+.panel, .sheet {
+  border: 0;
+  background: var(--panel);
+  box-shadow:
+    0 -4px 0 0 #000, 0 4px 0 0 #000, -4px 0 0 0 #000, 4px 0 0 0 #000,
+    inset 0 4px 0 0 var(--line), inset 0 -4px 0 0 #3a2470, inset 4px 0 0 0 var(--line), inset -4px 0 0 0 #3a2470,
+    8px 8px 0 0 rgba(0, 0, 0, 0.6);
+  margin: 4px 4px 20px;
+}
+.btn {
+  border: 0; border-radius: 0;
+  background: var(--panel-2);
+  box-shadow: 0 -3px 0 #000, 0 3px 0 #000, -3px 0 0 #000, 3px 0 0 #000, inset 0 3px 0 rgba(255, 255, 255, 0.15), inset 0 -4px 0 rgba(0, 0, 0, 0.4);
+  font-family: 'Pixelify Sans', sans-serif; font-weight: 600; margin: 3px;
+}
+.btn.primary { background: #2a8ac0; box-shadow: 0 -3px 0 #000, 0 3px 0 #000, -3px 0 0 #000, 3px 0 0 #000, inset 0 3px 0 #8af8ff, inset 0 -4px 0 #165070; }
+.btn:active { transform: translateY(2px); }
+.bar { border: 2px solid #000; }
+.bar > span { background: repeating-linear-gradient(90deg, var(--bar-1) 0 6px, var(--bar-2) 6px 8px); }
+
+.tabbar { border-top: 4px solid #000; box-shadow: 0 -4px 0 var(--line); }
+.tabbar button { font-family: 'Pixelify Sans', sans-serif; }
+.tabbar button.on { color: var(--gold); text-shadow: 2px 2px 0 #000; }
+.tabbar button.on span { animation: hop 0.8s steps(2) infinite; }
+@keyframes hop { 50% { transform: translateY(-2px); } }

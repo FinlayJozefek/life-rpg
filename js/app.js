@@ -17,6 +17,14 @@ import { tieredIcon, mountSkillIcon, badgeIcon, skillSymbol, tierOf } from './sk
 import { confetti, shake, flash, vibrate } from './celebrate.js';
 import { isInstalled, isIOS, inAppBrowser, installInstructions, promptInstall, onInstallChange, canPromptInstall } from './install.js';
 
+// Dev-only look previews: ?skin=name loads dev/skins/name.css on top (dev/ isn't deployed, so live ignores it).
+const skinParam = new URLSearchParams(location.search).get('skin');
+if (skinParam && /^[a-z-]+$/.test(skinParam)) {
+  document.documentElement.classList.add(`skin-${skinParam}`);
+  document.head.insertAdjacentHTML('beforeend', `<link rel="stylesheet" href="dev/skins/${skinParam}.css">`);
+  document.getElementById('splash')?.remove();
+}
+
 let state = load();
 let view = 'home';
 let collectionSkill = SKILLS[0].id;

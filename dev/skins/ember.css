@@ -1,0 +1,67 @@
+/* Skin trial: Ember Runes. Obsidian stone, molten glow, embers drifting up. */
+@import url('https://fonts.googleapis.com/css2?family=Uncial+Antiqua&family=Alegreya+Sans:wght@400;500;700&display=swap');
+
+:root {
+  --bg: #0c0806;
+  --glow: #3a1608;
+  --panel: #17110e;
+  --panel-2: #221812;
+  --line: #4a2c1a;
+  --deep: #070403;
+  --shadow: #000;
+  --topbar-bg: rgba(12, 8, 6, 0.9);
+  --tabbar: #0a0605;
+  --text: #f6e6d6;
+  --muted: #b89880;
+  --gold: #ffb347;
+  --gold-dark: #a8541a;
+  --gold-bg: #2c1608;
+  --accent: #ff8a3a;
+  --primary: #b8401a;
+  --primary-line: #ffb347;
+  --bar-1: #ffd27a;
+  --bar-2: #e0501a;
+  --display-font: 'Uncial Antiqua', 'Cinzel', serif;
+}
+body {
+  font-family: 'Alegreya Sans', system-ui, sans-serif; font-size: 16px;
+  background: radial-gradient(ellipse at 50% 120%, #5a1e08 0%, transparent 55%), radial-gradient(ellipse at 50% -10%, #2a1408 0%, transparent 50%), #0c0806;
+  background-attachment: fixed;
+}
+/* rising embers */
+body::before, body::after {
+  content: ''; position: fixed; left: 0; right: 0; bottom: -20vh; height: 140vh; z-index: 0; pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 10% 90%, #ffb347, transparent), radial-gradient(1.5px 1.5px at 25% 70%, #ff7a2a, transparent),
+    radial-gradient(2px 2px at 40% 95%, #ffd27a, transparent), radial-gradient(1.5px 1.5px at 55% 60%, #ff8a3a, transparent),
+    radial-gradient(2.5px 2.5px at 70% 85%, #ffb347, transparent), radial-gradient(1.5px 1.5px at 85% 75%, #ff6a1a, transparent),
+    radial-gradient(2px 2px at 95% 50%, #ffd27a, transparent), radial-gradient(1.5px 1.5px at 5% 40%, #ff8a3a, transparent);
+  animation: rise 14s linear infinite;
+  filter: drop-shadow(0 0 3px #ff7a2a);
+}
+body::after { animation-duration: 21s; animation-delay: -8s; transform: scaleX(-1); opacity: 0.7; }
+@keyframes rise { from { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } to { transform: translateY(-60vh); opacity: 0; } }
+main { position: relative; z-index: 1; }
+
+.topbar { border-bottom: 2px solid #2a160c; box-shadow: 0 2px 0 rgba(255, 120, 40, 0.25), 0 8px 18px rgba(0, 0, 0, 0.6); }
+.brand { font-family: 'Uncial Antiqua', serif; color: var(--gold); text-shadow: 0 0 10px rgba(255, 120, 40, 0.8), 0 2px 0 #000; }
+
+h2 { color: var(--gold); text-shadow: 0 0 8px rgba(255, 120, 40, 0.5); font-weight: 400; }
+h3 { color: #ffcf9a; font-weight: 400; }
+
+/* panels: carved stone slabs with a molten edge */
+.panel, .sheet {
+  border: 2px solid #3a2214; border-radius: 6px;
+  background: linear-gradient(180deg, rgba(255, 140, 60, 0.05), transparent 40%), repeating-linear-gradient(135deg, transparent 0 18px, rgba(255, 255, 255, 0.012) 18px 19px), var(--panel);
+  box-shadow: inset 0 0 0 1px #000, inset 0 -12px 24px rgba(255, 90, 20, 0.08), inset 0 0 18px rgba(255, 100, 30, 0.12), 0 6px 16px rgba(0, 0, 0, 0.7);
+  position: relative;
+}
+.panel::before { content: 'ᚱ ᛟ ᚦ'; font-family: 'Segoe UI Historic', 'Segoe UI Symbol', 'Noto Sans Runic', sans-serif; position: absolute; top: 6px; right: 10px; font-size: 11px; letter-spacing: 4px; color: rgba(255, 140, 60, 0.35); text-shadow: 0 0 6px rgba(255, 120, 40, 0.6); pointer-events: none; }
+.btn { border-radius: 4px; border: 1px solid #5a301a; background: linear-gradient(180deg, #2e1e16, #1a100c); box-shadow: inset 0 1px 0 rgba(255, 170, 90, 0.15), 0 2px 0 #000; }
+.btn.primary { background: linear-gradient(180deg, #e0601e, #8e2a0a); border-color: #ffb347; box-shadow: 0 0 14px rgba(255, 110, 30, 0.6), inset 0 1px 0 rgba(255, 220, 160, 0.4); }
+.bar { border: 1px solid #000; }
+.bar > span { box-shadow: 0 0 8px rgba(255, 140, 40, 0.9); }
+
+.tabbar { border-top: 2px solid #2a160c; box-shadow: 0 -2px 0 rgba(255, 120, 40, 0.25); }
+.tabbar button.on { color: var(--gold); text-shadow: 0 0 8px rgba(255, 120, 40, 0.9); }
+.tabbar button.on span { filter: drop-shadow(0 0 6px rgba(255, 120, 40, 0.9)); }
