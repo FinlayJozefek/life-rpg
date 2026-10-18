@@ -180,6 +180,22 @@
   .k5 .front .p { font: 400 20px var(--display-font); }
   .k5 .front small { font-size: 9.5px; color: #6a5030; text-align: center; }
   .k5 .strong { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); z-index: 2; }
+
+  /* ---------- after playing a card: the rest sink away, the played card bursts on the enemy, then the hand rises and fans back open ---------- */
+  .card.stow { transition: transform 0.32s cubic-bezier(.5, 0, .9, .5), opacity 0.32s; transform: translateY(170px) rotate(calc(var(--r) * 0.3)) scale(0.9) !important; opacity: 0.4; pointer-events: none; }
+  .card:nth-child(1) { --sx: 150px; --i: 0; } .card:nth-child(2) { --sx: 52px; --i: 1; } .card:nth-child(3) { --sx: -52px; --i: 2; } .card:nth-child(4) { --sx: -150px; --i: 3; }
+  .card.k5:nth-child(2) { --sx: 150px; --i: 0; } .card.k5:nth-child(3) { --sx: 52px; --i: 1; } .card.k5:nth-child(4) { --sx: -52px; --i: 2; } .card.k5:nth-child(5) { --sx: -150px; --i: 3; }
+  .hand.rise .card { animation: rise-stack 0.42s cubic-bezier(.2, .9, .3, 1) backwards, fan-open 0.55s cubic-bezier(.34, 1.56, .64, 1) backwards; animation-delay: 0s, calc(0.36s + var(--i) * 0.07s); }
+  @keyframes rise-stack { from { transform: translate(var(--sx), 190px) rotate(0deg) scale(0.92); opacity: 0; } to { transform: translate(var(--sx), 0) rotate(0deg) scale(0.96); opacity: 1; } }
+  @keyframes fan-open { from { transform: translate(var(--sx), 0) rotate(0deg) scale(0.96); } }
+  .hand.rise .card .face, .hand.rise .card .art { animation: card-gleam 0.9s ease-out backwards; animation-delay: calc(0.5s + var(--i) * 0.07s); }
+  @keyframes card-gleam { 0% { filter: brightness(1.6); } 100% { filter: none; } }
+  .hand.rise .card.fresh { animation: fresh-draw 0.7s cubic-bezier(.34, 1.56, .64, 1) backwards; animation-delay: 0.5s; }
+  @keyframes fresh-draw { from { transform: translateY(-60px) rotate(0deg) scale(1.25); opacity: 0; filter: brightness(3) drop-shadow(0 0 18px #ffd84a); } 60% { filter: brightness(1.4) drop-shadow(0 0 12px #ffd84a); } }
+  .ember { position: absolute; z-index: 20; width: 5px; height: 5px; border-radius: 1px; pointer-events: none; background: #ffb347; box-shadow: 0 0 6px #ff6a1a; animation: ember 0.9s ease-out forwards; }
+  @keyframes ember { to { transform: translate(var(--dx), var(--dy)) scale(0.3); opacity: 0; } }
+  .burst { position: absolute; z-index: 19; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; pointer-events: none; border: 3px solid #ffe8a0; animation: burst 0.45s ease-out forwards; }
+  @keyframes burst { to { transform: scale(7); opacity: 0; border-width: 1px; } }
 </style>
 </head>
 <body>
@@ -254,19 +270,37 @@ const DESIGNS = {
 };
 let cur = 'A';
 const pick = document.getElementById('pick');
-function draw() {
+function draw(mode = '', freshIdx = -1) {
   pick.innerHTML = Object.entries(DESIGNS).map(([k, [n]]) => `<button class="${k === cur ? 'on' : ''}" data-k="${k}">${k} · ${n}</button>`).join('');
   document.getElementById('ui').innerHTML = DESIGNS[cur][2]();
   document.getElementById('blurb').textContent = DESIGNS[cur][1];
+  if (mode === 'rise') {
+    const hand = document.querySelector('.hand'); if (!hand) return;
+    hand.classList.add('rise');
+    const cards = hand.querySelectorAll('.card');
+    if (cards[freshIdx]) cards[freshIdx].classList.add('fresh');
+    setTimeout(() => { hand.classList.remove('rise'); cards.forEach((c) => c.classList.remove('fresh')); }, 1400);
+  }
 }
 pick.onclick = (e) => { const b = e.target.closest('[data-k]'); if (b) { cur = b.dataset.k; draw(); } };
 document.getElementById('ui').addEventListener('click', (e) => {
   const c = e.target.closest('.B .c'); if (c) { document.querySelectorAll('.B .c').forEach((x) => x.classList.toggle('lift', x === c && !x.classList.contains('lift'))); return; }
   const k = e.target.closest('.card'); if (!k) return;
   if (!k.classList.contains('lift')) { document.querySelectorAll('.card').forEach((x) => x.classList.toggle('lift', x === k)); return; }
+  const cards = [...document.querySelectorAll('.card')];
+  const idx = cards.indexOf(k);
   k.classList.remove('lift'); k.classList.add('play');
-  setTimeout(() => { const f = document.querySelector('.foe'); f.classList.remove('struck'); void f.offsetWidth; f.classList.add('struck'); }, 330);
-  setTimeout(draw, 1100);
+  // the rest of the hand sinks out of the way, outer cards first
+  cards.filter((c) => c !== k).forEach((c, i) => { c.style.transitionDelay = `${i * 45}ms`; c.classList.add('stow'); });
+  setTimeout(() => {
+    const f = document.querySelector('.foe'); f.classList.remove('struck'); void f.offsetWidth; f.classList.add('struck');
+    const ph = document.querySelector('.phone').getBoundingClientRect(), fr = f.getBoundingClientRect();
+    const x = fr.left - ph.left + fr.width / 2, y = fr.top - ph.top + fr.height / 2;
+    const host = document.querySelector('.phone');
+    const b = document.createElement('i'); b.className = 'burst'; b.style.left = x + 'px'; b.style.top = y + 'px'; host.appendChild(b); setTimeout(() => b.remove(), 500);
+    for (let i = 0; i < 22; i++) { const e2 = document.createElement('i'); e2.className = 'ember'; e2.style.left = x + 'px'; e2.style.top = y + 'px'; e2.style.setProperty('--dx', (Math.random() * 180 - 90) + 'px'); e2.style.setProperty('--dy', (Math.random() * 150 - 110) + 'px'); host.appendChild(e2); setTimeout(() => e2.remove(), 950); }
+  }, 330);
+  setTimeout(() => draw('rise', idx), 760);
 });
 draw();
 </script>
