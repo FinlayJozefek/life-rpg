@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Battle look trials</title>
+<!-- Dev-only page: three battle-screen styles with animations. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding: 0 0 30px; background: #0c0a08; }
+  body::before, body::after { display: none !important; }
+  .ctl { position: sticky; top: 0; z-index: 30; background: #0c0a08; padding: 8px; border-bottom: 1px solid #2a2622; }
+  .ctl .row { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; max-width: 440px; margin: 0 auto 5px; }
+  .ctl button { padding: 6px 9px; border-radius: 6px; border: 1px solid #4a4540; background: #2a2724; color: #e6dcc4; font: 600 12px var(--body-font); cursor: pointer; }
+  .ctl button.on { border-color: #e09a3a; color: #e09a3a; }
+  .ctl .fx button { background: #3a1a14; border-color: #7a3a2a; }
+  .blurb { max-width: 420px; margin: 4px auto 0; text-align: center; font-size: 12px; color: #a89c86; }
+  .phone { position: relative; max-width: 400px; margin: 10px auto; height: 720px; max-height: calc(100vh - 170px); border: 8px solid #000; border-radius: 28px; overflow: hidden; background: #000; }
+  @media (max-width: 440px) { .phone { border: 0; border-radius: 0; height: calc(100vh - 150px); max-height: none; margin: 0; } }
+  .stage { position: absolute; inset: 0; overflow: hidden; }
+  .px { image-rendering: pixelated; }
+
+  /* ---------- shared FX ---------- */
+  .shake { animation: shake 0.35s; }
+  @keyframes shake { 10%, 90% { transform: translate(-2px, 1px); } 20%, 80% { transform: translate(4px, -2px); } 30%, 50%, 70% { transform: translate(-6px, 2px); } 40%, 60% { transform: translate(6px, -1px); } }
+  .bigshake { animation: bigshake 0.5s; }
+  @keyframes bigshake { 10%, 90% { transform: translate(-4px, 2px) scale(1.03); } 20%, 80% { transform: translate(8px, -4px) scale(1.03); } 30%, 50%, 70% { transform: translate(-10px, 4px) scale(1.04); } 40%, 60% { transform: translate(10px, -2px) scale(1.04); } }
+  .flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 20; }
+  .flash.go { animation: flash 0.25s; }
+  @keyframes flash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
+  .vignette { position: absolute; inset: 0; pointer-events: none; z-index: 19; box-shadow: inset 0 0 80px 30px rgba(200, 0, 0, 0); transition: box-shadow 0.1s; }
+  .vignette.go { animation: vig 0.6s; }
+  @keyframes vig { 0% { box-shadow: inset 0 0 80px 30px rgba(220, 20, 10, 0.75); } 100% { box-shadow: inset 0 0 80px 30px rgba(220, 20, 10, 0); } }
+  .foe { position: absolute; display: flex; flex-direction: column; align-items: center; transition: transform 0.18s, opacity 0.5s, filter 0.5s; }
+  .foe canvas { display: block; }
+  .foe .shadow { width: 70%; height: 10px; margin-top: -8px; border-radius: 50%; background: radial-gradient(rgba(0, 0, 0, 0.6), transparent 70%); }
+  .foe.hit canvas { animation: hitflash 0.3s; }
+  @keyframes hitflash { 0%, 40% { filter: brightness(4) saturate(0); transform: translateX(6px); } 70% { transform: translateX(-4px); } 100% { filter: none; transform: none; } }
+  .foe.tele canvas { animation: telepulse 0.6s ease-in-out infinite alternate; }
+  @keyframes telepulse { from { filter: drop-shadow(0 0 0 #ff2a1a); } to { filter: drop-shadow(0 0 12px #ff2a1a) brightness(1.2); } }
+  .foe .bang { position: absolute; top: -18px; font: 700 26px var(--display-font); color: #ff3a2a; text-shadow: 0 2px 0 #000; animation: bang 0.5s infinite alternate; }
+  @keyframes bang { to { transform: translateY(-5px) scale(1.15); } }
+  .foe .warn { position: absolute; bottom: -6px; width: 120%; height: 22px; border-radius: 50%; border: 2px dashed #ff3a2a; animation: spinwarn 1.2s linear infinite; }
+  @keyframes spinwarn { to { transform: rotate(360deg) scaleY(0.35); } }
+  .foe.dying canvas { animation: dissolve 0.8s forwards; }
+  @keyframes dissolve { 0% { filter: brightness(5) saturate(0); } 30% { filter: brightness(5) saturate(0); transform: scale(1.1); } 100% { filter: blur(6px) brightness(3); transform: scale(0.2) translateY(-40px); opacity: 0; } }
+  .bit { position: absolute; width: 5px; height: 5px; pointer-events: none; animation: bit 0.8s ease-out forwards; z-index: 15; }
+  @keyframes bit { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+  .slash { position: absolute; width: 140px; height: 140px; margin: -70px 0 0 -70px; pointer-events: none; z-index: 16; border-radius: 50%;
+    border-top: 6px solid #fff; border-right: 3px solid rgba(255, 255, 255, 0.6); filter: drop-shadow(0 0 6px #ffe8a0); animation: slash 0.28s ease-out forwards; }
+  @keyframes slash { from { transform: rotate(-80deg) scale(0.6); opacity: 1; } to { transform: rotate(60deg) scale(1.1); opacity: 0; } }
+  .num { position: absolute; z-index: 17; font: 700 26px var(--display-font); color: #fff; text-shadow: 0 2px 0 #000, 0 0 6px #000; pointer-events: none; animation: num 0.9s ease-out forwards; white-space: nowrap; }
+  .num.crit { font-size: 40px; color: #ffd84a; }
+  .num.me { color: #ff6a5a; }
+  .num small { display: block; font: 700 12px var(--body-font); color: #7ae0a0; text-align: center; }
+  @keyframes num { 0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; } 15% { transform: translate(-50%, -14px) scale(1.25); opacity: 1; } 35% { transform: translate(-50%, -20px) scale(1); } 100% { transform: translate(-50%, -60px); opacity: 0; } }
+  .lunge-left { animation: lungeL 0.35s; } @keyframes lungeL { 40% { transform: translateX(-60px); } }
+  .lunge-right { animation: lungeR 0.35s; } @keyframes lungeR { 40% { transform: translateX(60px); } }
+  .lunge-up { animation: lungeU 0.35s; } @keyframes lungeU { 40% { transform: translate(40px, -50px) scale(0.92); } }
+  .lunge-down { animation: lungeD 0.35s; } @keyframes lungeD { 40% { transform: translate(-30px, 40px) scale(1.15); } }
+  .bossbar { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 25; transition: height 0.35s; }
+  .bossbar.top { top: 0; } .bossbar.bot { bottom: 0; }
+  .bossbar.on { height: 70px; }
+  .bossname { position: absolute; top: 40%; left: 0; right: 0; z-index: 26; text-align: center; font: 400 38px var(--display-font); color: #e09a3a; text-shadow: 0 3px 0 #000; transform: translateX(-120%); }
+  .bossname small { display: block; font: 600 13px var(--body-font); color: #e6dcc4; letter-spacing: 3px; }
+  .bossname.go { animation: bossname 2.4s cubic-bezier(.2, .8, .2, 1) forwards; }
+  @keyframes bossname { 0% { transform: translateX(-120%); } 20%, 80% { transform: translateX(0); } 100% { transform: translateX(120%); } }
+  .hpplate { position: absolute; z-index: 10; background: rgba(20, 16, 12, 0.88); border: 2px solid #0a0908; box-shadow: inset 0 0 0 1px #5a5048; border-radius: 4px; padding: 5px 9px; color: #e6dcc4; font-size: 12px; min-width: 150px; }
+  .hpplate b { font: 400 15px var(--display-font); color: #e6dcc4; }
+  .hpplate .bar2 { height: 7px; margin-top: 3px; background: #0a0908; border: 1px solid #4a4540; border-radius: 2px; overflow: hidden; }
+  .hpplate .bar2 span { display: block; height: 100%; background: linear-gradient(#e8604a, #a82a1a); transition: width 0.4s; }
+  .hpplate.me .bar2 span { background: linear-gradient(#8ae07a, #3a9a2a); }
+  .moves { position: absolute; left: 0; right: 0; bottom: 0; z-index: 12; padding: 8px; background: linear-gradient(transparent, rgba(10, 8, 6, 0.95) 22%); display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-top: 26px; }
+  .moves .mv { padding: 8px; border-radius: 4px; border: 2px solid #0a0908; background: #36322e; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12); color: #e6dcc4; text-align: left; font: 600 14px var(--body-font); }
+  .moves .mv small { display: block; font-size: 11px; color: #a89c86; font-weight: 400; }
+  .textbox { position: absolute; z-index: 11; left: 8px; right: 8px; background: rgba(12, 10, 8, 0.92); border: 2px solid #c8a24a; border-radius: 4px; padding: 7px 10px; font-size: 14px; color: #f4e6c8; min-height: 40px; }
+
+  /* ---------- style 1: arena (side view) ---------- */
+  .arena .sky { position: absolute; inset: 0 0 38% 0; }
+  .arena .ground { position: absolute; left: -20%; right: -20%; bottom: 0; height: 40%; transform: perspective(300px) rotateX(48deg); transform-origin: bottom; background: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 60px), repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 50px); }
+  .arena .torch { position: absolute; top: 40%; width: 60px; height: 60px; margin-left: -30px; border-radius: 50%; background: radial-gradient(rgba(255, 160, 60, 0.6), transparent 70%); animation: torch 1.3s ease-in-out infinite alternate; }
+  @keyframes torch { 0% { opacity: 0.6; transform: scale(0.9); } 50% { opacity: 1; } 100% { opacity: 0.8; transform: scale(1.1); } }
+  .arena .hero { position: absolute; right: 8%; bottom: 31%; transition: transform 0.18s; }
+  .arena .hero img { width: 84px; transform: scaleX(-1); }
+  /* ---------- style 2: face-off (platforms, corner plates) ---------- */
+  .face .sky { position: absolute; inset: 0; }
+  .face .plat { position: absolute; border-radius: 50%; background: radial-gradient(ellipse, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.35) 60%, transparent 72%); }
+  .face .hero { position: absolute; left: 8%; bottom: 33%; transition: transform 0.18s; }
+  .face .hero img { width: 120px; filter: brightness(0.85); }
+  /* ---------- style 3: corridor (first person) ---------- */
+  .corr .walls { position: absolute; inset: 0; perspective: 260px; }
+  .corr .wall { position: absolute; top: 0; bottom: 0; width: 60%; background: repeating-linear-gradient(0deg, #0a0908 0 2px, transparent 2px 28px), repeating-linear-gradient(90deg, #0a0908 0 2px, transparent 2px 56px), #3a332c; }
+  .corr .wall.l { left: -30%; transform: rotateY(70deg); transform-origin: left; }
+  .corr .wall.r { right: -30%; transform: rotateY(-70deg); transform-origin: right; }
+  .corr .back { position: absolute; left: 30%; right: 30%; top: 28%; bottom: 38%; background: radial-gradient(ellipse at 50% 60%, rgba(0, 0, 0, 0.1), #000 90%), #1a1612; }
+  .corr .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(#1a1612, #2e2822); }
+  .corr .ceil { position: absolute; left: 0; right: 0; top: 0; height: 28%; background: linear-gradient(#0c0a08, #1e1a16); }
+  .corr .tlight { position: absolute; top: 30%; width: 90px; height: 120px; border-radius: 50%; background: radial-gradient(rgba(255, 150, 50, 0.45), transparent 70%); animation: torch 1.1s ease-in-out infinite alternate; }
+  .corr .claw { position: absolute; inset: 0; z-index: 18; pointer-events: none; opacity: 0; background:
+      linear-gradient(115deg, transparent 46%, rgba(255, 30, 20, 0.85) 47%, transparent 49%), linear-gradient(115deg, transparent 52%, rgba(255, 30, 20, 0.85) 53%, transparent 55%), linear-gradient(115deg, transparent 58%, rgba(255, 30, 20, 0.85) 59%, transparent 61%); }
+  .corr .claw.go { animation: claw 0.7s; }
+  @keyframes claw { 0% { opacity: 1; clip-path: inset(0 100% 0 0); } 30% { opacity: 1; clip-path: inset(0 0 0 0); } 100% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="ctl">
+  <div class="row" id="styles"></div>
+  <div class="row" id="secs"></div>
+  <div class="row fx">
+    <button data-fx="attack">⚔ Attack</button><button data-fx="crit">💥 Crit</button><button data-fx="hurt">Enemy hits you</button>
+    <button data-fx="tele">⚠ Big attack coming</button><button data-fx="kill">Defeat enemy</button><button data-fx="boss">Boss entrance</button><button data-fx="auto">▶ Auto demo</button>
+  </div>
+  <div class="blurb" id="blurb"></div>
+</div>
+<div class="phone"><div class="stage" id="stage"></div><div class="flash" id="flash"></div><div class="vignette" id="vig"></div>
+  <div class="bossbar top" id="bbt"></div><div class="bossbar bot" id="bbb"></div><div class="bossname" id="bname"></div></div>
+
+<script type="module">
+import { SECTIONS, FAMILY_ROSTER, BOSSES } from '../js/dungeon/ddata.js';
+import { mountEnemy, BOSS_AURA } from '../js/dungeon/dart.js';
+import { avatarDataUrl } from '../js/sprites2.js';
+
+let save = null; try { save = JSON.parse(localStorage.getItem('liferpg.save.v1')); } catch {}
+const hero = avatarDataUrl(save ? { head: save.equipped?.head, body: save.equipped?.body, feet: save.equipped?.feet } : {}, 4);
+
+const enc = (w, h, body) => `url('data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}' preserveAspectRatio='none'>${body}</svg>`).replace(/'/g, '%27')}')`;
+const SKY = {
+  1: `${enc(400, 120, "<path fill='#0a0e06' d='M0 120V70l30-30 30 40 40-50 40 40 40-30 50 50 40-40 60 50 40-30 30 20v60z'/><g fill='#0a0e06'><path d='M60 120l26-40 26 40zM250 120l34-52 34 52z'/></g><g fill='#ff9a3a'><rect x='280' y='104' width='6' height='8'/></g>")} bottom / 100% 45% no-repeat, radial-gradient(ellipse at 70% 100%, rgba(255,140,40,.3), transparent 50%), linear-gradient(#0e1408, #2a3a1a 60%, #3e4a24)`,
+  2: `${enc(400, 120, "<path fill='#08060e' d='M0 120V96c60-6 140-8 210-4s130 4 190-2v30z'/><g fill='#08060e'><path d='M50 100v-20a9 9 0 0 1 18 0v20zM120 98v-28h-8v-6h8v-8h6v8h8v6h-8v28zM300 100v-18a8 8 0 0 1 16 0v18zM230 104c-2-30-4-50 2-70-10-6-18-14-22-24 8 6 16 10 22 12 2-10 8-18 16-24-4 10-6 18-4 26 8-2 16-8 22-16-4 12-12 20-20 24 2 22 2 42-2 72z'/></g>")} bottom / 100% 50% no-repeat, radial-gradient(circle at 80% 18%, #d8d4f0 0 22px, rgba(200,190,255,.2) 23px, transparent 70px), linear-gradient(#0a0814, #1e1834 60%, #2e2448)`,
+  3: `${enc(400, 80, "<path fill='#050507' d='M0 0h400v20l-10 30-8-28-12 18-10-24-14 44-10-42-12 16-8-20-14 38-12-34-10 14-12-24-12 50-12-48-10 16-12-20-10 30-10-28-14 24-10-26-12 40-12-38-10 18-12-22-12 34-10-30-10 12-12-18-10 28-10-26-12 14-10-16z'/>")} top / 100% 30% no-repeat, radial-gradient(ellipse at 8% 60%, rgba(80,190,255,.4), transparent 22%), radial-gradient(ellipse at 92% 50%, rgba(80,190,255,.35), transparent 20%), linear-gradient(#0a0a0e, #1c1c24)`,
+  4: `${enc(400, 160, "<path fill='#324a6e' d='M0 160V80l50-40 40 30 50-60 50 50 40-30 60 50 40-30 70 50v60z'/><path fill='#e8f2ff' d='M50 40l14 12-6 2-8-5-8 6-6-3zM140 10l18 18-8 2-10-7-10 8-8-3z'/>")} bottom / 100% 55% no-repeat, linear-gradient(#0a1426, #1e3456 60%, #3a5a80)`,
+  5: `${enc(400, 160, "<path fill='#050101' d='M0 160v-40l10-40 8 30 10-70 10 80 14-30 8 40 12-60 10 50 16-20 10 40h10l12-80 10 70 14-40 10 50 8-30 12 50 14-100 12 100 10-20 14 30 10-60 10 60 16-40 10 40 12-70 10 70h10l10-40 10 40v60z'/>")} bottom / 100% 55% no-repeat, radial-gradient(ellipse at 50% 110%, rgba(255,90,20,.6), transparent 50%), radial-gradient(circle at 25% 20%, #c8281e 0 30px, rgba(200,40,30,.3) 31px, transparent 90px), linear-gradient(#120404, #3a0a06 60%, #6a1a08)`,
+};
+const GROUND = { 1: '#2a3018', 2: '#1e1a26', 3: '#26262c', 4: '#c8d8ec', 5: '#2a0e08' };
+
+const STYLES = [
+  ['arena', 'Arena (side view)', 'Classic side-view RPG battle: a scene from the section you are in, enemies on the left standing on the ground with shadows, you on the right. You lunge in to attack, slashes and hit-flashes land, numbers pop, and torches flicker.'],
+  ['face', 'Face-off (platforms)', 'Monster-battler style: the enemy on a lit platform at the top, you on a platform below, health plates in the corners and a story text box. Attacks fly between the platforms.'],
+  ['corr', 'Dungeon corridor (first person)', 'You see through your own eyes down a torch-lit stone corridor and the enemies come at you. When they hit you, claw marks rip across the screen and the edges flash red.'],
+];
+let style = 'arena', sec = 5, boss = false, foes = [], stops = [], busy = false;
+const stage = document.getElementById('stage');
+const $ = (s) => stage.querySelector(s);
+
+function build() {
+  stops.forEach((s) => s()); stops = [];
+  const roster = boss ? [SECTIONS[sec - 1].boss] : FAMILY_ROSTER[SECTIONS[sec - 1].family][2].slice(0, 2);
+  foes = roster.map((id, i) => ({ id, boss, hp: 100, i }));
+  const sky = SKY[sec];
+  const names = foes.map((f) => (f.boss ? BOSSES[f.id].name : f.id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())));
+  const moves = `<div class="moves"><button class="mv">Slash<small>Slashing</small></button><button class="mv">Master Slash<small>Slashing · 3/3</small></button><button class="mv">Parry<small>Utility</small></button><button class="mv">Potion<small>3 left</small></button></div>`;
+  if (style === 'arena') {
+    stage.className = 'stage arena';
+    stage.innerHTML = `<div class="sky" style="background:${sky}"></div><div class="ground" style="background-color:${GROUND[sec]}"></div>
+      <div class="torch" style="left:12%"></div><div class="torch" style="left:88%"></div>
+      ${foes.map((f, i) => `<div class="foe" data-i="${i}" style="left:${boss ? 6 : 4 + i * 26}%;bottom:${boss ? 29 : 30 + (i % 2) * 6}%"><canvas class="px"></canvas><div class="shadow"></div></div>`).join('')}
+      <div class="hero"><img class="px" src="${hero}"></div>
+      <div class="hpplate" style="left:8px;top:10px">${foes.map((f, i) => `<b>${names[i]}</b><div class="bar2"><span data-hp="${i}" style="width:100%"></span></div>`).join('')}</div>
+      <div class="hpplate me" style="right:8px;top:10px;min-width:120px"><b>You</b><div class="bar2"><span id="myhp" style="width:100%"></span></div></div>
+      <div class="textbox" style="bottom:118px" id="tb">${boss ? `The ${names[0]} blocks your path!` : `${foes.length} enemies appear!`}</div>${moves}`;
+  } else if (style === 'face') {
+    stage.className = 'stage face';
+    stage.innerHTML = `<div class="sky" style="background:${sky}"></div>
+      <div class="plat" style="right:2%;top:32%;width:58%;height:60px"></div><div class="plat" style="left:-4%;bottom:31%;width:60%;height:60px"></div>
+      ${foes.map((f, i) => `<div class="foe" data-i="${i}" style="right:${boss ? 10 : 4 + i * 24}%;top:${boss ? 8 : 14 + (i % 2) * 4}%"><canvas class="px"></canvas><div class="shadow"></div></div>`).join('')}
+      <div class="hero"><img class="px" src="${hero}"></div>
+      <div class="hpplate" style="left:8px;top:12px">${foes.map((f, i) => `<b>${names[i]}</b><div class="bar2"><span data-hp="${i}" style="width:100%"></span></div>`).join('')}</div>
+      <div class="hpplate me" style="right:8px;bottom:230px"><b>You</b> <span class="small">Lv 30</span><div class="bar2"><span id="myhp" style="width:100%"></span></div><div class="small" style="text-align:right">17,335 / 17,335</div></div>
+      <div class="textbox" style="bottom:118px" id="tb">What will you do?</div>${moves}`;
+  } else {
+    stage.className = 'stage corr';
+    stage.innerHTML = `<div class="walls"><div class="ceil"></div><div class="floor"></div><div class="back"></div><div class="wall l"></div><div class="wall r"></div></div>
+      <div class="tlight" style="left:4%"></div><div class="tlight" style="right:4%"></div>
+      ${foes.map((f, i) => `<div class="foe" data-i="${i}" style="left:${boss ? 22 : 10 + i * 42}%;bottom:${boss ? 30 : 34}%"><canvas class="px"></canvas><div class="shadow"></div></div>`).join('')}
+      <div class="hpplate" style="left:8px;top:10px">${foes.map((f, i) => `<b>${names[i]}</b><div class="bar2"><span data-hp="${i}" style="width:100%"></span></div>`).join('')}</div>
+      <div class="hpplate me" style="left:8px;right:8px;bottom:120px"><b>You</b><div class="bar2"><span id="myhp" style="width:100%"></span></div></div>
+      <div class="claw" id="claw"></div>${moves}`;
+  }
+  stage.querySelectorAll('.foe').forEach((el) => { const f = foes[+el.dataset.i]; stops.push(mountEnemy(el.querySelector('canvas'), { id: f.id, boss: f.boss, isBoss: f.boss }, f.boss ? (style === 'corr' ? 8 : 6) : (style === 'corr' ? 6 : 4))); });
+  document.getElementById('blurb').textContent = STYLES.find((s) => s[0] === style)[2];
+}
+
+// ---------- effects ----------
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const phone = document.querySelector('.phone');
+function centre(el) { const a = el.getBoundingClientRect(), b = stage.getBoundingClientRect(); return [a.left - b.left + a.width / 2, a.top - b.top + a.height / 2]; }
+function num(x, y, text, cls = '', sub = '') { const n = document.createElement('div'); n.className = `num ${cls}`; n.style.left = `${x}px`; n.style.top = `${y}px`; n.innerHTML = text + (sub ? `<small>${sub}</small>` : ''); stage.appendChild(n); setTimeout(() => n.remove(), 950); }
+function bits(x, y, colour, count = 18) { for (let i = 0; i < count; i++) { const b = document.createElement('i'); b.className = 'bit'; b.style.left = `${x}px`; b.style.top = `${y}px`; b.style.background = colour; b.style.setProperty('--dx', `${Math.random() * 160 - 80}px`); b.style.setProperty('--dy', `${Math.random() * 140 - 100}px`); stage.appendChild(b); setTimeout(() => b.remove(), 850); } }
+function tb(t) { const el = $('#tb'); if (el) el.textContent = t; }
+function live() { return [...stage.querySelectorAll('.foe:not(.gone)')]; }
+function setHp(i, pct) { const s = stage.querySelector(`[data-hp="${i}"]`); if (s) s.style.width = `${Math.max(0, pct)}%`; }
+function heroLunge() { const h = $('.hero'); if (!h) return; const cls = style === 'arena' ? 'lunge-left' : 'lunge-up'; h.classList.remove(cls); void h.offsetWidth; h.classList.add(cls); }
+function foeLunge(el) { const cls = style === 'arena' ? 'lunge-right' : style === 'face' ? 'lunge-down' : 'lunge-down'; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+function replay(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+async function attack(crit = false) {
+  const t = live()[0]; if (!t) return;
+  const f = foes[+t.dataset.i];
+  tb(crit ? 'A critical hit!' : 'You slash!');
+  heroLunge(); await wait(140);
+  const [x, y] = centre(t.querySelector('canvas'));
+  const s = document.createElement('div'); s.className = 'slash'; s.style.left = `${x}px`; s.style.top = `${y}px`; stage.appendChild(s); setTimeout(() => s.remove(), 300);
+  replay(t, 'hit');
+  if (crit) { replay(phone, 'bigshake'); replay(document.getElementById('flash'), 'go'); bits(x, y, '#ffd84a', 14); }
+  const dmg = crit ? 4200 + Math.round(Math.random() * 600) : 1300 + Math.round(Math.random() * 300);
+  num(x, y - 30, dmg.toLocaleString('en-GB'), crit ? 'crit' : '', 'super effective!');
+  f.hp -= crit ? 40 : 14; setHp(f.i, f.hp);
+  if (f.hp <= 0) { await wait(350); await kill(t); }
+}
+async function hurt() {
+  const t = live()[0]; if (!t) return;
+  tb(`${foes[+t.dataset.i].boss ? BOSSES[foes[+t.dataset.i].id].name : 'The enemy'} strikes!`);
+  foeLunge(t); await wait(150);
+  replay(phone, 'shake'); replay(document.getElementById('vig'), 'go');
+  const claw = $('#claw'); if (claw) replay(claw, 'go');
+  const h = $('.hero'); if (h) replay(h, 'hit');
+  const me = $('#myhp'); const [x, y] = h ? centre(h) : [stage.clientWidth / 2, stage.clientHeight * 0.55];
+  num(x, y - 30, (900 + Math.round(Math.random() * 400)).toLocaleString('en-GB'), 'me');
+  if (me) me.style.width = `${Math.max(20, parseFloat(me.style.width) - 12)}%`;
+}
+function tele() {
+  const t = live()[0]; if (!t) return;
+  if (t.classList.toggle('tele')) { t.insertAdjacentHTML('beforeend', '<div class="bang">!</div><div class="warn"></div>'); tb('It is winding up a huge attack: Parry or Block!'); }
+  else t.querySelectorAll('.bang, .warn').forEach((e) => e.remove());
+}
+async function kill(t = live()[0]) {
+  if (!t) return;
+  const f = foes[+t.dataset.i]; f.hp = 0; setHp(f.i, 0);
+  t.classList.remove('tele'); t.querySelectorAll('.bang, .warn').forEach((e) => e.remove());
+  const [x, y] = centre(t.querySelector('canvas'));
+  replay(t, 'dying'); t.classList.add('gone');
+  await wait(250); bits(x, y, f.boss ? BOSS_AURA[f.id] : '#e6dcc4', f.boss ? 40 : 22);
+  tb(f.boss ? 'The boss falls!' : 'Defeated!');
+  if (!live().length) { await wait(900); build(); }
+}
+async function bossIntro() {
+  if (!boss) { boss = true; drawSecs(); build(); await wait(100); }
+  const B = BOSSES[SECTIONS[sec - 1].boss];
+  document.getElementById('bbt').classList.add('on'); document.getElementById('bbb').classList.add('on');
+  const n = document.getElementById('bname'); n.innerHTML = `<small>FLOOR ${sec * 10} · BOSS</small>${B.name}`; replay(n, 'go');
+  replay(phone, 'shake');
+  await wait(2400);
+  document.getElementById('bbt').classList.remove('on'); document.getElementById('bbb').classList.remove('on');
+}
+async function auto() {
+  if (busy) return; busy = true;
+  for (const step of [() => attack(), () => hurt(), () => tele(), () => tele(), () => attack(true), () => attack(), () => hurt(), () => attack(true), () => kill()]) { await step(); await wait(900); }
+  busy = false;
+}
+
+// ---------- controls ----------
+const stylesEl = document.getElementById('styles'), secsEl = document.getElementById('secs');
+function drawStyles() { stylesEl.innerHTML = STYLES.map(([k, l]) => `<button class="${k === style ? 'on' : ''}" data-s="${k}">${l}</button>`).join(''); }
+function drawSecs() { secsEl.innerHTML = SECTIONS.map((s) => `<button class="${s.id === sec ? 'on' : ''}" data-sec="${s.id}">${s.name}</button>`).join('') + `<button class="${boss ? 'on' : ''}" data-boss>Boss</button>`; }
+stylesEl.onclick = (e) => { const b = e.target.closest('[data-s]'); if (b) { style = b.dataset.s; drawStyles(); build(); } };
+secsEl.onclick = (e) => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.sec) sec = +b.dataset.sec; else boss = !boss; drawSecs(); build(); };
+document.querySelector('.fx').onclick = (e) => { const b = e.target.closest('[data-fx]'); if (!b) return; ({ attack: () => attack(), crit: () => attack(true), hurt, tele, kill: () => kill(), boss: bossIntro, auto })[b.dataset.fx](); };
+drawStyles(); drawSecs(); build();
+</script>
+</body>
+</html>
