@@ -6,43 +6,29 @@
   src: url('fonts/cinzel-latin.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Cinzel Decorative';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('fonts/cinzel-decorative-700.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Cinzel Decorative';
-  font-style: normal;
-  font-weight: 900;
-  font-display: swap;
-  src: url('fonts/cinzel-decorative-900.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Spectral';
+  font-family: 'IM Fell English SC';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('fonts/spectral-400.woff2') format('woff2');
+  src: url('fonts/im-fell-english-sc.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Spectral';
+  font-family: 'Alegreya';
   font-style: normal;
-  font-weight: 600 700;
+  font-weight: 400 900;
   font-display: swap;
-  src: url('fonts/spectral-600.woff2') format('woff2');
+  src: url('fonts/alegreya.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Spectral';
+  font-family: 'Alegreya';
   font-style: italic;
-  font-weight: 400;
+  font-weight: 400 900;
   font-display: swap;
-  src: url('fonts/spectral-400-italic.woff2') format('woff2');
+  src: url('fonts/alegreya-italic.woff2') format('woff2');
 }
 
 :root {
-  /* Theme: Astral Grimoire (starry sky, gold filigree, violet magic) */
+  /* Theme: Realms (rustic; each area has its own surroundings, see the Realms block at the end) */
   --bg: #07061a;
   --glow: #2a1d5e;          /* light at the top of the page */
   --panel: rgba(22, 16, 54, 0.82);
@@ -70,8 +56,8 @@
   --c-legendary: #f0a020;
   --c-mythic: #e8435a;
   --c-divine: #fff1a8;
-  --display-font: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
-  --body-font: 'Spectral', Georgia, 'Times New Roman', serif;
+  --display-font: 'IM Fell English SC', Georgia, serif;
+  --body-font: 'Alegreya', Georgia, serif;
   --tabbar-h: 64px;
 }
 
@@ -886,61 +872,7 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 .d-sheet-acts { display: flex; gap: 8px; }
 .d-sheet-acts .btn { flex: 1; }
 
-/* ---------- Astral Grimoire: sky, glass panels with gold corners, glowing magic ---------- */
-body {
-  font-family: var(--body-font); font-size: 16px;
-  background: radial-gradient(ellipse at 20% 0%, #3a1f7a 0%, transparent 50%), radial-gradient(ellipse at 90% 30%, #1d2f7a 0%, transparent 45%), radial-gradient(ellipse at 50% 110%, #4a1650 0%, transparent 50%), var(--bg);
-  background-attachment: fixed;
-}
-/* two layers of twinkling stars */
-body::before, body::after { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-body::before {
-  background-image:
-    radial-gradient(1.5px 1.5px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 28% 72%, #fff, transparent),
-    radial-gradient(1.5px 1.5px at 44% 34%, #ffe9b0, transparent), radial-gradient(1px 1px at 63% 12%, #fff, transparent),
-    radial-gradient(2px 2px at 78% 58%, #d8c4ff, transparent), radial-gradient(1px 1px at 88% 22%, #fff, transparent),
-    radial-gradient(1px 1px at 8% 88%, #fff, transparent), radial-gradient(1.5px 1.5px at 52% 92%, #fff, transparent),
-    radial-gradient(1px 1px at 35% 50%, #fff, transparent), radial-gradient(1px 1px at 70% 80%, #ffe9b0, transparent);
-  animation: astral-twinkle 4s ease-in-out infinite alternate;
-}
-body::after {
-  background-image: radial-gradient(1px 1px at 20% 40%, #fff, transparent), radial-gradient(1.5px 1.5px at 58% 64%, #fff, transparent),
-    radial-gradient(1px 1px at 82% 8%, #fff, transparent), radial-gradient(1px 1px at 4% 55%, #d8c4ff, transparent), radial-gradient(1.5px 1.5px at 92% 86%, #fff, transparent);
-  animation: astral-twinkle 3s 1.5s ease-in-out infinite alternate;
-}
-@keyframes astral-twinkle { from { opacity: 0.25; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { body::before, body::after { animation: none; } }
-main { position: relative; z-index: 1; }
-.topbar { border-bottom: 1px solid var(--gold-dark); box-shadow: 0 1px 0 rgba(246, 210, 122, 0.15), 0 6px 20px rgba(0, 0, 0, 0.5); }
-.brand { font-weight: 900; font-size: 21px; white-space: nowrap; color: var(--gold); text-shadow: 0 0 12px rgba(246, 210, 122, 0.55), 0 2px 0 #000; }
-.coin-pill, .streak-pill { border-radius: 999px; border-width: 1px !important; box-shadow: 0 0 10px rgba(246, 210, 122, 0.2); }
-h2 { font-size: 20px; color: var(--gold); text-shadow: 0 0 10px rgba(246, 210, 122, 0.35); }
-.panel > h2::after { content: ""; display: block; height: 1px; margin-top: 6px; background: linear-gradient(90deg, var(--gold-dark), rgba(246, 210, 122, 0.6) 30%, transparent); }
-h3 { color: #e4d6ff; }
-.panel, .sheet {
-  border: 1px solid rgba(201, 166, 255, 0.35); border-radius: 14px;
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  box-shadow: inset 0 0 0 1px rgba(246, 210, 122, 0.12), inset 0 0 30px rgba(120, 80, 220, 0.15), 0 10px 30px rgba(0, 0, 0, 0.45);
-  background-image:
-    linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold)),
-    linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold));
-  background-size: 14px 1px, 1px 14px, 14px 1px, 1px 14px, 14px 1px, 1px 14px, 14px 1px, 1px 14px;
-  background-position: 6px 6px, 6px 6px, calc(100% - 6px) 6px, calc(100% - 6px) 6px, 6px calc(100% - 6px), 6px calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) calc(100% - 6px);
-  background-repeat: no-repeat;
-  background-color: var(--panel);
-}
-.sheet { border-radius: 18px 18px 0 0; background-color: #160f36; }
-@media (min-width: 600px) { .sheet { border-radius: 18px; } }
-.btn { border-radius: 10px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(70, 52, 140, 0.8), rgba(34, 24, 80, 0.9)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.4); }
-.btn.primary { background: linear-gradient(180deg, #8a5af0, #4a22a8); border-color: #d8c0ff; box-shadow: 0 0 16px rgba(160, 110, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.3); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4); }
-.bar { border-radius: 999px; border: 1px solid rgba(201, 166, 255, 0.3); overflow: hidden; }
-.bar > span { box-shadow: 0 0 10px rgba(214, 184, 255, 0.8); }
-.tile, .d-fold, .d-shop-row, .d-inv, .d-slot, .chip, .field input, .time-inputs input { border-radius: 10px; }
-.tabbar { border-top: 1px solid var(--gold-dark); box-shadow: 0 -1px 0 rgba(246, 210, 122, 0.15), 0 -8px 24px rgba(0, 0, 0, 0.6); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-.tabbar button { font-family: var(--body-font); font-weight: 600; }
-.tabbar button.on { color: var(--gold); text-shadow: 0 0 8px rgba(246, 210, 122, 0.7); }
-.tabbar button.on::before { content: ""; position: absolute; top: 4px; left: 50%; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%; background: radial-gradient(circle, rgba(180, 140, 255, 0.45), transparent 70%); animation: astral-orb 2.4s ease-in-out infinite; pointer-events: none; }
-@keyframes astral-orb { 50% { transform: scale(1.25); opacity: 0.6; } }
+
 
 /* equipped items: a gold ring instead of a badge */
 .d-tile.worn { box-shadow: 0 0 0 2px #f6d27a, 0 0 0 4px rgba(0, 0, 0, 0.55); }
@@ -955,3 +887,150 @@ h3 { color: #e4d6ff; }
 .d-hud-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .d-xpbar { height: 10px; margin-top: 5px; }
 .d-bestall { margin-top: 10px; min-height: 38px; padding: 6px 18px; font-size: 14px; }
+
+/* ==================== Realms: rustic, and each area has its own surroundings ====================
+   Character = journal on a leather desk, Skills = library, Quests = cork notice board, Collection = trophy hall,
+   Dungeon = stone keep under a blood moon, Camp: Gear = war tent, Bag = satchel, Forge, Shop = merchant stall, Potions = alchemist. */
+body::before, body::after { display: none !important; }
+.panel, .sheet { background-image: none; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+.panel > h2::after { display: none; }
+.topbar, .tabbar { -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+.tabbar button.on::before { display: none; }
+.brand, h2, .tabbar button.on { text-shadow: none; }
+.btn, .btn.primary { box-shadow: none; text-shadow: none; }
+.bar > span { box-shadow: none; }
+.coin-pill, .streak-pill { box-shadow: none; }
+
+:root {
+  --display-font: 'IM Fell English SC', Georgia, serif;
+  --body-font: 'Alegreya', Georgia, serif;
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .3 0 0 0 0 .12 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --planks: repeating-linear-gradient(90deg, transparent 0 46px, rgba(0, 0, 0, 0.45) 46px 48px), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 9px, rgba(0, 0, 0, 0.06) 9px 11px, transparent 11px 23px);
+  --stone: repeating-linear-gradient(0deg, #0a0908 0 2px, transparent 2px 40px), repeating-linear-gradient(90deg, #0a0908 0 2px, transparent 2px 80px);
+}
+body {
+  --bg: #1e1c1a; --panel: #2a2724; --panel-2: #36322e; --line: #4a4540; --deep: #161412;
+  --text: #e6dcc4; --muted: #a89c86; --gold: #e09a3a; --gold-dark: #8a5a1a; --gold-bg: #2e2216;
+  --accent: #c8b06a; --primary: #7a1e16; --primary-line: #c8a24a; --bar-1: #d8743a; --bar-2: #a8481a;
+  --area-bg: var(--noise), var(--stone), #1e1c1a;
+  --area-panel: var(--noise), #2a2724;
+  --area-frame: 3px solid #0a0908;
+  --area-frame-in: inset 0 0 0 3px #4a4540, inset 0 0 0 5px #0a0908;
+  --area-radius: 2px;
+  font-family: var(--body-font); font-size: 16px;
+  background: var(--area-bg);
+  transition: background-color 0.4s;
+}
+.panel, .sheet, .d-match { background: var(--area-panel); border: var(--area-frame); border-radius: var(--area-radius); box-shadow: var(--area-frame-in), 0 4px 0 rgba(0, 0, 0, 0.5); }
+.topbar { background: var(--noise), #1a1816; border-bottom: 3px solid #0a0908; }
+.tabbar { background: var(--noise), #1a1816; border-top: 3px solid #0a0908; }
+.tabbar button { color: #8a7e6a; font-family: var(--body-font); font-weight: 700; }
+.tabbar button.on { color: #e09a3a; }
+.brand { font-family: var(--display-font); font-weight: 400; font-size: 25px; color: #e09a3a; }
+.coin-pill, .streak-pill { border-radius: 3px; background: #2e2216; }
+h2 { font-family: var(--display-font); font-weight: 400; font-size: 24px; color: var(--gold); }
+h3 { font-family: var(--display-font); font-weight: 400; font-size: 19px; color: var(--accent); }
+.btn { border: 2px solid rgba(0, 0, 0, 0.7); border-radius: 3px; background: var(--noise), var(--panel-2); color: var(--text); font-family: var(--body-font); font-weight: 700; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+.btn.primary { background: var(--noise), var(--primary); color: #f6ead0; box-shadow: inset 0 0 0 1px var(--primary-line); }
+.bar { border-radius: 2px; border: 1px solid rgba(0, 0, 0, 0.6); background: rgba(0, 0, 0, 0.45); }
+.d-ctabs { background: var(--noise), #1a1816; border-bottom: 3px solid #0a0908; }
+.d-ctabs button.on { color: var(--gold); border-bottom-color: var(--gold); }
+.d-chips span, .d-flt button, .d-chip, .d-hubbtn { background: var(--noise), var(--panel-2); border-color: rgba(0, 0, 0, 0.6); color: var(--text); }
+.d-flt button.on { color: var(--gold); border-color: var(--gold); }
+.d-bar { background: linear-gradient(transparent, rgba(10, 9, 8, 0.95) 30%); }
+body[data-view="home"] {
+  --text: #3a2814; --muted: #7a6040; --gold: #7a3a10; --accent: #2f6a2a; --panel-2: #e0cfa8; --deep: #d4c094; --line: #a8875a;
+  --c-common: #6a6458; --c-uncommon: #2f7a2a; --c-rare: #1f5aa8; --c-epic: #6a2a9a; --c-legendary: #a8600a; --c-mythic: #a81e34; --c-divine: #8a7a1a;
+  --area-bg: var(--noise), #3a2414;
+  --area-panel: var(--paper), #eadcbc;
+  --area-frame: 1px solid #8a6a3e;
+  --area-frame-in: 0 0 0 4px #eadcbc, 0 0 0 5px #8a6a3e;
+}
+body[data-view="home"] .btn { background: #e8d6ae; border-color: #8a6a3e; }
+body[data-view="home"] .btn.primary { background: #8e2418; color: #fbe8d0; border-radius: 999px; }
+body[data-view="skills"] {
+  --panel-2: #4a2e22; --gold: #e8c070; --accent: #d8b880;
+  --area-bg: repeating-linear-gradient(0deg, #1a0e08 0 10px, transparent 10px 120px), var(--planks), #2e1c12;
+  --area-panel: var(--noise), #4a2a1e;
+  --area-frame: 2px solid #1a0e08;
+  --area-frame-in: inset 0 0 0 3px #4a2a1e, inset 0 0 0 4px #b8904a;
+  --area-radius: 4px;
+}
+body[data-view="quests"] {
+  --text: #3a2814; --muted: #7a6040; --gold: #7a3a10; --accent: #2f6a2a; --panel-2: #e0cfa8; --deep: #d4c094; --line: #a8875a;
+  --area-bg: var(--noise), radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.06), transparent 60%), #a87a4a;
+  --area-panel: var(--paper), #f0e4c4;
+  --area-frame: 1px solid #b8986a;
+  --area-frame-in: 2px 3px 0 rgba(0, 0, 0, 0.25);
+  --area-radius: 1px;
+}
+body[data-view="quests"] .panel { position: relative; }
+body[data-view="quests"] .panel::before { content: ""; position: absolute; top: -6px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff7a6a, #a81e1e 60%, #5a0a0a); box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.4); }
+body[data-view="quests"] .panel:nth-child(even) { transform: rotate(0.6deg); }
+body[data-view="quests"] .panel:nth-child(odd) { transform: rotate(-0.5deg); }
+body[data-view="quests"] .btn { background: #e8d6ae; border-color: #8a6a3e; }
+body[data-view="collection"] {
+  --panel-2: #3a2216; --gold: #e8c070;
+  --area-bg: var(--noise), radial-gradient(ellipse at 50% 0%, #7a1a22, #3a080e 70%);
+  --area-panel: var(--noise), #2e1a12;
+  --area-frame: 3px solid #160a06;
+  --area-frame-in: inset 0 0 0 2px #b8904a, inset 0 0 0 4px #160a06;
+  --area-radius: 4px;
+}
+body[data-camp="bag"] {
+  --area-bg: var(--noise), radial-gradient(ellipse at 50% 30%, #6a4426, #3a2210 75%);
+}
+body[data-camp="bag"] .d-camp-body { padding: 10px; border: 2px dashed #c8a070; border-radius: 10px; background: var(--noise), #5a3a1e; box-shadow: 0 0 0 4px #5a3a1e, 0 6px 0 4px rgba(0, 0, 0, 0.4); }
+body[data-camp="forge"] {
+  --gold: #ff9a3a; --accent: #ffb060;
+  --area-bg: radial-gradient(ellipse at 50% 115%, rgba(255, 110, 30, 0.55), transparent 55%), var(--noise), #121010;
+}
+body[data-camp="forge"] .d-anvil { background: radial-gradient(circle at 50% 80%, rgba(255, 120, 30, 0.35), transparent 60%), var(--noise), #1c1918; border: 3px solid #0a0908; border-radius: 2px; }
+body[data-camp="shop"] {
+  --gold: #ffd45a;
+  --area-bg: var(--planks), #4a2e16;
+}
+body[data-camp="shop"] .d-camp-body { position: relative; padding-top: 30px; }
+body[data-camp="shop"] .d-camp-body::before { content: ""; position: absolute; top: 0; left: -16px; right: -16px; height: 22px; background: repeating-linear-gradient(90deg, #a8281e 0 22px, #f0e2c0 22px 44px); clip-path: polygon(0 0, 100% 0, 100% 60%, 97.5% 100%, 95% 60%, 92.5% 100%, 90% 60%, 87.5% 100%, 85% 60%, 82.5% 100%, 80% 60%, 77.5% 100%, 75% 60%, 72.5% 100%, 70% 60%, 67.5% 100%, 65% 60%, 62.5% 100%, 60% 60%, 57.5% 100%, 55% 60%, 52.5% 100%, 50% 60%, 47.5% 100%, 45% 60%, 42.5% 100%, 40% 60%, 37.5% 100%, 35% 60%, 32.5% 100%, 30% 60%, 27.5% 100%, 25% 60%, 22.5% 100%, 20% 60%, 17.5% 100%, 15% 60%, 12.5% 100%, 10% 60%, 7.5% 100%, 5% 60%, 2.5% 100%, 0 60%); }
+body[data-camp="shop"] .d-bubble { background: #f6e8c4; border: 2px solid #5a3a12; font-style: normal; }
+body[data-camp="potions"] {
+  --gold: #a8f07a; --accent: #7ae0a0;
+  --area-bg: radial-gradient(circle at 20% 30%, rgba(90, 220, 120, 0.12), transparent 40%), radial-gradient(circle at 80% 70%, rgba(150, 90, 220, 0.12), transparent 40%), var(--noise), #0e1612;
+}
+body[data-camp="potions"] .d-pcard { background: var(--noise), #16241c; border: 2px solid #0a120e; border-radius: 3px; box-shadow: inset 0 0 0 1px #3a5a44; }
+body[data-camp="potions"] .d-pack div { border-color: #3a5a44; }
+.topbar, .tabbar, .d-ctabs { --gold: #e09a3a; --gold-dark: #8a5a1a; --gold-bg: #2e2216; --text: #e6dcc4; --muted: #a89c86; color: #e6dcc4; }
+body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::before, body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::before { inset: 0 0 118px 0; }
+body[data-view="dungeon"]:not([data-camp]) .d-bar { background: linear-gradient(transparent, #0a0908 22%); }
+body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::before { background-repeat: no-repeat; }
+@keyframes realm-fog { from { background-position: 0 0, 0 0; } to { background-position: -200% 0, 0 0; } }
+@keyframes realm-lightning { 0%, 93%, 95.5%, 97.5%, 100% { background-size: 200% 100%, 0 0; } 94% , 96.5% { background-size: 200% 100%, 100% 100%; } }
+body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::before {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20fill%3D%27%23060203%27%20d%3D%27M0%20200v-40l14-6v-30l6-4%204%206v-20l8-30%206%2026v40l10%206v-18l10-4%206%2010v30h18l4-60%206-16%205%2018%203%2058h14v-24l10-30%206%2022v40h20v-80l7-24%207%2022v90h16v-36l10-8%208%2010v-20l6-14%206%2016v46h18l6-30%2010%2030h20v-60l6-20%206%2018v66h24v-30l8-6%206%2010v40z%27%2F%3E%3C%2Fsvg%3E"), radial-gradient(circle at 28% 20%, #c8281e 0 46px, transparent 47px), radial-gradient(circle at 28% 20%, rgba(200,40,30,.35) 46px, transparent 147.20000000000002px), linear-gradient(#0a0204, #2a0608 60%, #4a0e0c);
+  background-size: 100% 40%, auto, auto, auto; background-position: bottom, 0 0, 0 0, 0 0; background-repeat: no-repeat;
+}
+body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap::after {
+  background-image: radial-gradient(2px 2px at 10% 80%, #ff5a2a, transparent), radial-gradient(1.5px 1.5px at 30% 90%, #ff8a3a, transparent), radial-gradient(2px 2px at 55% 85%, #ff5a2a, transparent), radial-gradient(1.5px 1.5px at 75% 95%, #ffaa4a, transparent), radial-gradient(2px 2px at 90% 75%, #ff5a2a, transparent);
+  animation: realm-ash 9s linear infinite;
+}
+@keyframes realm-ash { from { transform: translateY(0); opacity: 0.9; } to { transform: translateY(-70vh); opacity: 0; } }
+@keyframes realm-snow { from { transform: translateY(-20vh); } to { transform: translateY(60vh); } }
+@keyframes realm-blink { from { opacity: 0.2; } to { opacity: 1; } }
+body[data-view="dungeon"]:not([data-camp]) .d-tower-wrap .d-tower-hint { color: #e6dcc4; text-shadow: 0 1px 2px #000; }
+body[data-view="quests"] .streak-big, body[data-view="home"] .streak-big { color: #a8400a; }
+body[data-camp="gear"] .d-camp-body .hint, body[data-camp="gear"] .d-camp-body h3 { text-shadow: 0 1px 2px #000, 0 0 6px #000; }
+body[data-camp="gear"] .d-camp-body .hint { color: #e6dcc4; }
+body[data-camp="gear"] {
+  background: radial-gradient(ellipse at 50% 8%, rgba(255, 190, 90, 0.45), transparent 45%) fixed,
+    linear-gradient(90deg, transparent calc(50% - 4px), #2a1a0e calc(50% - 4px), #4a2e16 50%, #2a1a0e calc(50% + 4px), transparent calc(50% + 4px)) fixed,
+    linear-gradient(115deg, transparent 49.6%, rgba(0, 0, 0, 0.5) 49.6% 50.4%, transparent 50.4%) fixed, linear-gradient(65deg, transparent 49.6%, rgba(0, 0, 0, 0.5) 49.6% 50.4%, transparent 50.4%) fixed,
+    repeating-linear-gradient(90deg, #4a3a24 0 28px, #3e3020 28px 56px) fixed, var(--noise);
+}
+body[data-view="home"], body[data-view="quests"] { --gold-bg: #ecd9a8; --gold-dark: #8a5a1a; }
+body[data-view="home"] .install-banner, body[data-view="home"] .welcome-install { background: #ecd9a8; border-color: #8a5a1a; color: #3a2814; }
+body[data-view="quests"] .btn.primary { background: #8e2418; border-color: #5a140c; color: #fbe8d0; border-radius: 999px; }
+
+/* page content sits on its own layer so area backdrops (e.g. the blood moon) draw between it and the background */
+main { position: relative; z-index: 1; }

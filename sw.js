@@ -1,12 +1,12 @@
 // Offline support: network-first so updates show up straight away, falling back
 // to the cache when offline. Bump VERSION if you add/rename shell files.
-const VERSION = 'v16';
+const VERSION = 'v17';
 const CACHE = `life-rpg-${VERSION}`;
 const SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest',
   './js/app.js', './js/game.js', './js/data.js', './js/sprites.js', './js/sprites2.js', './js/pets.js', './js/install.js', './js/updates.js', './js/engage.js', './js/sfx.js', './js/celebrate.js', './js/card.js', './js/uiicons.js', './js/skillicons.js',
   './js/dungeon/ddata.js', './js/dungeon/engine.js', './js/dungeon/dgame.js', './js/dungeon/dart.js', './js/dungeon/dui.js', './js/dungeon/dbot.js', './js/dungeon/gearart.js',
-  './fonts/cinzel-latin.woff2', './fonts/cinzel-decorative-700.woff2', './fonts/cinzel-decorative-900.woff2', './fonts/spectral-400.woff2', './fonts/spectral-600.woff2', './fonts/spectral-400-italic.woff2',
+  './fonts/cinzel-latin.woff2', './fonts/im-fell-english-sc.woff2', './fonts/alegreya.woff2', './fonts/alegreya-italic.woff2',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/logo.png',
 ];
 
