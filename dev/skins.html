@@ -34,11 +34,11 @@
     ['keep', 'Iron & Stone Keep', 'Gritty dungeon: cut stone walls, riveted iron frames, bone-white text, torch-orange headings and blood-red banner buttons.'],
   ];
   const bar = document.getElementById('bar'), game = document.getElementById('game'), about = document.getElementById('about');
-  const VARS = { tower: [['tower-moon', 'Moonlit castle'], ['tower-blood', 'Blood moon ruins'], ['tower-sections', 'Section skies']], gear: [['gear-armory', 'Armory'], ['gear-banner', 'Banner hall'], ['gear-campfire', 'Campfire']] };
-  let cur = '', vt = 'tower-moon', vg = 'gear-armory';
+  const VARS = { tower: [['tower-moon', 'Moonlit castle'], ['tower-blood', 'Blood moon ruins'], ['tower-sections', 'Section skies']], gear: [['gear-ramparts', 'Blood moon ramparts'], ['gear-rack', 'Weapon racks'], ['gear-hall', 'Great hall'], ['gear-tent', 'War tent']] };
+  let cur = '', vt = 'tower-blood', vg = 'gear-ramparts';
   const varsEl = document.getElementById('vars');
   function drawVars() {
-    varsEl.innerHTML = cur !== 'realms' ? '' : Object.entries(VARS).map(([k, list]) => '<span>' + (k === 'tower' ? 'Tower:' : 'Gear:') + '</span>' + list.map(([v, l]) => '<button data-v="' + v + '" class="' + (v === vt || v === vg ? 'on' : '') + '">' + l + '</button>').join('')).join('');
+    varsEl.innerHTML = cur !== 'realms' ? '' : Object.entries(VARS).map(([k, list]) => '<span>' + (k === 'tower' ? 'Tower:' : 'Camp gear room:') + '</span>' + list.map(([v, l]) => '<button data-v="' + v + '" class="' + (v === vt || v === vg ? 'on' : '') + '">' + l + '</button>').join('')).join('');
     varsEl.querySelectorAll('button').forEach((b) => b.onclick = () => { if (b.dataset.v.startsWith('tower')) vt = b.dataset.v; else vg = b.dataset.v; pick('realms'); });
   }
   function pick(id) {
