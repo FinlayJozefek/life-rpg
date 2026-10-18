@@ -1227,3 +1227,7 @@ main { position: relative; z-index: 1; }
 .q-win p { margin: 0 0 8px; line-height: 1.4; }
 .q-ico img { width: 72px; image-rendering: pixelated; }
 .q-note { padding: 8px 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); border: 1px solid #8a6a1a; font-size: 14px; text-align: left; }
+
+/* numbers: easy-to-read, even-height digits (the title font's old-style numerals are hard to read) */
+.coin-pill, .streak-pill { font-family: var(--body-font) !important; font-weight: 700; font-size: 15px; }
+body, .coin-pill, .streak-pill, .stat-num, .d-dpow, .d-hptext, .d-pop, .tc-seal, .d-price, .d-chip, .ch-cell b { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; }

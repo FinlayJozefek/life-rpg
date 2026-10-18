@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Font trials</title>
+<!-- Dev-only page: font pairings for an MMO / RPG feel, previewed on samples and on the real game. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" id="gf">
+<style>
+  body { padding: 0 0 40px; }
+  body::before, body::after { display: none !important; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 10px; display: grid; grid-template-columns: 1fr 400px; gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } .phonebox { position: static; } .phone { height: 640px; } }
+  h1 { font: 400 26px var(--display-font); color: #e09a3a; margin: 6px 0 2px; }
+  .intro { color: #a89c86; font-size: 14px; margin: 0 0 10px; }
+  .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .f { position: relative; padding: 12px 12px 10px; border: 3px solid #0a0908; border-radius: 4px; background: var(--noise), #2a2724; box-shadow: inset 0 0 0 2px #4a4540; color: #e6dcc4; cursor: pointer; }
+  .f.on { box-shadow: inset 0 0 0 2px #e09a3a, 0 0 12px rgba(224, 154, 58, 0.35); }
+  .f .tag { position: absolute; top: 8px; right: 10px; font: 600 11px system-ui, sans-serif; color: #a89c86; }
+  .f .title { font-size: 30px; color: #e09a3a; line-height: 1.05; }
+  .f .h { font-size: 19px; color: #e6dcc4; margin: 4px 0 6px; }
+  .f .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+  .f .coins { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 3px; border: 1px solid #8a5a1a; background: #2e2216; color: #e09a3a; font-weight: 700; font-size: 16px; }
+  .f .coins i { width: 11px; height: 11px; background: #e09a3a; box-shadow: inset -2px -2px 0 #8a5a1a; }
+  .f .btn2 { padding: 5px 12px; border: 2px solid #0a0908; border-radius: 3px; background: #7a1e16; color: #f6ead0; font-weight: 700; font-size: 15px; box-shadow: inset 0 0 0 1px #c8a24a; }
+  .f .ribbon { padding: 3px 14px; background: #7a1e16; color: #fbe8d0; font-size: 15px; clip-path: polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%, 6% 50%); }
+  .f .st2 { font-size: 13px; color: #a89c86; }
+  .f .st2 b { color: #e6dcc4; }
+  .f .p { font-size: 14.5px; line-height: 1.4; margin: 4px 0 0; }
+  .f .names { font: 600 11px system-ui, sans-serif; color: #7a6e5a; margin-top: 6px; }
+  .phonebox { position: sticky; top: 10px; }
+  .phonebox .now { text-align: center; font: 600 13px system-ui, sans-serif; color: #e09a3a; margin-bottom: 6px; }
+  .phone { width: 100%; height: 760px; max-height: calc(100vh - 60px); border: 8px solid #000; border-radius: 28px; overflow: hidden; background: #000; }
+  iframe { width: 100%; height: 100%; border: 0; display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>Font trials</h1>
+    <p class="intro">Tap a style to see it on the real game in the phone (with your save). Each sample shows the title, a heading, coins, a button, a move card and some normal text, so you can check the numbers are easy to read.</p>
+    <div class="list" id="list"></div>
+  </div>
+  <div class="phonebox"><div class="now" id="now"></div><div class="phone"><iframe id="game" title="Life RPG"></iframe></div></div>
+</div>
+<script>
+  const FONTS = [
+    ['Current', 'IM Fell English SC', 'Alegreya', 'What the game uses now: old printing-press titles, bookish text.'],
+    ['Classic MMO', 'Cinzel', 'Alegreya Sans', 'Roman-carved capitals like big fantasy MMOs, with a clean modern text font.'],
+    ['Kingdom', 'Marcellus SC', 'Marcellus', 'Close to the font famous MMOs use for their menus: elegant, flared, very readable.'],
+    ['Old Scrolls', 'Almendra SC', 'Almendra', 'Hand-lettered medieval scrolls: soft, a little calligraphic.'],
+    ['Runic Blackletter', 'Pirata One', 'Alegreya Sans', 'Sharp blackletter titles for a darker, gothic dungeon feel.'],
+    ['Gothic Keep', 'Grenze Gotisch', 'Grenze', 'Heavy gothic titles with matching condensed text: grim and bold.'],
+    ['Celtic', 'Uncial Antiqua', 'Crimson Pro', 'Rounded Celtic uncials like old Irish manuscripts.'],
+    ['Medieval Hand', 'MedievalSharp', 'Alegreya Sans', 'Classic hand-drawn medieval lettering, very "RPG".'],
+    ['Elven', 'Cormorant Unicase', 'Cormorant Garamond', 'Tall, airy and elegant: elves and ancient libraries.'],
+    ['Arcane Tome', 'Metamorphous', 'Lora', 'Spiky magical letters from a wizard\'s spellbook.'],
+    ['Calligrapher', 'Fondamento', 'Alegreya', 'Ink-pen calligraphy titles: rustic and handmade.'],
+    ['Storybook', 'Macondo', 'Nunito', 'Playful fairy-tale fantasy, friendlier and softer.'],
+    ['Heavy Metal', 'New Rocker', 'Alegreya Sans', 'Spiky metal-band lettering for maximum dark fantasy.'],
+    ['Pixel MMO', 'Silkscreen', 'Pixelify Sans', 'Full pixel fonts to match the pixel art, like retro online RPGs.'],
+  ];
+  const fams = [...new Set(FONTS.flatMap(([, a, b]) => [a, b]))].map((f) => 'family=' + f.replace(/ /g, '+')).join('&');
+  document.getElementById('gf').href = `https://fonts.googleapis.com/css2?${fams}&display=swap`;
+  const list = document.getElementById('list'), game = document.getElementById('game');
+  list.innerHTML = FONTS.map(([name, d, b, blurb], i) => `<div class="f" data-i="${i}" style="font-family:'${b}',serif">
+      <span class="tag">${name}</span>
+      <div class="title" style="font-family:'${d}',serif">Life RPG</div>
+      <div class="h" style="font-family:'${d}',serif">Infernal Spire · Floor 41</div>
+      <div class="row"><span class="coins"><i></i>99,322</span><span class="btn2">Climb floor 41</span><span class="ribbon" style="font-family:'${d}',serif">Master Slash</span></div>
+      <div class="st2">Atk <b>1,498</b> · Def <b>3,687</b> · HP <b>17,335 / 17,335</b> · Crypts level <b>30</b></div>
+      <p class="p">${blurb} The Demon Lord unfurls his wings and the Spire erupts in flame!</p>
+      <div class="names">${d} + ${b}</div>
+    </div>`).join('');
+  function pick(i) {
+    const [name, d, b] = FONTS[i];
+    list.querySelectorAll('.f').forEach((el) => el.classList.toggle('on', +el.dataset.i === i));
+    game.src = `../index.html?dfont=${encodeURIComponent(d + '|' + b)}`;
+    document.getElementById('now').textContent = `${name}: ${d} + ${b}`;
+  }
+  list.onclick = (e) => { const f = e.target.closest('.f'); if (f) pick(+f.dataset.i); };
+  pick(0);
+</script>
+</body>
+</html>

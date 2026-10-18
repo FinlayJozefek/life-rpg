@@ -26,6 +26,15 @@ if (skinParam && /^[a-z-]+$/.test(skinParam)) {
   document.head.insertAdjacentHTML('beforeend', `<link rel="stylesheet" href="dev/skins/${skinParam}.css">`);
   document.getElementById('splash')?.remove();
 }
+// Dev-only font previews: ?dfont=Display Font|Body Font (Google Fonts) swaps the game's fonts for a look.
+const dfont = new URLSearchParams(location.search).get('dfont');
+if (dfont && /^[A-Za-z0-9 |]+$/.test(dfont)) {
+  const [disp, body = disp] = dfont.split('|').map((f) => f.trim());
+  const fam = (f) => `family=${f.replace(/ /g, '+')}`;
+  document.head.insertAdjacentHTML('beforeend', `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${fam(disp)}&${fam(body)}&display=swap">
+    <style>:root, body { --display-font: '${disp}', serif; --body-font: '${body}', serif; } body { font-family: var(--body-font); }</style>`);
+  document.getElementById('splash')?.remove();
+}
 
 let state = load();
 let view = 'home';
