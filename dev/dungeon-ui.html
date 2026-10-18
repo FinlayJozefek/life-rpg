@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dungeon layout ideas</title>
+<!-- Dev-only page: brainstorm layouts for the Dungeon's gear, bag, forge, shop and potions. Uses your test save. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding: 0 0 30px; background: #0a0a14; }
+  .dpick { position: sticky; top: 0; z-index: 30; background: #0a0a14; padding: 8px 8px 6px; border-bottom: 1px solid #2a2a40; }
+  .dpick .prow { display: flex; gap: 6px; max-width: 420px; margin: 0 auto; }
+  .dpick button { flex: 1; padding: 8px 4px; border: 2px solid var(--line); background: var(--panel); color: var(--muted); font: 700 12px var(--display-font); border-radius: 8px; }
+  .dpick button.on { border-color: var(--gold); color: var(--gold); background: var(--gold-bg); }
+  .blurb { max-width: 420px; margin: 6px auto 0; font-size: 12px; color: var(--muted); text-align: center; padding: 0 10px; }
+  .phone { position: relative; max-width: 400px; margin: 10px auto; height: 760px; max-height: calc(100vh - 150px); border: 8px solid #000; border-radius: 30px; overflow: hidden; background: radial-gradient(circle at 50% -20%, var(--glow), var(--bg) 60%); box-shadow: 0 10px 40px #000; display: flex; flex-direction: column; }
+  @media (max-width: 440px) { .phone { border: 0; border-radius: 0; height: calc(100vh - 110px); max-height: none; margin: 4px 0 0; } }
+  .scr { flex: 1; overflow-y: auto; padding: 10px 12px 20px; }
+  .px { image-rendering: pixelated; }
+  .toast2 { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); background: #000c; color: #fff; padding: 6px 12px; border-radius: 999px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 9; }
+  .toast2.on { opacity: 1; }
+
+  /* camp tabs (direction 1) */
+  .ctabs { display: flex; background: rgba(0,0,0,.35); border-bottom: 2px solid var(--line); }
+  .ctabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0 5px; background: none; border: 0; color: var(--muted); font-size: 10px; font-weight: 700; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+  .ctabs button img { width: 26px; height: 26px; }
+  .ctabs button.on { color: var(--gold); border-bottom-color: var(--gold); }
+  .camp-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+  .camp-head h2 { margin: 0; flex: 1; font-size: 18px; }
+  .back { background: var(--panel-2); border: 2px solid var(--line); color: var(--text); border-radius: 8px; padding: 4px 10px; font-size: 13px; }
+  .coins { color: var(--gold); font-weight: 700; font-size: 13px; }
+
+  /* paperdoll */
+  .doll { display: grid; grid-template-columns: minmax(0, 66px) 1fr minmax(0, 66px); gap: 8px; align-items: center; }
+  .doll-col { display: flex; flex-direction: column; gap: 8px; }
+  .slot { position: relative; width: 100%; aspect-ratio: 1; border-radius: 10px; background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.07), rgba(0,0,0,.45)); border: 2px solid var(--rc, var(--line)); box-shadow: inset 0 0 12px var(--rcg, transparent); display: grid; place-items: center; padding: 0; }
+  .slot img { width: 92%; }
+  .slot .lbl { position: absolute; bottom: -1px; left: 0; right: 0; font-size: 8.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); text-align: center; background: rgba(0,0,0,.55); border-radius: 0 0 8px 8px; }
+  .slot .plus { position: absolute; top: 2px; right: 4px; font: 700 11px var(--display-font); color: var(--accent); text-shadow: 1px 1px 0 #000; }
+  .slot.empty { opacity: .45; }
+  .hero { text-align: center; }
+  .hero img { width: 100%; max-width: 120px; }
+  .hero .pw { font: 700 22px var(--display-font); color: var(--gold); }
+  .hero .pwl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .chips2 { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 12px 0 8px; }
+  .chips2 span { background: var(--deep); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; font-size: 12px; }
+  .chips2 b { color: var(--text); }
+  .odds2 { border-left: 5px solid var(--oc); background: var(--panel); border-radius: 10px; padding: 7px 10px; font-size: 12px; }
+  .odds2 b { color: var(--oc); font: 700 16px var(--display-font); }
+
+  /* filters */
+  .flt { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+  .flt button { flex: none; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+  .flt button img { width: 18px; height: 18px; }
+  .flt button.on { color: var(--gold); border-color: var(--gold); background: var(--gold-bg); }
+
+  /* bag grid */
+  .bag { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 4px; }
+  .tile2 { position: relative; aspect-ratio: 1; border-radius: 9px; padding: 0; background: radial-gradient(circle at 50% 35%, var(--rcb, rgba(255,255,255,.05)), rgba(0,0,0,.5) 75%); border: 2px solid var(--rc); display: grid; place-items: center; }
+  .tile2 img { width: 92%; }
+  .tile2 .e { position: absolute; top: 2px; left: 3px; font: 700 9px var(--display-font); background: var(--gold); color: #000; padding: 0 3px; border-radius: 3px; }
+  .tile2 .n { position: absolute; bottom: 1px; right: 3px; font: 700 10px var(--display-font); color: #fff; text-shadow: 1px 1px 0 #000; }
+  .tile2 .up { position: absolute; top: 1px; right: 3px; font-size: 11px; color: var(--accent); font-weight: 700; text-shadow: 1px 1px 0 #000; }
+  .cap { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin: 8px 2px 2px; }
+
+  /* shop */
+  .smith { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .smith img { width: 56px; }
+  .bubble { position: relative; flex: 1; background: #f4ecd8; color: #2a2010; border-radius: 12px; padding: 8px 10px; font-size: 12.5px; font-style: italic; }
+  .bubble::before { content: ''; position: absolute; left: -8px; top: 16px; border: 8px solid transparent; border-right-color: #f4ecd8; border-left: 0; }
+  .feat { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 10px; scrollbar-width: none; }
+  .fcard { flex: none; width: 70%; scroll-snap-align: center; border-radius: 14px; padding: 10px; border: 2px solid var(--rc); background: radial-gradient(circle at 50% 30%, var(--rcb), #07060c 80%); text-align: center; }
+  .fcard canvas { width: 140px; height: 140px; }
+  .fcard .nm { font: 700 15px var(--display-font); }
+  .fcard .pp { font-size: 11px; color: var(--accent); min-height: 30px; margin: 2px 0 6px; }
+  .price { display: inline-flex; align-items: center; gap: 4px; background: var(--gold-bg); border: 1px solid var(--gold-dark); color: var(--gold); font-weight: 700; border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+  .price.no { opacity: .5; }
+  .stock { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .scard { border-radius: 10px; border: 2px solid var(--rc); background: radial-gradient(circle at 50% 30%, var(--rcb), rgba(0,0,0,.5) 80%); padding: 6px 4px 8px; text-align: center; }
+  .scard img { width: 72px; }
+  .scard .nm { font-size: 11px; font-weight: 700; line-height: 1.15; min-height: 26px; }
+  .scard .price { font-size: 11px; padding: 2px 8px; margin-top: 4px; }
+  h4.sh { font: 700 12px var(--display-font); color: var(--gold); margin: 12px 0 6px; letter-spacing: .5px; }
+
+  /* forge */
+  .strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+  .strip .tile2 { flex: none; width: 58px; }
+  .strip .tile2.sel { box-shadow: 0 0 0 2px var(--gold), 0 0 12px rgba(255,201,74,.6); }
+  .anvil { margin-top: 8px; border-radius: 14px; padding: 12px; text-align: center; background: radial-gradient(circle at 50% 45%, rgba(255,140,40,.22), transparent 60%), var(--panel); border: 2px solid var(--line); position: relative; overflow: hidden; }
+  .anvil canvas { width: 150px; height: 150px; }
+  .anvil .lv { font: 700 20px var(--display-font); }
+  .pips { display: flex; gap: 3px; justify-content: center; margin: 6px 0; }
+  .pips i { width: 16px; height: 6px; border-radius: 2px; background: var(--deep); border: 1px solid var(--line); }
+  .pips i.on { background: var(--gold); border-color: var(--gold-dark); box-shadow: 0 0 6px rgba(255,201,74,.6); }
+  .pips i.nx { background: rgba(255,201,74,.35); animation: blink2 1s infinite; }
+  @keyframes blink2 { 50% { opacity: .3; } }
+  .diff { display: flex; justify-content: center; gap: 14px; font-size: 13px; margin: 6px 0; }
+  .diff b { color: var(--accent); }
+  .cost { display: flex; justify-content: center; gap: 8px; font-size: 12px; margin: 6px 0 10px; }
+  .cost span { background: var(--deep); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; }
+  .cost .bad { color: #ff7a6a; border-color: #6a2a2a; }
+  .strike { width: 100%; }
+  .spark { position: absolute; width: 4px; height: 4px; background: #ffd27a; box-shadow: 0 0 6px #ff8a2e; pointer-events: none; animation: spk .7s ease-out forwards; }
+  @keyframes spk { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+
+  /* potions shelf */
+  .pack { display: flex; gap: 6px; justify-content: center; margin: 4px 0 12px; }
+  .pack div { width: 56px; height: 56px; border-radius: 10px; border: 2px dashed var(--line); display: grid; place-items: center; font-size: 22px; }
+  .pack div.f { border-style: solid; border-color: #e8435a; background: rgba(232,67,90,.12); }
+  .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pcard { border-radius: 10px; background: var(--panel); border: 2px solid var(--line); padding: 8px 4px; text-align: center; font-size: 11px; }
+  .pcard .ic { font-size: 30px; filter: drop-shadow(0 0 6px var(--pc)); color: var(--pc); }
+  .pcard b { display: block; font-size: 12px; margin: 2px 0; }
+  .pcard .own { color: var(--muted); }
+
+  /* direction 2: clean lists */
+  .seg2 { display: flex; background: var(--deep); border-radius: 10px; padding: 3px; margin: 8px 12px 0; }
+  .seg2 button { flex: 1; border: 0; background: none; color: var(--muted); padding: 7px 0; border-radius: 8px; font-weight: 700; font-size: 12px; }
+  .seg2 button.on { background: var(--panel-2); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+  .lrow { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,.06); background: none; border-left: 0; border-right: 0; border-top: 0; width: 100%; color: var(--text); text-align: left; }
+  .lrow img { width: 46px; flex: none; }
+  .lrow .t { flex: 1; min-width: 0; line-height: 1.25; }
+  .lrow .t b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lrow .t span { font-size: 11px; color: var(--muted); }
+  .lrow .r { text-align: right; font-size: 12px; font-weight: 700; flex: none; }
+  .up2 { color: var(--accent); } .dn2 { color: #ff7a6a; } .eq2 { color: var(--gold); font-size: 10px; }
+  .grp { font: 700 11px var(--display-font); color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin: 14px 2px 2px; }
+  .search { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--deep); color: var(--text); font-size: 14px; margin-bottom: 8px; }
+  .stepper { display: flex; align-items: center; gap: 6px; }
+  .stepper button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font-size: 16px; }
+  .mini-pips { display: inline-flex; gap: 2px; vertical-align: middle; margin-left: 4px; }
+  .mini-pips i { width: 5px; height: 5px; border-radius: 1px; background: var(--deep); }
+  .mini-pips i.on { background: var(--gold); }
+
+  /* item sheet (shared) */
+  .sheet2 { position: absolute; inset: 0; z-index: 8; background: rgba(0,0,0,.6); display: none; align-items: flex-end; }
+  .sheet2.on { display: flex; }
+  .sheet2 .in { width: 100%; max-height: 85%; overflow-y: auto; background: var(--panel); border-top: 2px solid var(--line); border-radius: 18px 18px 0 0; padding: 12px 14px 16px; animation: up .2s; }
+  .sheet2 .top { display: flex; gap: 10px; align-items: center; }
+  .sheet2 .card3 { width: 110px; height: 110px; flex: none; border-radius: 12px; border: 2px solid var(--rc); background: radial-gradient(circle at 50% 35%, var(--rcb), #07060c 80%); display: grid; place-items: center; }
+  .sheet2 .card3 canvas { width: 104px; height: 104px; }
+  .cmpt { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0; }
+  .cmpt td { padding: 3px 4px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .cmpt td:nth-child(2), .cmpt td:nth-child(3) { text-align: right; }
+  .acts { display: flex; gap: 8px; }
+  .acts .btn { flex: 1; min-height: 40px; }
+</style>
+</head>
+<body>
+<div class="dpick">
+  <div class="prow"><button data-d="1" class="on">1 · Camp (game feel)</button><button data-d="2">2 · Clean lists (app feel)</button></div>
+  <div class="blurb" id="blurb"></div>
+</div>
+<div class="phone" id="phone"></div>
+
+<script type="module">
+import { DITEMS, SECTIONS, MATERIALS, POTIONS, RAR_NAME, SLOT_NAME_D, GEAR_SLOTS_D } from '../js/dungeon/ddata.js';
+import { newDungeon, buildPlayer, powerScore, itemStats, buyPrice, upgradeCost, blacksmithStock, cryptsLevel, sectionOf } from '../js/dungeon/dgame.js';
+import { gearArtIcon, mountGearArt } from '../js/dungeon/gearart.js';
+import { enemyIcon } from '../js/dungeon/dart.js';
+import { uiIcon } from '../js/uiicons.js';
+import { avatarDataUrl } from '../js/sprites2.js';
+import { winChance, oddsLabel } from '../js/dungeon/dbot.js';
+
+// ----- data: your test save, or a sample -----
+let save = null; try { save = JSON.parse(localStorage.getItem('liferpg.save.v1')); } catch {}
+let dg = save?.dungeon?.started ? save.dungeon : null;
+if (!dg) {
+  dg = newDungeon(); dg.started = true; dg.xp = 9000; dg.climb = 24;
+  for (const id of ['d1.goblin-bane-axe', 'd1.goblin-warlord-helm', 'd2.blessed-longsword', 'd2.wraithweave-robe', 'd2.holy-water-flask', 'd2.bonecage-boots', 'd3.earthshaker-maul', 'd3.obsidian-helm', 'd1.studded-leggings', 'd2.coffin-lid']) dg.inv[id] = 1;
+  dg.equipped = { weapon: 'd2.blessed-longsword', helmet: 'd1.goblin-warlord-helm', chest: 'd2.wraithweave-robe', legs: 'd1.studded-leggings', boots: 'd2.bonecage-boots', offhand: 'd2.holy-water-flask' };
+  dg.upgrades = { 'd2.blessed-longsword': 3 }; dg.materials = { 'goblin-scrap': 6, 'bone-dust': 2 }; dg.potions = { 'hp-medium': 2 };
+}
+const coins = save?.coins ?? 2400;
+const hero = avatarDataUrl(save ? { head: save.equipped?.head, body: save.equipped?.body, feet: save.equipped?.feet } : {}, 4);
+
+const RC = { common: '#6a6a66', uncommon: '#4a9a46', rare: '#3a78c8', epic: '#8a4ac8', legendary: '#d88a10', mythic: '#d0384e', divine: '#e8d890' };
+const RCB = { common: 'rgba(255,255,255,.05)', uncommon: 'rgba(95,191,90,.18)', rare: 'rgba(74,144,226,.22)', epic: 'rgba(163,90,224,.26)', legendary: 'rgba(240,160,32,.3)', mythic: 'rgba(232,67,90,.32)', divine: 'rgba(255,241,168,.35)' };
+const ORDER = ['divine', 'mythic', 'legendary', 'epic', 'rare', 'uncommon', 'common'];
+const rv = (r) => `--rc:${RC[r]};--rcb:${RCB[r]}`;
+const art = (id, s = 3) => gearArtIcon(DITEMS[id], s);
+const owned = () => Object.keys(dg.inv).filter((id) => dg.inv[id] > 0).sort((a, b) => ORDER.indexOf(DITEMS[a].rarity) - ORDER.indexOf(DITEMS[b].rarity));
+const isEq = (id) => Object.values(dg.equipped).includes(id);
+const powerNow = () => powerScore(buildPlayer(dg));
+const powerWith = (id) => powerScore(buildPlayer(dg, { equipped: { ...dg.equipped, [DITEMS[id].slot]: id } }));
+const statText = (id) => { const s = itemStats(id, dg.upgrades[id] || 0); return [s.atk && `${s.atk} Atk`, s.def && `${s.def} Def`, s.hp && `${s.hp} HP`, s.crit && `+${Math.round(s.crit * 100)}% crit`].filter(Boolean).join(' · '); };
+const next = Math.min(50, dg.climb), nsec = SECTIONS[sectionOf(next) - 1];
+const fmt = (n) => Math.round(n).toLocaleString('en-GB');
+
+let dir = '1', tab = 'gear', filter = 'all', fSec = 0, forgeSel = null, stops = [];
+const phone = document.getElementById('phone');
+const BLURB = {
+  1: 'Everything lives in one "Camp" screen with icon tabs. Gear is a paperdoll around your character, the Bag is a grid of item tiles, the Forge is an anvil, the Shop is a merchant with a Masterworks showcase, and Potions sit on a shelf.',
+  2: 'Same screens as tidy lists, like a modern app: a segmented switch at the top, filters, and every item shows how much Power it would add or remove compared with what you wear.',
+};
+function toast(msg) { const t = phone.querySelector('.toast2'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1400); }
+function mountCards(root) { root.querySelectorAll('canvas[data-art]').forEach((cv) => stops.push(mountGearArt(cv, DITEMS[cv.dataset.art], 3))); }
+
+// ----- shared item sheet with compare -----
+function sheet(id) {
+  const it = DITEMS[id], cur = dg.equipped[it.slot];
+  const a = itemStats(id, dg.upgrades[id] || 0), b = cur ? itemStats(cur, dg.upgrades[cur] || 0) : { atk: 0, def: 0, hp: 0, crit: 0 };
+  const row = (k, lab, pct) => { const x = a[k] || 0, y = b[k] || 0; if (!x && !y) return ''; const d = x - y; const f = (v) => (pct ? Math.round(v * 100) + '%' : fmt(v)); return `<tr><td>${lab}</td><td>${f(x)}</td><td class="${d > 0 ? 'up2' : d < 0 ? 'dn2' : 'muted'}">${d === 0 ? '–' : (d > 0 ? '▲ ' : '▼ ') + f(Math.abs(d))}</td></tr>`; };
+  const pw = powerWith(id) - powerNow();
+  let odds = '';
+  try { const now = winChance(dg, next), then = winChance({ ...dg, equipped: { ...dg.equipped, [it.slot]: id } }, next); odds = `<p class="small">Chance to beat floor ${next}: <b>${Math.round(now * 100)}%</b> → <b class="${then > now ? 'up2' : then < now ? 'dn2' : ''}">${Math.round(then * 100)}%</b></p>`; } catch {}
+  const s = phone.querySelector('.sheet2');
+  s.innerHTML = `<div class="in"><div class="top"><div class="card3" style="${rv(it.rarity)}"><canvas data-art="${id}"></canvas></div>
+    <div><div style="font:700 17px var(--display-font)">${it.name}${dg.upgrades[id] ? ` <span class="up2">+${dg.upgrades[id]}</span>` : ''}</div><span class="rtag r-${it.rarity}">${RAR_NAME[it.rarity]}</span> <span class="small muted">${SLOT_NAME_D[it.slot]} · ${SECTIONS[it.section - 1]?.name || 'Starter'}</span>
+    <div class="small" style="margin-top:4px">Power <b class="${pw > 0 ? 'up2' : pw < 0 ? 'dn2' : ''}">${pw > 0 ? '+' : ''}${fmt(pw)}</b> ${isEq(id) ? '<span class="eq2">EQUIPPED</span>' : ''}</div></div></div>
+    <table class="cmpt"><tr><td class="muted small">vs ${cur ? DITEMS[cur].name : 'empty slot'}</td><td class="muted small">this</td><td class="muted small">change</td></tr>${row('atk', 'Attack')}${row('def', 'Defence')}${row('hp', 'Health')}${row('crit', 'Crit', true)}</table>
+    ${odds}
+    <div class="acts"><button class="btn primary" data-fake="Equipped">${isEq(id) ? 'Unequip' : 'Equip'}</button><button class="btn" data-go="forge" data-id="${id}">Upgrade</button><button class="btn" data-fake="Sold">Sell</button></div></div>`;
+  s.classList.add('on'); mountCards(s);
+}
+
+// ===== direction 1: camp =====
+const CT = [['gear', 'Gear', uiIcon('swords', 'color', 3)], ['bag', 'Bag', uiIcon('chest', 'color', 3)], ['forge', 'Forge', uiIcon('anvil', 'color', 3)], ['shop', 'Shop', uiIcon('coin', 'color', 3)], ['potions', 'Potions', uiIcon('potion', 'color', 3)]];
+function slotBtn(slot) {
+  const id = dg.equipped[slot]; const r = id ? DITEMS[id].rarity : null;
+  return `<button class="slot ${id ? '' : 'empty'}" style="${id ? rv(r) + `;--rcg:${RCB[r]}` : ''}" ${id ? `data-item="${id}"` : ''}>${id ? `<img class="px" src="${art(id)}">` : ''}${id && dg.upgrades[id] ? `<span class="plus">+${dg.upgrades[id]}</span>` : ''}<span class="lbl">${SLOT_NAME_D[slot]}</span></button>`;
+}
+function oddsBox() {
+  try { const c = winChance(dg, next), l = oddsLabel(c); const col = { 'odds-good': '#3ee0a0', 'odds-ok': '#ffc94a', 'odds-risky': '#ff9a3a', 'odds-bad': '#ff5a4a' }[l.cls];
+    return `<div class="odds2" style="--oc:${col}"><b>${Math.round(c * 100)}%</b> to beat floor ${next} · ${l.text}</div>`; } catch { return ''; }
+}
+function campGear() {
+  const p = buildPlayer(dg);
+  return `<div class="doll"><div class="doll-col">${slotBtn('helmet')}${slotBtn('chest')}${slotBtn('legs')}</div>
+    <div class="hero"><img class="px" src="${hero}"><div class="pw">${fmt(powerScore(p))}</div><div class="pwl">Power</div></div>
+    <div class="doll-col">${slotBtn('weapon')}${slotBtn('offhand')}${slotBtn('boots')}</div></div>
+    <div class="chips2"><span>Atk <b>${fmt(p.atk)}</b></span><span>Def <b>${fmt(p.def)}</b></span><span>HP <b>${fmt(p.maxHp)}</b></span><span>Crit <b>${Math.round(p.crit * 100)}%</b></span>${p.dodge ? `<span>Dodge <b>${Math.round(p.dodge * 100)}%</b></span>` : ''}</div>
+    ${oddsBox()}<p class="small muted center" style="margin-top:10px">Tap a slot to compare, upgrade or swap.</p>`;
+}
+const FILT = [['all', 'All'], ['weapon', 'Weapons'], ['armour', 'Armour'], ['offhand', 'Off-hand']];
+function bagFilter(id) { const s = DITEMS[id].slot; return filter === 'all' || (filter === 'armour' ? ['helmet', 'chest', 'legs', 'boots'].includes(s) : s === filter); }
+function campBag() {
+  const list = owned().filter(bagFilter).filter((id) => !fSec || Math.max(1, DITEMS[id].section) === fSec);
+  const tiles = list.map((id) => `<button class="tile2" style="${rv(DITEMS[id].rarity)}" data-item="${id}"><img class="px" src="${art(id)}">${isEq(id) ? '<span class="e">E</span>' : ''}${dg.upgrades[id] ? `<span class="up">+${dg.upgrades[id]}</span>` : ''}${dg.inv[id] > 1 ? `<span class="n">×${dg.inv[id]}</span>` : ''}</button>`).join('');
+  const empties = Math.max(0, 25 - list.length);
+  return `<div class="flt">${FILT.map(([k, l]) => `<button class="${filter === k ? 'on' : ''}" data-f="${k}">${l}</button>`).join('')}</div>
+    <div class="flt"><button class="${!fSec ? 'on' : ''}" data-s="0">Every section</button>${SECTIONS.map((s) => `<button class="${fSec === s.id ? 'on' : ''}" data-s="${s.id}"><img class="px" src="${enemyIcon(s.boss, 1)}">${s.name.split(' ')[1] || s.name}</button>`).join('')}</div>
+    <div class="cap"><span>${list.length} items · best first</span><span>Materials: ${Object.entries(dg.materials).filter(([, n]) => n).map(([m, n]) => `${MATERIALS[m].name} ×${n}`).join(', ') || 'none'}</span></div>
+    <div class="bag">${tiles}${'<div class="tile2" style="--rc:rgba(255,255,255,.06)"></div>'.repeat(empties)}</div>`;
+}
+function campForge() {
+  const list = owned(); forgeSel = forgeSel && dg.inv[forgeSel] ? forgeSel : (dg.equipped.weapon || list[0]);
+  if (!forgeSel) return '<p class="muted">No gear yet.</p>';
+  const it = DITEMS[forgeSel], plus = dg.upgrades[forgeSel] || 0, c = upgradeCost(forgeSel, plus);
+  const a = itemStats(forgeSel, plus), b = itemStats(forgeSel, plus + 1), have = dg.materials[c.material] || 0;
+  const diffs = ['atk', 'def', 'hp'].filter((k) => a[k]).map((k) => `<span>${k.toUpperCase()} ${fmt(a[k])} → <b>${fmt(b[k])}</b></span>`).join('');
+  return `<div class="strip">${list.map((id) => `<button class="tile2 ${id === forgeSel ? 'sel' : ''}" style="${rv(DITEMS[id].rarity)}" data-forge="${id}"><img class="px" src="${art(id)}">${dg.upgrades[id] ? `<span class="up">+${dg.upgrades[id]}</span>` : ''}</button>`).join('')}</div>
+    <div class="anvil" id="anvil"><canvas data-art="${forgeSel}"></canvas><div style="margin-top:-6px"><img class="px" src="${uiIcon('anvil', 'color', 3)}" style="width:54px"></div>
+      <div class="lv">${it.name} <span class="up2">+${plus}</span> → <span style="color:var(--gold)">+${plus + 1}</span></div>
+      <div class="pips">${Array.from({ length: 10 }, (_, i) => `<i class="${i < plus ? 'on' : i === plus ? 'nx' : ''}"></i>`).join('')}</div>
+      <div class="diff">${diffs}</div>
+      <div class="cost"><span class="${coins >= c.coins ? '' : 'bad'}">🪙 ${fmt(c.coins)}</span><span class="${have >= c.count ? '' : 'bad'}">${MATERIALS[c.material].name} ${have}/${c.count}</span></div>
+      <button class="btn primary strike" data-strike>Strike the anvil!</button></div>`;
+}
+function campShop() {
+  const stock = blacksmithStock(dg);
+  const feat = stock.filter((i) => i.shopOnly).sort((a, b) => ORDER.indexOf(a.rarity) - ORDER.indexOf(b.rarity));
+  const secs = SECTIONS.filter((s) => stock.some((i) => i.section === s.id));
+  const sel = fSec && secs.some((s) => s.id === fSec) ? fSec : secs[secs.length - 1]?.id;
+  const basic = stock.filter((i) => !i.shopOnly && i.section === sel);
+  return `<div class="smith"><img class="px" src="${uiIcon('anvil', 'color', 4)}"><div class="bubble">${feat.length ? 'Masterworks fresh off the anvil. Not cheap, but nothing out there drops like these.' : 'Common steel for common folk. Reach the Stone Depths and I\'ll forge you something special.'}</div></div>
+    ${feat.length ? `<h4 class="sh">✦ Masterworks</h4><div class="feat">${feat.map((i) => `<div class="fcard" style="${rv(i.rarity)}"><canvas data-art="${i.id}"></canvas><div class="nm">${i.name}</div><span class="rtag r-${i.rarity}">${RAR_NAME[i.rarity]}</span> <span class="small muted">${SLOT_NAME_D[i.slot]}</span><div class="pp">${statText(i.id)}</div><button class="price ${coins >= buyPrice(i.id) ? '' : 'no'}" data-fake="Bought ${i.name}">🪙 ${fmt(buyPrice(i.id))}</button></div>`).join('')}</div>` : ''}
+    <h4 class="sh">Everyday gear</h4>
+    <div class="flt">${secs.map((s) => `<button class="${s.id === sel ? 'on' : ''}" data-s="${s.id}"><img class="px" src="${enemyIcon(s.boss, 1)}">${s.name}</button>`).join('')}</div>
+    <div class="stock">${basic.map((i) => `<div class="scard" style="${rv(i.rarity)}" data-item="${i.id}"><img class="px" src="${art(i.id)}"><div class="nm">${i.name}</div><span class="price ${coins >= buyPrice(i.id) ? '' : 'no'}">🪙 ${fmt(buyPrice(i.id))}</span></div>`).join('')}</div>`;
+}
+function campPotions() {
+  const pc = { 'hp-small': '#ff6a7a', 'hp-medium': '#e8435a', 'hp-large': '#c8203a', strength: '#ff9a3a', ironskin: '#9aa3b8', fortune: '#ffd84a' };
+  const packed = Object.entries(dg.potions).flatMap(([k, n]) => Array(Math.min(n, 3)).fill(k)).slice(0, 3);
+  return `<p class="small muted center" style="margin:0">Your pack for the next fight (3 max)</p>
+    <div class="pack">${[0, 1, 2].map((i) => packed[i] ? `<div class="f" style="color:${pc[packed[i]]}">${POTIONS[packed[i]].heal ? '❤' : '✦'}</div>` : '<div class="muted">+</div>').join('')}</div>
+    <div class="shelf">${Object.entries(POTIONS).map(([k, p]) => `<div class="pcard" style="--pc:${pc[k]}"><div class="ic">${p.heal ? '❤' : '✦'}</div><b>${p.name}</b><span class="own">You have ${dg.potions[k] || 0}</span><div style="margin-top:6px"><button class="price" data-fake="Bought ${p.name}">🪙 ${p.price}</button></div></div>`).join('')}</div>`;
+}
+function renderCamp() {
+  const body = { gear: campGear, bag: campBag, forge: campForge, shop: campShop, potions: campPotions }[tab]();
+  return `<div class="camp-head"><button class="back">‹ Tower</button><h2>Camp</h2><span class="coins">🪙 ${fmt(coins)}</span></div>
+    <div class="ctabs">${CT.map(([k, l, ic]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}"><img class="px" src="${ic}">${l}</button>`).join('')}</div>
+    <div class="scr">${body}</div>`;
+}
+
+// ===== direction 2: clean lists =====
+const LT = [['gear', 'Gear'], ['bag', 'Bag'], ['forge', 'Forge'], ['shop', 'Shop'], ['potions', 'Potions']];
+function lrow(id, right, act = 'item') {
+  const it = DITEMS[id];
+  return `<button class="lrow" data-${act}="${id}"><img class="px" src="${art(id)}"><span class="t"><b class="r-${it.rarity}">${it.name}${dg.upgrades[id] ? ` +${dg.upgrades[id]}` : ''}</b><span>${SLOT_NAME_D[it.slot]} · ${statText(id)}</span></span><span class="r">${right}</span></button>`;
+}
+function delta(id) { if (isEq(id)) return '<span class="eq2">WEARING</span>'; const d = powerWith(id) - powerNow(); return `<span class="${d > 0 ? 'up2' : d < 0 ? 'dn2' : 'muted'}">${d > 0 ? '▲ +' : d < 0 ? '▼ ' : ''}${fmt(d)}</span><br><span class="muted" style="font-size:10px;font-weight:400">power</span>`; }
+function listGear() {
+  const p = buildPlayer(dg);
+  return `<div class="chips2" style="justify-content:flex-start;margin-top:4px"><span>Power <b>${fmt(powerScore(p))}</b></span><span>Atk <b>${fmt(p.atk)}</b></span><span>Def <b>${fmt(p.def)}</b></span><span>HP <b>${fmt(p.maxHp)}</b></span></div>${oddsBox()}
+    <div class="grp">Wearing</div>${GEAR_SLOTS_D.map((s) => dg.equipped[s] ? lrow(dg.equipped[s], '<span class="muted">Change ›</span>') : `<div class="lrow"><span class="t"><b class="muted">${SLOT_NAME_D[s]}</b><span>Empty</span></span></div>`).join('')}`;
+}
+function listBag() {
+  const list = owned().filter(bagFilter);
+  const groups = ['weapon', 'helmet', 'chest', 'legs', 'boots', 'offhand'].map((s) => [s, list.filter((id) => DITEMS[id].slot === s)]).filter(([, l]) => l.length);
+  return `<div class="flt">${FILT.map(([k, l]) => `<button class="${filter === k ? 'on' : ''}" data-f="${k}">${l}</button>`).join('')}</div>
+    ${groups.map(([s, l]) => `<div class="grp">${SLOT_NAME_D[s]} · ${l.length}</div>${l.map((id) => lrow(id, delta(id))).join('')}`).join('')}`;
+}
+function listForge() {
+  return `<p class="small muted">Each +1 adds 6% to the item's stats, up to +10.</p>${owned().map((id) => { const plus = dg.upgrades[id] || 0, c = upgradeCost(id, plus), have = dg.materials[c.material] || 0;
+    return lrow(id, `<span class="mini-pips">${Array.from({ length: 10 }, (_, i) => `<i class="${i < plus ? 'on' : ''}"></i>`).join('')}</span><br><span class="${coins >= c.coins && have >= c.count ? 'up2' : 'dn2'}" style="font-size:11px">🪙${fmt(c.coins)} · ${have}/${c.count}</span>`, 'forge'); }).join('')}`;
+}
+function listShop() {
+  const stock = blacksmithStock(dg).sort((a, b) => b.section - a.section || ORDER.indexOf(a.rarity) - ORDER.indexOf(b.rarity));
+  const feat = stock.filter((i) => i.shopOnly), basic = stock.filter((i) => !i.shopOnly && bagFilter(i.id));
+  const pr = (i) => `<span class="price ${coins >= buyPrice(i.id) ? '' : 'no'}" style="font-size:11px;padding:3px 8px">🪙 ${fmt(buyPrice(i.id))}</span>`;
+  return `<input class="search" placeholder="Search the Blacksmith…">
+    <div class="flt">${FILT.map(([k, l]) => `<button class="${filter === k ? 'on' : ''}" data-f="${k}">${l}</button>`).join('')}</div>
+    ${feat.length ? `<div class="grp" style="color:var(--gold)">✦ Masterworks</div>${feat.map((i) => lrow(i.id, pr(i))).join('')}` : ''}
+    ${SECTIONS.filter((s) => basic.some((i) => i.section === s.id)).reverse().map((s) => `<div class="grp">${s.name}</div>${basic.filter((i) => i.section === s.id).map((i) => lrow(i.id, pr(i))).join('')}`).join('')}`;
+}
+function listPotions() {
+  return Object.entries(POTIONS).map(([k, p]) => `<div class="lrow"><span style="font-size:26px;width:46px;text-align:center;color:${p.heal ? '#e8435a' : '#ffd84a'}">${p.heal ? '❤' : '✦'}</span><span class="t"><b>${p.name}</b><span>${p.heal ? `Heals ${Math.round(p.heal * 100)}%` : p.text} · 🪙 ${p.price}</span></span><span class="stepper"><button data-fake="−">−</button><b>${dg.potions[k] || 0}</b><button data-fake="Bought ${p.name}">+</button></span></div>`).join('');
+}
+function renderLists() {
+  const body = { gear: listGear, bag: listBag, forge: listForge, shop: listShop, potions: listPotions }[tab]();
+  return `<div class="camp-head"><button class="back">‹</button><h2 style="font-size:17px">${LT.find((t) => t[0] === tab)[1]}</h2><span class="coins">🪙 ${fmt(coins)}</span></div>
+    <div class="seg2">${LT.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>
+    <div class="scr">${body}</div>`;
+}
+
+function render() {
+  stops.forEach((s) => s()); stops = [];
+  const y = phone.querySelector('.scr')?.scrollTop || 0;
+  phone.innerHTML = (dir === '1' ? renderCamp() : renderLists()) + '<div class="sheet2"></div><div class="toast2"></div>';
+  mountCards(phone);
+  document.getElementById('blurb').textContent = BLURB[dir] + ' (Uses your test save. Buttons are pretend.)';
+  const scr = phone.querySelector('.scr'); if (scr && keepScroll) scr.scrollTop = y;
+  keepScroll = false;
+}
+let keepScroll = false;
+phone.addEventListener('click', (e) => {
+  const t = e.target.closest('button, [data-item]'); if (!t) return;
+  const sh = phone.querySelector('.sheet2');
+  if (e.target === sh) { sh.classList.remove('on'); return; }
+  if (t.dataset.tab) { tab = t.dataset.tab; fSec = 0; filter = 'all'; render(); return; }
+  if (t.dataset.f) { filter = t.dataset.f; keepScroll = true; render(); return; }
+  if (t.dataset.s !== undefined) { fSec = +t.dataset.s; keepScroll = true; render(); return; }
+  if (t.dataset.forge) { forgeSel = t.dataset.forge; tab = 'forge'; keepScroll = dir === '1'; render(); if (dir === '2') toast('Upgraded (pretend)'); return; }
+  if (t.dataset.go === 'forge') { forgeSel = t.dataset.id; tab = 'forge'; render(); return; }
+  if (t.dataset.item) { sheet(t.dataset.item); return; }
+  if (t.dataset.strike !== undefined) {
+    const an = phone.querySelector('#anvil');
+    for (let i = 0; i < 14; i++) { const s = document.createElement('i'); s.className = 'spark'; s.style.left = '50%'; s.style.top = '45%'; s.style.setProperty('--dx', (Math.random() * 160 - 80) + 'px'); s.style.setProperty('--dy', (Math.random() * -110 - 10) + 'px'); an.appendChild(s); setTimeout(() => s.remove(), 800); }
+    an.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(3px)' }, { transform: 'translateY(0)' }], { duration: 160 });
+    toast('Clang! (pretend upgrade)'); return;
+  }
+  if (t.dataset.fake) { toast(t.dataset.fake + ' (pretend)'); sh.classList.remove('on'); }
+});
+document.querySelectorAll('.dpick [data-d]').forEach((b) => b.onclick = () => { dir = b.dataset.d; document.querySelectorAll('.dpick [data-d]').forEach((x) => x.classList.toggle('on', x === b)); render(); });
+render();
+</script>
+</body>
+</html>
