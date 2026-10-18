@@ -337,7 +337,7 @@ function showItem(id) {
     </div>
     <div class="btn-col">
       ${owned ? `<button class="btn primary" data-action="d-best" data-slot="${it.slot}">⚡ Equip best ${SLOT_NAME_D[it.slot].toLowerCase()}</button>
-      <div class="d-acts"><button class="btn" data-action="d-equip" data-id="${id}">${eq ? 'Unequip' : 'Equip'}</button><button class="btn" data-action="d-to-forge" data-id="${id}">Upgrade</button>${(dg.inv[id] || 0) > (eq ? 1 : 0) ? `<button class="btn" data-action="d-sell" data-id="${id}">Sell</button>` : ''}</div>`
+      <div class="d-sheet-acts"><button class="btn" data-action="d-equip" data-id="${id}">${eq ? 'Unequip' : 'Equip'}</button><button class="btn" data-action="d-to-forge" data-id="${id}">Upgrade</button>${(dg.inv[id] || 0) > (eq ? 1 : 0) ? `<button class="btn" data-action="d-sell" data-id="${id}">Sell</button>` : ''}</div>`
         : inStock ? `<button class="btn primary" data-action="d-buy" data-id="${id}" ${S().coins >= buyPrice(id) ? '' : 'disabled'}>Buy for ${fmt(buyPrice(id))} coins</button>` : ''}
       <button class="btn" data-action="close">Close</button>
     </div>`);

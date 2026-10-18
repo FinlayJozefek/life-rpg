@@ -6,7 +6,7 @@
   <meta name="format-detection" content="telephone=no">
   <title>Life RPG</title>
   <meta name="description" content="Turn real life into an RPG. Log activities, level up skills, collect drops.">
-  <meta name="theme-color" content="#0c0e24">
+  <meta name="theme-color" content="#07061a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,16 +14,17 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="preload" href="fonts/cinzel-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/cinzel-decorative-900.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/spectral-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <style>
     /* Inline so it applies on the very first frame, before styles.css or any JS loads:
        no black/white flash, straight into the splash. */
-    html, body { background: #0c0e24; }
+    html, body { background: #07061a; }
     #splash {
       position: fixed; inset: 0; z-index: 100;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-      background: radial-gradient(circle at 50% 42%, #23285e 0%, #0c0e24 62%);
+      background: radial-gradient(circle at 50% 42%, #3a1f7a 0%, #160f36 38%, #07061a 66%);
       transition: opacity 0.9s ease, visibility 0.9s;
     }
     #splash img {
@@ -32,8 +33,8 @@
       animation: splash-in 1.3s cubic-bezier(.2, .8, .2, 1) both;
     }
     #splash .splash-title {
-      font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 30px; letter-spacing: 0.06em;
-      color: #ffc94a; text-shadow: 2px 2px 0 #000;
+      font-family: 'Cinzel Decorative', 'Cinzel', Georgia, serif; font-weight: 900; font-size: 30px; letter-spacing: 0.04em;
+      color: #f6d27a; text-shadow: 0 0 16px rgba(246, 210, 122, 0.6), 0 2px 0 #000;
       animation: splash-in 1.3s 0.45s cubic-bezier(.2, .8, .2, 1) both;
     }
     #splash.out { opacity: 0; visibility: hidden; }
