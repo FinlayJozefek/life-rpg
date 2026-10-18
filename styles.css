@@ -6,25 +6,46 @@
   src: url('fonts/cinzel-latin.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'IM Fell English SC';
+  font-family: 'New Rocker';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('fonts/im-fell-english-sc.woff2') format('woff2');
+  src: url('fonts/new-rocker.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Alegreya';
+  font-family: 'Alegreya Sans';
   font-style: normal;
-  font-weight: 400 900;
+  font-weight: 400;
   font-display: swap;
-  src: url('fonts/alegreya.woff2') format('woff2');
+  src: url('fonts/alegreya-sans-400.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Alegreya';
-  font-style: italic;
-  font-weight: 400 900;
+  font-family: 'Alegreya Sans';
+  font-style: normal;
+  font-weight: 500;
   font-display: swap;
-  src: url('fonts/alegreya-italic.woff2') format('woff2');
+  src: url('fonts/alegreya-sans-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('fonts/alegreya-sans-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('fonts/alegreya-sans-800.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/alegreya-sans-italic.woff2') format('woff2');
 }
 
 :root {
@@ -56,8 +77,8 @@
   --c-legendary: #f0a020;
   --c-mythic: #e8435a;
   --c-divine: #fff1a8;
-  --display-font: 'IM Fell English SC', Georgia, serif;
-  --body-font: 'Alegreya', Georgia, serif;
+  --display-font: 'New Rocker', Georgia, serif;
+  --body-font: 'Alegreya Sans', system-ui, sans-serif;
   --tabbar-h: 64px;
 }
 
@@ -902,8 +923,8 @@ body::before, body::after { display: none !important; }
 .coin-pill, .streak-pill { box-shadow: none; }
 
 :root {
-  --display-font: 'IM Fell English SC', Georgia, serif;
-  --body-font: 'Alegreya', Georgia, serif;
+  --display-font: 'New Rocker', Georgia, serif;
+  --body-font: 'Alegreya Sans', system-ui, sans-serif;
   --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .3 0 0 0 0 .12 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --planks: repeating-linear-gradient(90deg, transparent 0 46px, rgba(0, 0, 0, 0.45) 46px 48px), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 9px, rgba(0, 0, 0, 0.06) 9px 11px, transparent 11px 23px);
@@ -1231,3 +1252,5 @@ main { position: relative; z-index: 1; }
 /* numbers: easy-to-read, even-height digits (the title font's old-style numerals are hard to read) */
 .coin-pill, .streak-pill { font-family: var(--body-font) !important; font-weight: 700; font-size: 15px; }
 body, .coin-pill, .streak-pill, .stat-num, .d-dpow, .d-hptext, .d-pop, .tc-seal, .d-price, .d-chip, .ch-cell b { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; }
+/* numbers in the clean text font (bold) so they are always easy to read; titles keep the metal font */
+.stat-num, .d-dpow, .d-pop, .tc-seal, .ch-n, .d-anvil-lv .plus, .lvl, .count, .d-chip { font-family: var(--body-font) !important; font-weight: 800; }
