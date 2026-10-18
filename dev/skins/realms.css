@@ -1,0 +1,125 @@
+/* Skin trial: Realms. One rustic look whose surroundings change with where you are:
+   Character = journal on a leather desk, Skills = library shelves, Quests = cork notice board,
+   Dungeon = stone keep, Bag = leather satchel, Forge = sooty forge with embers, Shop = merchant stall,
+   Potions = alchemist's lab, Collection = trophy hall. */
+@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+@import url('_reset.css');
+
+:root {
+  --display-font: 'IM Fell English SC', Georgia, serif;
+  --body-font: 'Alegreya', Georgia, serif;
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .3 0 0 0 0 .12 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --planks: repeating-linear-gradient(90deg, transparent 0 46px, rgba(0, 0, 0, 0.45) 46px 48px), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 9px, rgba(0, 0, 0, 0.06) 9px 11px, transparent 11px 23px);
+  --stone: repeating-linear-gradient(0deg, #0a0908 0 2px, transparent 2px 40px), repeating-linear-gradient(90deg, #0a0908 0 2px, transparent 2px 80px);
+}
+
+/* ---------- default area: the stone keep (Dungeon, Settings) ---------- */
+body {
+  --bg: #1e1c1a; --panel: #2a2724; --panel-2: #36322e; --line: #4a4540; --deep: #161412;
+  --text: #e6dcc4; --muted: #a89c86; --gold: #e09a3a; --gold-dark: #8a5a1a; --gold-bg: #2e2216;
+  --accent: #c8b06a; --primary: #7a1e16; --primary-line: #c8a24a; --bar-1: #d8743a; --bar-2: #a8481a;
+  --area-bg: var(--noise), var(--stone), #1e1c1a;
+  --area-panel: var(--noise), #2a2724;
+  --area-frame: 3px solid #0a0908;
+  --area-frame-in: inset 0 0 0 3px #4a4540, inset 0 0 0 5px #0a0908;
+  --area-radius: 2px;
+  font-family: var(--body-font); font-size: 16px;
+  background: var(--area-bg);
+  transition: background-color 0.4s;
+}
+.panel, .sheet, .d-match { background: var(--area-panel); border: var(--area-frame); border-radius: var(--area-radius); box-shadow: var(--area-frame-in), 0 4px 0 rgba(0, 0, 0, 0.5); }
+.topbar { background: var(--noise), #1a1816; border-bottom: 3px solid #0a0908; }
+.tabbar { background: var(--noise), #1a1816; border-top: 3px solid #0a0908; }
+.tabbar button { color: #8a7e6a; font-family: var(--body-font); font-weight: 700; }
+.tabbar button.on { color: #e09a3a; }
+.brand { font-family: var(--display-font); font-weight: 400; font-size: 25px; color: #e09a3a; }
+.coin-pill, .streak-pill { border-radius: 3px; background: #2e2216; }
+h2 { font-family: var(--display-font); font-weight: 400; font-size: 24px; color: var(--gold); }
+h3 { font-family: var(--display-font); font-weight: 400; font-size: 19px; color: var(--accent); }
+.btn { border: 2px solid rgba(0, 0, 0, 0.7); border-radius: 3px; background: var(--noise), var(--panel-2); color: var(--text); font-family: var(--body-font); font-weight: 700; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+.btn.primary { background: var(--noise), var(--primary); color: #f6ead0; box-shadow: inset 0 0 0 1px var(--primary-line); }
+.bar { border-radius: 2px; border: 1px solid rgba(0, 0, 0, 0.6); background: rgba(0, 0, 0, 0.45); }
+.d-ctabs { background: var(--noise), #1a1816; border-bottom: 3px solid #0a0908; }
+.d-ctabs button.on { color: var(--gold); border-bottom-color: var(--gold); }
+.d-chips span, .d-flt button, .d-chip, .d-hubbtn { background: var(--noise), var(--panel-2); border-color: rgba(0, 0, 0, 0.6); color: var(--text); }
+.d-flt button.on { color: var(--gold); border-color: var(--gold); }
+.d-bar { background: linear-gradient(transparent, rgba(10, 9, 8, 0.95) 30%); }
+
+/* ---------- Character: your journal on a leather desk ---------- */
+body[data-view="home"] {
+  --text: #3a2814; --muted: #7a6040; --gold: #7a3a10; --accent: #2f6a2a; --panel-2: #e0cfa8; --deep: #d4c094; --line: #a8875a;
+  --c-common: #6a6458; --c-uncommon: #2f7a2a; --c-rare: #1f5aa8; --c-epic: #6a2a9a; --c-legendary: #a8600a; --c-mythic: #a81e34; --c-divine: #8a7a1a;
+  --area-bg: var(--noise), #3a2414;
+  --area-panel: var(--paper), #eadcbc;
+  --area-frame: 1px solid #8a6a3e;
+  --area-frame-in: 0 0 0 4px #eadcbc, 0 0 0 5px #8a6a3e;
+}
+body[data-view="home"] .btn { background: #e8d6ae; border-color: #8a6a3e; }
+body[data-view="home"] .btn.primary { background: #8e2418; color: #fbe8d0; border-radius: 999px; }
+
+/* ---------- Skills: the library, dark shelves and leather-bound books ---------- */
+body[data-view="skills"] {
+  --panel-2: #4a2e22; --gold: #e8c070; --accent: #d8b880;
+  --area-bg: repeating-linear-gradient(0deg, #1a0e08 0 10px, transparent 10px 120px), var(--planks), #2e1c12;
+  --area-panel: var(--noise), #4a2a1e;
+  --area-frame: 2px solid #1a0e08;
+  --area-frame-in: inset 0 0 0 3px #4a2a1e, inset 0 0 0 4px #b8904a;
+  --area-radius: 4px;
+}
+
+/* ---------- Quests: notes pinned to a cork board ---------- */
+body[data-view="quests"] {
+  --text: #3a2814; --muted: #7a6040; --gold: #7a3a10; --accent: #2f6a2a; --panel-2: #e0cfa8; --deep: #d4c094; --line: #a8875a;
+  --area-bg: var(--noise), radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.06), transparent 60%), #a87a4a;
+  --area-panel: var(--paper), #f0e4c4;
+  --area-frame: 1px solid #b8986a;
+  --area-frame-in: 2px 3px 0 rgba(0, 0, 0, 0.25);
+  --area-radius: 1px;
+}
+body[data-view="quests"] .panel { position: relative; }
+body[data-view="quests"] .panel::before { content: ""; position: absolute; top: -6px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff7a6a, #a81e1e 60%, #5a0a0a); box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.4); }
+body[data-view="quests"] .panel:nth-child(even) { transform: rotate(0.6deg); }
+body[data-view="quests"] .panel:nth-child(odd) { transform: rotate(-0.5deg); }
+body[data-view="quests"] .btn { background: #e8d6ae; border-color: #8a6a3e; }
+
+/* ---------- Collection: trophy hall, red velvet and walnut cases ---------- */
+body[data-view="collection"] {
+  --panel-2: #3a2216; --gold: #e8c070;
+  --area-bg: var(--noise), radial-gradient(ellipse at 50% 0%, #7a1a22, #3a080e 70%);
+  --area-panel: var(--noise), #2e1a12;
+  --area-frame: 3px solid #160a06;
+  --area-frame-in: inset 0 0 0 2px #b8904a, inset 0 0 0 4px #160a06;
+  --area-radius: 4px;
+}
+
+/* ---------- Dungeon camp areas ---------- */
+/* Bag: inside a leather satchel, stitched seams */
+body[data-camp="bag"] {
+  --area-bg: var(--noise), radial-gradient(ellipse at 50% 30%, #6a4426, #3a2210 75%);
+}
+body[data-camp="bag"] .d-camp-body { padding: 10px; border: 2px dashed #c8a070; border-radius: 10px; background: var(--noise), #5a3a1e; box-shadow: 0 0 0 4px #5a3a1e, 0 6px 0 4px rgba(0, 0, 0, 0.4); }
+/* Forge: soot, iron and an ember glow from below */
+body[data-camp="forge"] {
+  --gold: #ff9a3a; --accent: #ffb060;
+  --area-bg: radial-gradient(ellipse at 50% 115%, rgba(255, 110, 30, 0.55), transparent 55%), var(--noise), #121010;
+}
+body[data-camp="forge"] .d-anvil { background: radial-gradient(circle at 50% 80%, rgba(255, 120, 30, 0.35), transparent 60%), var(--noise), #1c1918; border: 3px solid #0a0908; border-radius: 2px; }
+/* Shop: a merchant's stall under a striped awning */
+body[data-camp="shop"] {
+  --gold: #ffd45a;
+  --area-bg: var(--planks), #4a2e16;
+}
+body[data-camp="shop"] .d-camp-body { position: relative; padding-top: 30px; }
+body[data-camp="shop"] .d-camp-body::before { content: ""; position: absolute; top: 0; left: -16px; right: -16px; height: 22px; background: repeating-linear-gradient(90deg, #a8281e 0 22px, #f0e2c0 22px 44px); clip-path: polygon(0 0, 100% 0, 100% 60%, 97.5% 100%, 95% 60%, 92.5% 100%, 90% 60%, 87.5% 100%, 85% 60%, 82.5% 100%, 80% 60%, 77.5% 100%, 75% 60%, 72.5% 100%, 70% 60%, 67.5% 100%, 65% 60%, 62.5% 100%, 60% 60%, 57.5% 100%, 55% 60%, 52.5% 100%, 50% 60%, 47.5% 100%, 45% 60%, 42.5% 100%, 40% 60%, 37.5% 100%, 35% 60%, 32.5% 100%, 30% 60%, 27.5% 100%, 25% 60%, 22.5% 100%, 20% 60%, 17.5% 100%, 15% 60%, 12.5% 100%, 10% 60%, 7.5% 100%, 5% 60%, 2.5% 100%, 0 60%); }
+body[data-camp="shop"] .d-bubble { background: #f6e8c4; border: 2px solid #5a3a12; font-style: normal; }
+/* Potions: an alchemist's lab, green glass and stone */
+body[data-camp="potions"] {
+  --gold: #a8f07a; --accent: #7ae0a0;
+  --area-bg: radial-gradient(circle at 20% 30%, rgba(90, 220, 120, 0.12), transparent 40%), radial-gradient(circle at 80% 70%, rgba(150, 90, 220, 0.12), transparent 40%), var(--noise), #0e1612;
+}
+body[data-camp="potions"] .d-pcard { background: var(--noise), #16241c; border: 2px solid #0a120e; border-radius: 3px; box-shadow: inset 0 0 0 1px #3a5a44; }
+body[data-camp="potions"] .d-pack div { border-color: #3a5a44; }
+
+/* the top and bottom bars keep one look everywhere */
+.topbar, .tabbar, .d-ctabs { --gold: #e09a3a; --gold-dark: #8a5a1a; --gold-bg: #2e2216; --text: #e6dcc4; --muted: #a89c86; color: #e6dcc4; }

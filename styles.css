@@ -860,7 +860,7 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 .d-fname { font: 700 15px var(--display-font); }
 .d-fpass { min-height: 32px; margin: 3px 0 6px; font-size: 11px; color: var(--accent); }
 .d-price { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--gold-dark); background: var(--gold-bg); color: var(--gold); font-weight: 700; font-size: 13px; cursor: pointer; }
-.d-price::before { content: ""; width: 9px; height: 9px; background: var(--gold); box-shadow: inset -2px -2px 0 var(--gold-dark); }
+.d-coin { width: 16px; height: 16px; image-rendering: pixelated; vertical-align: -3px; margin-right: 3px; }
 .d-price.no, .d-price:disabled { opacity: 0.45; cursor: default; }
 .d-stock { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .d-scard { padding: 6px 4px 8px; text-align: center; border-radius: 10px; border: 2px solid var(--rc); background: radial-gradient(circle at 50% 30%, var(--rcb), rgba(0, 0, 0, 0.5) 80%); }
@@ -941,3 +941,17 @@ h3 { color: #e4d6ff; }
 .tabbar button.on { color: var(--gold); text-shadow: 0 0 8px rgba(246, 210, 122, 0.7); }
 .tabbar button.on::before { content: ""; position: absolute; top: 4px; left: 50%; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%; background: radial-gradient(circle, rgba(180, 140, 255, 0.45), transparent 70%); animation: astral-orb 2.4s ease-in-out infinite; pointer-events: none; }
 @keyframes astral-orb { 50% { transform: scale(1.25); opacity: 0.6; } }
+
+/* equipped items: a gold ring instead of a badge */
+.d-tile.worn { box-shadow: 0 0 0 2px #f6d27a, 0 0 0 4px rgba(0, 0, 0, 0.55); }
+.d-strip .d-tile.worn.sel, .d-strip .d-tile.sel { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--gold); }
+.d-bag { padding: 3px; }
+/* matchup line (no win percentages) */
+.d-match { max-width: 616px; margin: 0 auto 6px; padding: 6px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); font-size: 12px; color: var(--muted); line-height: 1.35; }
+.d-match b { color: var(--text); }
+.d-match b.d-good { color: #7ae0a0; } .d-match b.d-red { color: #ff7a6a; }
+.d-camp .d-match { margin: 0 0 4px; }
+/* Crypts XP bar */
+.d-hud-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.d-xpbar { height: 10px; margin-top: 5px; }
+.d-bestall { margin-top: 10px; min-height: 38px; padding: 6px 18px; font-size: 14px; }

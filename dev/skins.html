@@ -23,6 +23,7 @@
 <script>
   const SKINS = [
     ['', 'Current (Astral)', 'What is live now: starry sky, glass panels, glowing violet.'],
+    ['realms', 'Realms (changes by area)', 'One rustic look whose surroundings change with where you are: a journal on a leather desk for your Character, library shelves for Skills, a cork notice board for Quests, a stone keep for the Dungeon, a leather satchel for the Bag, a glowing forge, a merchant stall with an awning for the Shop, an alchemist lab for Potions and a red velvet trophy hall for the Collection.'],
     ['journal', "Adventurer's Journal", 'Your quest log as a real book: aged parchment pages with ink text, a leather cover for the top and bottom bars, old-print headings and red wax-seal buttons.'],
     ['tavern', 'Tavern Board', 'Cosy carved wood like a pixel farming or adventure game: plank walls, wooden boards with nails in the corners, chunky pixel lettering, green painted buttons.'],
     ['jrpg', 'Classic JRPG', 'The old-school blue menu windows from classic console RPGs: white rounded frames, pixel text and a blinking hand cursor.'],
@@ -35,7 +36,7 @@
     about.textContent = SKINS.find((s) => s[0] === id)[2] + ' Tap around inside the phone to see every tab.';
   }
   for (const [id, name] of SKINS) { const b = document.createElement('button'); b.textContent = name; b.dataset.id = id; b.onclick = () => pick(id); bar.appendChild(b); }
-  pick('journal');
+  pick('realms');
 </script>
 </body>
 </html>

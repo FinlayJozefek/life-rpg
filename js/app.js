@@ -399,6 +399,8 @@ let stopAnimations = [];
 function render() {
   stopAnimations.forEach((stop) => stop());
   stopAnimations = [];
+  document.body.dataset.view = view;
+  if (view !== 'dungeon') delete document.body.dataset.camp;
   $main.innerHTML = VIEWS[view]();
   document.querySelectorAll('.tabbar button').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
   document.getElementById('coin-pill').textContent = fmt(state.coins);
