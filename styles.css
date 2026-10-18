@@ -1220,3 +1220,10 @@ main { position: relative; z-index: 1; }
 .ch-pointer::before, .ch-pointer::after { content: ""; position: absolute; left: -5px; border: 6px solid transparent; }
 .ch-pointer::before { top: 0; border-top-color: #ffd84a; }
 .ch-pointer::after { bottom: 0; border-bottom-color: #ffd84a; }
+
+/* in-game question windows */
+.q-win { text-align: center; }
+.q-win h2 { margin: 4px 0 8px; }
+.q-win p { margin: 0 0 8px; line-height: 1.4; }
+.q-ico img { width: 72px; image-rendering: pixelated; }
+.q-note { padding: 8px 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.3); border: 1px solid #8a6a1a; font-size: 14px; text-align: left; }

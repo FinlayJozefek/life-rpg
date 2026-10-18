@@ -292,6 +292,34 @@ function campPotions() {
       <div class="d-pbuy"><button class="d-price ${coins >= pt.price ? '' : 'no'}" data-action="d-potion-buy" data-id="${k}" data-n="1" ${coins >= pt.price ? '' : 'disabled'}>${coinImg()}${fmt(pt.price)}</button><button class="d-price ${coins >= pt.price * 5 ? '' : 'no'}" data-action="d-potion-buy" data-id="${k}" data-n="5" ${coins >= pt.price * 5 ? '' : 'disabled'}>${coinImg()}${fmt(pt.price * 5)} ×5</button></div></div>`).join('')}</div>`;
 }
 
+// ---------- in-game question windows ----------
+function replayWindow(f) {
+  const dg = d();
+  const climb = Math.min(50, dg.climb);
+  const boss = floorInSection(f) === 10;
+  api.openModal(`<div class="q-win">
+      <div class="q-ico"><img src="${boss ? enemyIcon(SECTIONS[sectionOf(f) - 1].boss, 3) : chestIcon(`${sectionOf(f)}w`, { scale: 4 })}" alt=""></div>
+      <h2>Replay floor ${f}?</h2>
+      <p>You've already cleared this floor. Replaying it is a good way to farm <b>coins, gear, materials and another chest</b>.</p>
+      <p class="q-note">Note: replaying won't move you up the tower. Your climb stays at <b>floor ${climb}</b>. To keep climbing, take on floor ${climb}.</p>
+    </div>
+    <div class="btn-col">
+      <button class="btn primary" data-action="d-floor-go" data-floor="${f}">Replay floor ${f}</button>
+      ${canPlay(dg, climb) && climb !== f ? `<button class="btn" data-action="d-floor-go" data-floor="${climb}">Climb floor ${climb} instead</button>` : ''}
+      <button class="btn" data-action="close">Cancel</button>
+    </div>`);
+}
+function fleeWindow() {
+  api.openModal(`<div class="q-win">
+      <h2>Flee this floor?</h2>
+      <p>You keep everything you've found so far, but the floor <b>won't count as cleared</b> and you won't get its chest.</p>
+    </div>
+    <div class="btn-col">
+      <button class="btn danger-btn" data-action="d-flee-go">Flee</button>
+      <button class="btn primary" data-action="close">Keep fighting</button>
+    </div>`);
+}
+
 // ---------- opening a chest ----------
 function openChest(key) {
   const dg = d();
@@ -812,9 +840,10 @@ export function action(a, el) {
     case 'd-floor': {
       const f = Number(el.dataset.floor);
       closeBattle();
-      if (f !== dg.climb && dg.cleared[f] && !confirm(`Replay floor ${f} to farm? Your climb stays at floor ${dg.climb}.`)) return true;
+      if (f !== dg.climb && dg.cleared[f]) { replayWindow(f); return true; }
       startRun(f); return true;
     }
+    case 'd-floor-go': api.closeModal(); closeBattle(); startRun(Number(el.dataset.floor)); return true;
     case 'd-target': if (battle && !battle.busy) { const uid = Number(el.dataset.uid); if (battle.b.enemies.find((e) => e.uid === uid && e.hp > 0)) { battle.target = uid; renderBattle(); } } return true;
     case 'd-card': {
       if (!battle || battle.busy || battle.cardLock) return true;
@@ -851,7 +880,11 @@ export function action(a, el) {
     }
     case 'd-flee': {
       if (!battle || battle.busy) return true;
-      if (!confirm('Flee the floor? You keep what you have found so far, but this floor is not cleared.')) return true;
+      fleeWindow(); return true;
+    }
+    case 'd-flee-go': {
+      api.closeModal();
+      if (!battle || battle.busy) return true;
       battle.stops.forEach((s) => s());
       grantRewards(false, { fled: true });   // keep what you found, no fall
       api.persist(); closeBattle(); run = null; api.render();
