@@ -13,7 +13,7 @@ export const SECTION_SCALE = [5, 11.1, 24.7, 54.8, 121.7];
 // Health on gear grows a bit faster in later sections so the player's base 100 Health
 // doesn't leave them proportionally squishier the higher they climb (section 1 = the spec's numbers).
 export const HP_SCALE = [1, 1.87, 2.28, 2.47, 2.55];
-export const RARITY_MULT = { common: 1, uncommon: 2, rare: 3.6, epic: 5.6, legendary: 8, mythic: 11, divine: 15 };
+export const RARITY_MULT = { common: 1, uncommon: 2, rare: 3.6, epic: 5.6, legendary: 10.5, mythic: 15, divine: 20 };   // Legendary+ well above Epic
 
 export const DMG_TYPES = ['slashing', 'piercing', 'blunt', 'fire', 'frost', 'lightning', 'holy', 'poison'];
 export const TYPE_NAME = { slashing: 'Slashing', piercing: 'Piercing', blunt: 'Blunt', fire: 'Fire', frost: 'Frost', lightning: 'Lightning', holy: 'Holy', poison: 'Poison', bleed: 'Bleed' };
@@ -171,8 +171,8 @@ export const SIGNATURES = {
   'Goblin Fury': mv('Goblin Fury', 0.4, { hits: 3, critBonus: 0.1 }),
   Smite: mv('Smite', 2.1, { charges: 3, dtype: 'holy' }),
   'Phantom Cut': mv('Phantom Cut', 1.1, { sure: true, ignoreDef: 0.3 }),
-  'Soul Siphon': mv('Soul Siphon', 1.1, { charges: 3, lifesteal: 0.6, dtype: 'frost' }),
-  'Grave Chill': mv('Grave Chill', 1, { freeze: 0.2, dtype: 'frost' }),
+  'Soul Siphon': mv('Soul Siphon', 2.3, { charges: 3, lifesteal: 0.5, dtype: 'frost' }),
+  'Grave Chill': mv('Grave Chill', 1.1, { freeze: 0.25, dtype: 'frost' }),
   'Rune Strike': mv('Rune Strike', 1.7, { charges: 3, dtype: 'lightning' }),
   Quake: mv('Quake', 0.7, { aoe: true, stun: 0.25 }),
   Landslide: mv('Landslide', 2.6, { charges: 2 }),
@@ -186,7 +186,7 @@ export const SIGNATURES = {
   Avalanche: mv('Avalanche', 2.6, { charges: 3, dtype: 'frost' }),
   'Soul Drink': mv('Soul Drink', 1.3, { charges: 3, lifesteal: 0.35 }),
   Hellfire: mv('Hellfire', 0.6, { aoe: true, burn: 1, dtype: 'fire' }),
-  'Infernal Impale': mv('Infernal Impale', 2.4, { charges: 3, burn: 1, dtype: 'fire' }),
+  'Infernal Impale': mv('Infernal Impale', 2.4, { charges: 3, burn: 1 }),
   'Brimstone Rain': mv('Brimstone Rain', 0.7, { aoe: true, burn: 1, dtype: 'fire' }),
   Dawnbreak: mv('Dawnbreak', 3.2, { charges: 2, dtype: 'holy' }),
   Purify: mv('Purify', 0, { charges: 1, cleanse: true, heal: 0.25 }),
@@ -199,7 +199,7 @@ export const SIGNATURES = {
 // Item spec shorthand: [rarity, slot, name, kind/weaponType, extras]
 // slot: weapon | helmet | chest | legs | boots | offhand
 // grindDrop: fixed chance per normal-enemy kill instead of the usual rarity roll (final-boss weapons).
-// extras: crit, dodge, slayer:{family,bonus}, sig:[...], passive fields (see engine), set: setId, dtype override
+// extras: crit, dodge, slayer:{family,bonus}, sig:[...], sigAt (which move a single signature replaces, default the 4th), passive fields (see engine), set: setId, dtype override
 const SETS = {
   'goblin-warlord': { name: 'Goblin Warlord', section: 1, bonus: { crit: 0.1 }, text: '+10% crit chance' },
   wraithweave: { name: 'Wraithweave', section: 2, bonus: { hpPct: 0.15 }, text: '+15% Health' },
@@ -237,7 +237,7 @@ const G = {
     ['epic', 'chest', 'Wraithweave Robe', null, { set: 'wraithweave' }], ['epic', 'legs', 'Wraithweave Leggings', null, { set: 'wraithweave', dodge: 0.1 }],
     ['epic', 'boots', 'Wraithweave Boots', null, { set: 'wraithweave' }], ['epic', 'offhand', 'Tome of Rites', 'tome', { dtype: 'holy' }],
     ['legendary', 'offhand', "Lich's Phylactery", 'relic', { revive: 0.3, grantMove: 'Soul Siphon' }],
-    ['legendary', 'weapon', 'Deathwhisper Staff', 'staff', { dtype: 'frost', slayer: { family: 'undead', bonus: 1.3 }, sig: ['Grave Chill', 'Soul Siphon'] }],
+    ['legendary', 'weapon', 'Deathwhisper Staff', 'staff', { dtype: 'frost', slayer: { family: 'undead', bonus: 0.6 }, sig: ['Grave Chill', 'Soul Siphon'] }],
   ],
   3: [
     ['common', 'weapon', "Miner's Pickaxe", 'axe'], ['common', 'helmet', 'Hard Leather Helm'], ['common', 'chest', 'Quarry Vest'],
@@ -247,11 +247,11 @@ const G = {
     ['rare', 'weapon', 'Runed Battleaxe', 'axe', { sig: ['Rune Strike'] }], ['rare', 'helmet', 'Dwarven Helm'], ['rare', 'chest', 'Dwarven Cuirass'],
     ['rare', 'legs', 'Dwarven Legplates'], ['rare', 'boots', 'Dwarven Boots'], ['rare', 'offhand', 'Runestone Tome', 'tome', { dtype: 'lightning' }],
     ['rare', 'weapon', 'Golembreaker', 'hammer', { slayer: { family: 'construct', bonus: 0.4 }, sig: ['Stone Breaker'] }],
-    ['epic', 'weapon', 'Earthshaker Maul', 'hammer', { stunOnHit: 0.1, slayer: { family: 'construct', bonus: 0.45 }, sig: ['Quake'] }], ['epic', 'helmet', 'Obsidian Helm', null, { set: 'obsidian' }],
+    ['epic', 'weapon', 'Earthshaker Maul', 'hammer', { stunOnHit: 0.1, slayer: { family: 'construct', bonus: 0.45 }, sig: ['Quake'], sigAt: 2 }], ['epic', 'helmet', 'Obsidian Helm', null, { set: 'obsidian' }],
     ['epic', 'chest', 'Obsidian Plate', null, { set: 'obsidian' }], ['epic', 'legs', 'Obsidian Greaves', null, { set: 'obsidian' }],
     ['epic', 'boots', 'Obsidian Boots', null, { set: 'obsidian' }], ['epic', 'offhand', 'Obsidian Bulwark', 'shield'],
     ['legendary', 'chest', 'Golemheart Plate', null, { defMult: 1.5, reflect: 0.15 }],
-    ['legendary', 'weapon', 'Mountainheart Hammer', 'hammer', { slayer: { family: 'construct', bonus: 0.6 }, sig: ['Quake', 'Landslide'] }],
+    ['legendary', 'weapon', 'Mountainheart Hammer', 'hammer', { slayer: { family: 'construct', bonus: 0.6 }, sig: ['Landslide', 'Quake'] }],
     ['mythic', 'weapon', "Titan's Fist", 'gauntlet', { titan: true, sig: ['Titan Strike', 'Colossus'] }],
     // Blacksmith exclusives (bought, never dropped)
     ['legendary', 'chest', 'Deepforge Cuirass', null, { shopOnly: true, defMult: 1.3, healStart: 0.15 }],
@@ -291,7 +291,7 @@ const G = {
     ['epic', 'chest', 'Dread Plate', null, { set: 'dread' }], ['epic', 'legs', 'Dread Greaves', null, { set: 'dread' }],
     ['epic', 'boots', 'Dread Sabatons', null, { set: 'dread' }], ['epic', 'offhand', 'Dread Aegis', 'shield'],
     ['legendary', 'helmet', 'Hellfire Crown', null, { dmgPct: 0.25, burnAttackers: 0.5 }],
-    ['legendary', 'weapon', "Demon Lord's Trident", 'spear', { slayer: { family: 'demon', bonus: 0.75 }, sig: ['Infernal Impale', 'Brimstone Rain'] }],
+    ['legendary', 'weapon', "Demon Lord's Trident", 'spear', { slayer: { family: 'demon', bonus: 0.3 }, sig: ['Infernal Impale', 'Brimstone Rain'] }],
     ['mythic', 'weapon', 'Ashbringer', 'sword', { grindDrop: 1 / 2000, dtype: 'holy', killHeal: 1, sig: ['Dawnbreak', 'Purify'] }],
     ['divine', 'offhand', 'Wings of the Seraph', 'relic', { allStats: 0.3, cheatDeath: true }],
     // Blacksmith exclusives

@@ -89,7 +89,7 @@ export function weaponMoves(weaponId, offhandId) {
   const type = WEAPON_TYPES[w?.weaponType || 'gauntlet'];
   const moves = type.moves.map((mv) => ({ ...mv }));
   const sigs = w?.sig || [];
-  if (sigs[0]) moves[3] = { ...SIGNATURES[sigs[0]], sig: true };
+  if (sigs[0]) moves[sigs[1] ? 3 : (w.sigAt ?? 3)] = { ...SIGNATURES[sigs[0]], sig: true };
   if (sigs[1]) moves[2] = { ...SIGNATURES[sigs[1]], sig: true };
   const grant = offhandId && DITEMS[offhandId]?.grantMove;
   if (grant && !moves.some((mv) => mv.name === grant)) moves[sigs[1] ? 1 : 2] = { ...SIGNATURES[grant], sig: true, fromOffhand: true };
