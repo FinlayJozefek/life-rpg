@@ -2,7 +2,7 @@
 // The estimate plays the next floor a few hundred times with your real gear, level and potions,
 // using the "smart" bot (guards big attacks, uses type matchups, drinks potions in time).
 import { createBattle, takeTurn, getActions, aliveEnemies, typeMult, moveType } from './engine.js';
-import { buildPlayer, itemStats, powerScore, floorPlan, cryptsLevel, sectionOf, floorInSection, SECTION_FUDGE } from './dgame.js';
+import { buildPlayer, powerScore, floorPlan, cryptsLevel, sectionOf, floorInSection, SECTION_FUDGE } from './dgame.js';
 import { POTIONS, SECTION_SCALE, DITEMS, GEAR_SLOTS_D } from './ddata.js';
 
 function healPotion(acts) {
@@ -100,21 +100,11 @@ function gearScore(d, eq, bossFloor) {
   const c = winChance(d2, bossFloor, 200);
   return (c >= 0.1 ? Math.floor(c * 20) : 0) * 1e6 + powerScore(buildPlayer(d2));
 }
-// Armour (helmet, chest, legs, boots) is picked on the piece's own Defence + Health first, so a set bonus
-// or rarity never swaps in a weaker piece; only a tie falls back to the full score below.
-const ARMOUR_SLOTS = new Set(['helmet', 'chest', 'legs', 'boots']);
-const toughness = (d, id) => { if (!id) return -1; const s = itemStats(id, d.upgrades[id] || 0); return s.def * 1.5 + s.hp * 0.5; };
 export function bestForSlot(d, slot, eq = d.equipped) {
   const bossFloor = sectionOf(Math.min(50, d.climb)) * 10;
-  const armour = ARMOUR_SLOTS.has(slot);
-  let best = eq[slot], bestTough = armour ? toughness(d, best) : 0, bestScore = gearScore(d, eq, bossFloor);
+  let best = eq[slot], bestScore = gearScore(d, eq, bossFloor);
   for (const id of Object.keys(d.inv)) {
     if (!(d.inv[id] > 0) || DITEMS[id].slot !== slot || id === eq[slot]) continue;
-    if (armour) {
-      const t = toughness(d, id);
-      if (t < bestTough) continue;
-      if (t > bestTough) { best = id; bestTough = t; bestScore = gearScore(d, { ...eq, [slot]: id }, bossFloor); continue; }
-    }
     const sc = gearScore(d, { ...eq, [slot]: id }, bossFloor);
     if (sc > bestScore) { best = id; bestScore = sc; }
   }
