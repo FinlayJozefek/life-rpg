@@ -1098,7 +1098,7 @@ main { position: relative; z-index: 1; }
 .fo-text { min-height: 46px; margin: 0 0 8px !important; border: 2px solid #c8a24a !important; border-radius: 4px; background: rgba(12, 10, 8, 0.94) !important; font-size: 14px; color: #f4e6c8; }
 .fo-text div { color: #a89c86; } .fo-text div:last-child { color: #f4e6c8; }
 /* effects */
-#d-battle.fo .fo-foe.hit .d-enemy-cv, .fo-hero.hit img { animation: fo-hitflash 0.3s; }
+#d-battle.fo .fo-foe.hit .d-enemy-cv, .fo-hero.hit img:not(.d-gl) { animation: fo-hitflash 0.3s; }
 @keyframes fo-hitflash { 0%, 40% { filter: brightness(4) saturate(0); transform: translateX(6px); } 70% { transform: translateX(-4px); } 100% { filter: none; transform: none; } }
 .fo-hero.lunge { animation: fo-lunge-up 0.35s; }
 @keyframes fo-lunge-up { 40% { transform: translate(40px, -46px) scale(0.92); } }
@@ -1264,3 +1264,13 @@ body, .coin-pill, .streak-pill, .stat-num, .d-dpow, .d-hptext, .d-pop, .tc-seal,
 .odds-chip { padding: 1px 7px; border-radius: 999px; border: 1px solid var(--oc); background: rgba(10, 8, 6, 0.85); color: var(--oc); white-space: nowrap; }
 .odds-chip b { color: #fff; }
 .q-win .odds-row { margin: 4px 0 10px; }
+
+/* armour rarity glow round the avatar (Camp, battles) */
+.d-gav { position: relative; display: inline-grid; place-items: center; vertical-align: top; }
+.d-gav > img { grid-area: 1 / 1; position: relative; z-index: 2; }
+.d-gav > img.d-gl { z-index: 1; filter: blur(4px) saturate(1.4); opacity: 0.95; pointer-events: none; }
+.d-gav.pulse > img.d-gl { animation: d-glowpulse 2.2s ease-in-out infinite; }
+@keyframes d-glowpulse { 50% { opacity: 0.45; } }
+.d-gpt { position: absolute; width: 4px; height: 4px; z-index: 3; bottom: 15%; opacity: 0; pointer-events: none; animation: d-gpt-rise linear infinite; }
+@keyframes d-gpt-rise { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-90px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .d-gav.pulse > img.d-gl, .d-gpt { animation: none; } }

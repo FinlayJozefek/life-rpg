@@ -7,7 +7,7 @@ import {
 } from './game.js';
 import { itemSprite } from './sprites.js';
 import { mountAvatar, mountPet, outfitIcon, petIcon, avatarDataUrl } from './sprites2.js';
-import { dungeonAvatarUrl } from './dungeon/armour.js';
+import { dungeonAvatar, dungeonAvatarUrl } from './dungeon/armour.js';
 import { startAutoUpdate } from './updates.js';
 import { checkProgress, questsFor, rewardText, ACH_BADGE, ACHIEVEMENTS, TITLES, TITLE, titleLabel, bestDrops } from './engage.js';
 import * as sfx from './sfx.js';
@@ -1026,6 +1026,7 @@ dungeon.init({
   avatarUrl: (scale = 3) => avatarDataUrl({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, scale),
   // your avatar wearing its Dungeon armour (Camp, battles, tower)
   dAvatarUrl: (scale = 3) => dungeonAvatarUrl({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, state.dungeon?.equipped || {}, scale),
+  dAvatar: (scale = 3) => dungeonAvatar({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, state.dungeon?.equipped || {}, scale),
   avatarImg: () => `<img class="d-faller-img" src="${avatarDataUrl({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, 4)}" alt="">`,
 });
 document.querySelectorAll('.tabbar button').forEach((b) => { const sp = b.querySelector('span'); if (sp) sp.innerHTML = ic(TAB_ICONS[b.dataset.view], 'tab-ic'); });

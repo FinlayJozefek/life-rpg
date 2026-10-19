@@ -15,6 +15,19 @@ import { uiIcon } from '../uiicons.js';
 import { bestForSlot, bestGear } from './dbot.js';
 import { mountGearArt } from './gearart.js';
 
+// Your avatar with each armour piece glowing in its rarity colour (Rare+); Legendary+ pulses, Mythic gives off embers, Divine sparkles.
+const GLOW_RAR = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'];
+function glowAvatar(scale) {
+  const { url, glow, top } = api.dAvatar(scale);
+  const t = GLOW_RAR.indexOf(top);
+  let fx = '';
+  if (t >= 5) for (let i = 0; i < 8; i++) {
+    const col = t === 5 ? ['#ff6a1a', '#ffb02e', '#ff3a3a'][i % 3] : ['#fff4b0', '#ffffff', '#ffd84a'][i % 3];
+    fx += `<span class="d-gpt" style="left:${20 + ((i * 37) % 60)}%;background:${col};animation-duration:${1.8 + (i % 4) * 0.5}s;animation-delay:${(i * 0.37) % 2}s"></span>`;
+  }
+  return `<span class="d-gav ${t >= 4 ? 'pulse' : ''}">${glow ? `<img class="d-gl" src="${glow}" alt="">` : ''}<img src="${url}" alt="">${fx}</span>`;
+}
+
 let api = null;          // helpers from app.js
 let sub = 'hub';         // hub | camp
 let battle = null;       // current fight UI state
@@ -207,7 +220,7 @@ function campGear() {
   const set = activeSet(dg.equipped);
   return `<div class="d-doll">
       <div class="d-dcol">${dollSlot(dg, 'helmet')}${dollSlot(dg, 'chest')}${dollSlot(dg, 'legs')}</div>
-      <div class="d-dhero"><img src="${api.dAvatarUrl(4)}" alt=""><div class="d-dpow">${fmt(powerScore(p))}</div><div class="d-dpowl">Power</div></div>
+      <div class="d-dhero">${glowAvatar(4)}<div class="d-dpow">${fmt(powerScore(p))}</div><div class="d-dpowl">Power</div></div>
       <div class="d-dcol">${dollSlot(dg, 'weapon')}${dollSlot(dg, 'offhand')}${dollSlot(dg, 'boots')}</div>
     </div>
     <div class="d-chips"><span>Atk <b>${fmt(p.atk)}</b></span><span>Def <b>${fmt(p.def)}</b></span><span>HP <b>${fmt(p.maxHp)}</b></span><span>Crit <b>${Math.round(p.crit * 100)}%</b></span>${p.dodge ? `<span>Dodge <b>${Math.round(p.dodge * 100)}%</b></span>` : ''}</div>
@@ -491,7 +504,7 @@ function renderBattle(full = false) {
   const sec = SECTIONS[sectionOf(run.floor) - 1];
   const target = b.enemies.find((e) => e.uid === battle.target && e.hp > 0) || aliveEnemies(b)[0];
   if (target) battle.target = target.uid;
-  battle.hero ||= api.dAvatarUrl(4);
+  battle.hero ||= glowAvatar(4);
   const statuses = statusChips;
   const foes = b.enemies.map((e) => `<button class="d-enemy fo-foe ${shownHp(e) <= 0 ? 'dead' : ''} ${e.uid === battle.target ? 'targeted' : ''} ${e.boss ? 'boss' : ''} ${e.charging ? 'tele' : ''}" data-action="d-target" data-uid="${e.uid}" data-e="${e.uid}">
       <span class="fo-mark">▼</span>${e.charging ? '<span class="fo-bang">!</span><span class="fo-warn"></span>' : ''}
@@ -539,7 +552,7 @@ function renderBattle(full = false) {
       <div class="fo-plat fo-plat-foe"></div>
       <div class="fo-foes n${Math.min(4, b.enemies.length)}">${foes}</div>
       <div class="fo-plat fo-plat-me"></div>
-      <div class="fo-hero"><img src="${battle.hero}" alt=""></div>
+      <div class="fo-hero">${battle.hero}</div>
     </div>
     <div class="d-player fo-ui">
       <div class="fo-me"><div class="fo-me-top"><b>${esc(S().name)}</b><span class="d-sts">${statuses(p)}${p.ward > 0 ? '<span class="d-st st-ward">ward</span>' : ''}${p.parry ? '<span class="d-st st-ward">parry</span>' : ''}</span></div>
