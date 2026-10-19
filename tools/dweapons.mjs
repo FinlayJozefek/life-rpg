@@ -11,9 +11,9 @@ function rng32(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Mat
 const R = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'];
 const scaleOf = (sec) => SECTION_SCALE[sec - 1] * SECTION_FUDGE[sec - 1];
 
-export function weaponReport(sec, n = 400) {
+export function weaponReport(sec, n = 400, withGrind = false) {
   const eq0 = loadout(sec, 'epic');
-  const weapons = DITEMS_BY_SECTION[sec].filter((i) => i.slot === 'weapon' && !i.shopOnly && !i.grindDrop).sort((a, b) => R.indexOf(a.rarity) - R.indexOf(b.rarity));
+  const weapons = DITEMS_BY_SECTION[sec].filter((i) => i.slot === 'weapon' && !i.shopOnly && (withGrind || !i.grindDrop)).sort((a, b) => R.indexOf(a.rarity) - R.indexOf(b.rarity));
   const rows = [];
   for (const w of weapons) {
     const eq = { ...eq0, weapon: w.id };
@@ -48,6 +48,6 @@ if (process.argv[1]?.endsWith('dweapons.mjs')) {
   for (let sec = 1; sec <= 5; sec++) {
     if (only && sec !== only) continue;
     console.log(`\n${SECTIONS[sec - 1].name} (${SECTIONS[sec - 1].family})`);
-    for (const r of weaponReport(sec)) console.log(`  ${r.rarity.padEnd(9)} ${r.name.padEnd(24)} ${r.type.padEnd(8)} ${r.dtype.padEnd(9)} atk ${String(r.atk).padStart(4)} ${r.slayer.padEnd(16)} ${r.sig.padEnd(26)} boss ${String(Math.round(r.boss * 100)).padStart(3)}% in ${r.bossTurns.toFixed(1).padStart(4)}  floor9 ${String(Math.round(r.floor * 100)).padStart(3)}% ${r.floorTurns.toFixed(1)} turns/fight`);
+    for (const r of weaponReport(sec, 400, process.argv.includes('--grind'))) console.log(`  ${r.rarity.padEnd(9)} ${r.name.padEnd(24)} ${r.type.padEnd(8)} ${r.dtype.padEnd(9)} atk ${String(r.atk).padStart(4)} ${r.slayer.padEnd(16)} ${r.sig.padEnd(26)} boss ${String(Math.round(r.boss * 100)).padStart(3)}% in ${r.bossTurns.toFixed(1).padStart(4)}  floor9 ${String(Math.round(r.floor * 100)).padStart(3)}% ${r.floorTurns.toFixed(1)} turns/fight`);
   }
 }

@@ -287,11 +287,11 @@ const G = {
     ['rare', 'chest', 'Demonhide Vest'], ['rare', 'legs', 'Demonhide Leggings'], ['rare', 'boots', 'Demonhide Boots'],
     ['rare', 'offhand', 'Infernal Tome', 'tome', { dtype: 'fire' }],
     ['mythic', 'weapon', 'Demonbane Blade', 'sword', { grindDrop: 1 / 2000, dtype: 'holy', slayer: { family: 'demon', bonus: 0.4 }, sig: ['Demonbane Strike'] }],
-    ['epic', 'weapon', 'Infernal Greatsword', 'sword', { burnOnHit: 0.3, sig: ['Hellfire'] }], ['epic', 'helmet', 'Dread Helm', null, { set: 'dread' }],
+    ['epic', 'weapon', 'Infernal Greatsword', 'sword', { burnOnHit: 0.3, slayer: { family: 'demon', bonus: 0.3 }, sig: ['Hellfire'] }], ['epic', 'helmet', 'Dread Helm', null, { set: 'dread' }],
     ['epic', 'chest', 'Dread Plate', null, { set: 'dread' }], ['epic', 'legs', 'Dread Greaves', null, { set: 'dread' }],
     ['epic', 'boots', 'Dread Sabatons', null, { set: 'dread' }], ['epic', 'offhand', 'Dread Aegis', 'shield'],
     ['legendary', 'helmet', 'Hellfire Crown', null, { dmgPct: 0.25, burnAttackers: 0.5 }],
-    ['legendary', 'weapon', "Demon Lord's Trident", 'spear', { slayer: { family: 'demon', bonus: 0.4 }, sig: ['Infernal Impale', 'Brimstone Rain'] }],
+    ['legendary', 'weapon', "Demon Lord's Trident", 'spear', { slayer: { family: 'demon', bonus: 0.75 }, sig: ['Infernal Impale', 'Brimstone Rain'] }],
     ['mythic', 'weapon', 'Ashbringer', 'sword', { grindDrop: 1 / 2000, dtype: 'holy', killHeal: 1, sig: ['Dawnbreak', 'Purify'] }],
     ['divine', 'offhand', 'Wings of the Seraph', 'relic', { allStats: 0.3, cheatDeath: true }],
     // Blacksmith exclusives
