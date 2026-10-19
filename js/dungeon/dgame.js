@@ -242,7 +242,7 @@ export const materialFor = (section) => SECTIONS[section - 1].material;
 // ---------- inventory & shops ----------
 const SELL = { common: 2, uncommon: 5, rare: 12, epic: 30, legendary: 80, mythic: 200, divine: 600 };
 export const sellPrice = (id) => (DITEMS[id].section === 0 ? 1 : Math.round(SELL[DITEMS[id].rarity] * SECTION_SCALE[DITEMS[id].section - 1]));
-export const buyPrice = (id) => sellPrice(id) * (DITEMS[id].shopOnly ? 3 : DITEMS[id].rarity === 'common' ? 4 : 5);
+export const buyPrice = (id) => sellPrice(id) * (DITEMS[id].shopOnly ? 30 : DITEMS[id].rarity === 'common' ? 4 : 5);
 export const MAX_PLUS = 10;
 export function upgradeCost(id, plus) {
   const it = DITEMS[id];
