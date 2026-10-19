@@ -99,59 +99,6 @@ function boots(g, L) {
   if (L.fx === 'lava') for (const x of [12, 18]) px(g, x, 42, '#ff6a1a', true);
 }
 
-// weapon gripped in the right hand (viewer's right), angled up and outwards; the fist is drawn over the handle
-const HAND = { x: 23, y: 30.5 };
-function stroke(g, dir, t0, t1, offs, colour) {
-  const len = Math.hypot(dir[0], dir[1]), d = [dir[0] / len, dir[1] / len], n = [-d[1], d[0]];   // n points outwards/right
-  for (let t = t0; t <= t1; t += 0.35) for (const o of offs) {
-    const x = Math.round(HAND.x + d[0] * t + n[0] * o), y = Math.round(HAND.y + d[1] * t + n[1] * o);
-    g.px(x, y, typeof colour === 'function' ? colour(t, o) : colour);
-  }
-}
-function weapon(g, L) {
-  const t = L.it.weaponType, r = L.metal, wood = ['#3a2414', '#6a4426', '#8a5c34', '#a87a4a'];
-  const fistCol = g.c[30 + (g.oy || 0)]?.[23] || '#e2b48c';            // whatever skin the avatar has
-  const trim = L.trim ? L.trim[2] : r[2];
-  const glowAt = (x, y) => g.px(x, y, L.gem, true);
-  const DIAG = [0.55, -1];                                             // up and a little outwards
-  if (t === 'bow') {                                                   // held upright in the fist, string on the inside
-    for (let y = 19; y <= 42; y++) { const dx = Math.round(3 * Math.sin(Math.PI * (y - 19) / 23)); g.px(23 + dx, y, wood[2]); g.px(24 + dx, y, wood[0]); }
-    for (let y = 19; y <= 42; y++) g.px(22, y, '#e8e0d0');
-    if (L.R >= 3) { g.px(23, 19, TRIM[2]); g.px(23, 42, TRIM[2]); }
-  } else if (t === 'staff') {
-    stroke(g, [0.2, -1], -9, 15, [0], wood[1]); stroke(g, [0.2, -1], -9, 15, [1], wood[0]);
-    const orb = L.glow || L.gem || '#9fd3ff', cx = Math.round(HAND.x + 0.2 * 18 / 1.02), cy = Math.round(HAND.y - 18 / 1.02);
-    for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x * x + y * y <= 5) g.px(cx + x, cy + y, x + y < -1 ? '#ffffff' : orb, true);
-    g.px(cx - 2, cy + 2, trim); g.px(cx + 2, cy + 2, trim);              // claws holding the orb
-  } else if (t === 'gauntlet') {
-    for (const x0 of [6, 21]) for (let y = 28; y <= 32; y++) for (let x = x0; x <= x0 + 4; x++) g.px(x, y, x === x0 ? r[2] : x === x0 + 4 || y === 32 ? r[0] : r[1]);
-    if (L.it.titan) { g.px(23, 30, '#ffd84a', true); g.px(8, 30, '#ffd84a', true); }
-    return;                                                            // the gauntlets are the fists
-  } else if (t === 'spear') {
-    stroke(g, DIAG, -8, 17, [0], wood[1]); stroke(g, DIAG, -8, 17, [1], wood[0]);
-    stroke(g, DIAG, 17, 22, [-1, 0, 1, 2], (tt, o) => (Math.abs(o - 0.5) > (22 - tt) * 0.45 ? null : o <= 0 ? r[3] : r[1]));
-    stroke(g, DIAG, 16, 16.6, [-1, 0, 1, 2], trim);
-  } else if (t === 'hammer') {
-    stroke(g, DIAG, -3, 12, [0], wood[1]); stroke(g, DIAG, -3, 12, [1], wood[0]);
-    stroke(g, DIAG, 11, 15, [-3, -2, -1, 0, 1, 2, 3, 4], (tt, o) => (tt < 11.6 || tt > 14.4 || o === -3 || o === 4 ? r[0] : o < 0 ? r[3] : r[1]));
-    if (L.fx === 'rune' && L.R >= 2) stroke(g, DIAG, 13, 13.3, [0, 1], L.glow);
-  } else if (t === 'axe') {
-    stroke(g, DIAG, -3, 15, [0], wood[1]); stroke(g, DIAG, -3, 15, [1], wood[0]);
-    stroke(g, DIAG, 10, 15, [2, 3, 4, 5, 6], (tt, o) => (o > 4.6 - Math.abs(tt - 12.5) * 0.5 ? (o >= 5 - Math.abs(tt - 12.5) * 0.5 ? null : r[3]) : r[1]));   // curved blade head
-    if (L.R >= 2) stroke(g, DIAG, 11, 14, [-1, -2], (tt) => (tt > 12 ? r[0] : null));                                                                   // back spike
-  } else {                                                             // sword / dagger
-    const len = t === 'dagger' ? 7 : 15;
-    stroke(g, DIAG, -2.5, 1.5, [0, 1], wood[1]);                       // grip
-    stroke(g, DIAG, -3.2, -2.6, [0, 1], trim);                         // pommel
-    stroke(g, DIAG, 2, 2.6, [-2, -1, 0, 1, 2, 3], trim);               // cross-guard
-    stroke(g, DIAG, 3, 2 + len, [0, 1], (tt, o) => (tt > len ? (o === 0 ? r[3] : null) : o === 0 ? r[3] : r[1]));
-    if (L.fx === 'lava') stroke(g, DIAG, 8, 8.4, [1], '#ff6a1a');
-    if (L.fx === 'rune' && L.R >= 2) stroke(g, DIAG, 7, 7.4, [0], L.glow);
-  }
-  // the fist closes over the handle
-  for (let y = 29; y <= 31; y++) for (let x = 22; x <= 24; x++) g.px(x, y, x === 22 || y === 29 ? fistCol : x === 24 || y === 31 ? '#b8886a' : fistCol);
-}
-
 // off-hand on the left arm (viewer's left)
 function offhand(g, L) {
   const k = L.it.kind;
@@ -190,12 +137,11 @@ export function dungeonAvatarUrl(lifeGear, dEquipped = {}, scale = 4) {
   return avatarDataUrl(lifeGear, scale, {
     behind: (g) => { if (off && /wings/i.test(off.it.name)) wingsBehind(g); },
     over: (g) => {
-      const parts = { legs: L('legs'), boots: L('boots'), chest: L('chest'), helmet: L('helmet'), weapon: L('weapon'), offhand: off };
+      const parts = { legs: L('legs'), boots: L('boots'), chest: L('chest'), helmet: L('helmet'), offhand: off };
       if (parts.legs) legs(g, parts.legs);
       if (parts.boots) boots(g, parts.boots);
       if (parts.chest) chest(g, parts.chest);
       if (parts.helmet) helmet(g, parts.helmet);
-      if (parts.weapon) weapon(g, parts.weapon);
       if (parts.offhand) offhand(g, parts.offhand);
     },
   });
