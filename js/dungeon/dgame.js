@@ -66,11 +66,16 @@ export function itemStats(id, plus = 0) {
 // Player stats before gear (TUNED), for section 1. Attack/Defence/Health grow with each
 // Crypts tier you unlock, in step with that section's gear (see baseScale).
 export const BASE = { hp: 220, atk: 34, def: 20, crit: 0.18, dodge: 0 };
-export function baseScale(level) {
+// The boost only kicks in once you have also reached that section in the tower (and you keep it after),
+// so grinding Crypts levels on low floors does not make the rest of the current section too easy.
+export function baseScale(level, reached = SECTIONS.length) {
   let k = 0;
   for (let i = 0; i < SECTIONS.length; i++) if (level >= SECTIONS[i].crypts) k = i;
+  k = Math.min(k, Math.max(1, reached) - 1);
   return SECTION_SCALE[k] / SECTION_SCALE[0];
 }
+// Highest section you have reached in the tower (it never goes down, even if you fall).
+export const reachedSection = (d) => sectionOf(Math.min(50, Math.max(d.highest || 1, d.climb || 1)));
 
 export function activeSet(equipped) {
   const counts = {};
@@ -92,8 +97,8 @@ export function weaponMoves(weaponId, offhandId) {
 }
 
 // Combine base stats, gear, upgrades, set bonus and Crypts perks into a fighter for the engine.
-export function buildPlayer(d, { level = cryptsLevel(d.xp), equipped = d.equipped, upgrades = d.upgrades, potions = d.potions } = {}) {
-  const bs = baseScale(level);
+export function buildPlayer(d, { level = cryptsLevel(d.xp), reached = reachedSection(d), equipped = d.equipped, upgrades = d.upgrades, potions = d.potions } = {}) {
+  const bs = baseScale(level, reached);
   const t = { hp: BASE.hp * bs, atk: BASE.atk * bs, def: BASE.def * bs, crit: BASE.crit, dodge: BASE.dodge };
   const passive = {};
   let dmgPct = 0.01 * (level - 1);            // Crypts perk: +1% damage per level
@@ -265,7 +270,7 @@ export function rarelLoadout(section) {
 }
 export function recommendedPower(section) {
   const gate = section < 5 ? SECTIONS[section].crypts - 1 : 33;
-  return powerScore(buildPlayer(newDungeon(), { equipped: rarelLoadout(section), level: gate, upgrades: {}, potions: {} }));
+  return powerScore(buildPlayer(newDungeon(), { equipped: rarelLoadout(section), level: gate, reached: section, upgrades: {}, potions: {} }));
 }
 
 // ---------- floor chests ----------

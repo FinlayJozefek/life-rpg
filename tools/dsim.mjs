@@ -61,7 +61,7 @@ export function bossRuns(sec, kind, botName, n = 1500, seed = 1) {
   const eq = loadout(sec, kind);
   let wins = 0, rounds = 0;
   for (let i = 0; i < n; i++) {
-    const p = buildPlayer(newDungeon(), { equipped: eq, level: BOSS_LEVEL[sec - 1], upgrades: {}, potions: { 'hp-medium': 3 } });
+    const p = buildPlayer(newDungeon(), { equipped: eq, level: BOSS_LEVEL[sec - 1], reached: sec, upgrades: {}, potions: { 'hp-medium': 3 } });
     const r = fight(p, [makeBoss(sec)], bot, rng, true, sec);
     if (r.won) wins++;
     rounds += r.rounds;
@@ -75,7 +75,7 @@ export function floorRuns(floor, kind, botName, n = 600, seed = 2) {
   const eq = loadout(sec, kind);
   let wins = 0, rounds = 0, fights = 0;
   for (let i = 0; i < n; i++) {
-    let p = buildPlayer(newDungeon(), { equipped: eq, level: FLOOR_LEVEL[sec - 1], upgrades: {}, potions: { 'hp-medium': 4 } });
+    let p = buildPlayer(newDungeon(), { equipped: eq, level: FLOOR_LEVEL[sec - 1], reached: sec, upgrades: {}, potions: { 'hp-medium': 4 } });
     let ok = true;
     for (const group of floorPlan(floor, rng)) {
       const r = fight(p, group, bot, rng, false, sec);

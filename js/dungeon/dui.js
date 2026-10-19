@@ -7,7 +7,7 @@ import {
   newDungeon, startDungeon, cryptsProgress, cryptsLevel, sectionOf, floorInSection, sectionStart, sectionUnlocked, canPlay,
   buildPlayer, powerScore, recommendedPower, floorPlan, enemyXp, enemyCoins, rollEnemyDrops, rollBossDrops, materialFor,
   itemStats, weaponMoves, activeSet, sellPrice, buyPrice, upgradeCost, MAX_PLUS, blacksmithStock, XP, SECTION_XP, SECTION_FUDGE,
-  chestKey, chestName, chestInfo, rollChest, CHEST_TIERS, CHEST_ORDER, chestOdds, floorLayout,
+  chestKey, chestName, chestInfo, rollChest, CHEST_TIERS, CHEST_ORDER, chestOdds, floorLayout, baseScale, reachedSection,
 } from './dgame.js';
 import { createBattle, takeTurn, getActions, aliveEnemies, typeMult, moveType } from './engine.js';
 import { gearIcon, mountEnemy, enemyIcon, BOSS_AURA, TOWER_PAL, towerTexture, chestIcon } from './dart.js';
@@ -792,6 +792,10 @@ function grantRewards(won, { fled = false } = {}) {
     // fall back to the start of the section only when dying on a floor you have not beaten yet
     if (!dg.cleared[run.floor] && sectionOf(run.floor) === sectionOf(dg.climb)) dg.climb = sectionStart(run.floor);
   }
+  // base stats step up once you have both the Crypts level and have reached the new section
+  const boost = baseScale(cryptsLevel(dg.xp), reachedSection(dg));
+  if (dg.boostSeen && boost > dg.boostSeen) api.toast(`Your strength surges! Base Attack, Defence and Health are up for ${SECTIONS[reachedSection(dg) - 1].name}`);
+  dg.boostSeen = boost;
   return { first, mat };
 }
 
