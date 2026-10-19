@@ -130,18 +130,117 @@ function wingsBehind(g) {
   }
 }
 
+// ---------- rarity looks (trial: dev/armour-tiers.html) ----------
+// Each style adds to the base armour as rarity goes up, so an Epic chestplate looks grander than an Uncommon one.
+const TIER_METAL = [null, ['#4a2a12', '#8a5a2a', '#b8823e', '#e8b878'], ['#4a505e', '#9aa2b2', '#d6dce8', '#ffffff'], TRIM, TRIM,
+  ['#5a0a1a', '#c8243a', '#ff6a5a', '#ffd0a0'], ['#a07a2a', '#ffe08a', '#fff8d8', '#ffffff']];
+const OBSIDIAN = ['#08060a', '#1a1220', '#2e2236', '#4a3a56'];
+const CAPE = [null, null, ['#142a5a', '#24448a', '#3a62b0', '#6a8ad0'], ['#2a1048', '#4a1e78', '#6a34a8', '#9a6ad8'],
+  ['#5a1408', '#8a2410', '#b83a18', '#e86a2a'], ['#3a040e', '#6a0a1a', '#9a1428', '#ff4a6a'], ['#0e1440', '#1a2670', '#2e40a0', '#5a70d0']];
+
+// Metal tiers: the trim metal climbs bronze -> silver -> gold -> gold & gems -> crimson-gold on obsidian -> radiant white-gold.
+function metalsPrep(L) {
+  if (!L || L.R < 1) return L;
+  const out = { ...L, trim: TIER_METAL[L.R] };
+  if (L.R === 5) out.metal = OBSIDIAN;
+  if (L.R === 6) out.metal = ['#b8a070', '#e8dcb8', '#fff8e8', '#ffffff'];
+  return out;
+}
+function metalsEdges(g, parts) {
+  const { chest: C, legs: Lg, boots: B, helmet: H } = parts;
+  if (C && C.R >= 1 && !isCloth(C.it)) {
+    const t = C.trim;
+    for (let y = 18; y <= 27; y++) { px(g, 10, y, t[1]); px(g, 21, y, t[0]); }               // chest borders
+    for (const [x0, x1] of [[7, 10], [21, 24]]) for (let x = x0; x <= x1; x++) px(g, x, 17, t[2]);   // pauldron rims
+    for (const x of [7, 8, 9, 22, 23, 24]) px(g, x, 29, t[1]);                               // vambrace cuffs
+    if (C.R >= 4) for (const [x, y] of [[8, 18], [23, 18], [12, 19], [19, 19]]) px(g, x, y, C.gem, true);
+  }
+  if (Lg && Lg.R >= 1 && !isCloth(Lg.it)) for (const x0 of [12, 17]) { for (let x = x0; x <= x0 + 2; x++) px(g, x, 35, Lg.trim[2]); }
+  if (B && B.R >= 1 && !isCloth(B.it)) for (const x of [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]) px(g, x, 42, B.trim[1]);
+  if (H && H.R >= 1 && !/crown/i.test(H.it.name) && !isCloth(H.it)) { for (let x = 11; x <= 20; x++) px(g, x, 1, H.trim[2]); if (H.R >= 4) { px(g, 15, 1, H.gem, true); px(g, 16, 1, H.gem, true); } }
+}
+
+// Ornate: the armour itself gets more elaborate -- rivets, layered plates, spikes, filigree, glowing core, radiant flares.
+function ornate(g, parts) {
+  const { chest: C, legs: Lg, boots: B, helmet: H } = parts;
+  if (C && !isCloth(C.it)) {
+    const r = C.metal, t = C.trim || TRIM, R = C.R;
+    if (R >= 1) for (const [x, y] of [[11, 19], [20, 19], [11, 26], [20, 26]]) px(g, x, y, r[3]);
+    if (R >= 2) for (let x = 11; x <= 20; x++) if (x !== 15 && x !== 16) { px(g, x, 23, r[0]); px(g, x, 24, r[2]); }   // segmented plates
+    if (R >= 3) for (const [x0, x1] of [[6, 10], [21, 25]]) { box(g, x0, 18, x1, 21, r); for (let x = x0; x <= x1; x++) px(g, x, 21, t[2]); }   // layered pauldrons
+    if (R >= 4) {
+      for (const [x, s] of [[7, -1], [24, 1]]) { px(g, x, 17, r[3]); px(g, x, 16, r[3]); px(g, x + s, 15, r[2]); px(g, x + s, 14, '#ffffff'); }   // spikes
+      for (const [x, y] of [[12, 20], [13, 21], [19, 20], [18, 21], [12, 26], [13, 25], [19, 26], [18, 25]]) px(g, x, y, t[2]);   // filigree
+    }
+    if (R >= 5) {
+      const gm = C.gem; for (let y = 20; y <= 23; y++) for (let x = 14; x <= 17; x++) px(g, x, y, (x === 14 || y === 20) ? '#ffffff' : gm, true);
+      for (let x = 11; x <= 20; x++) if (x < 14 || x > 17) px(g, x, 23, gm, true);         // glowing seams
+    }
+    if (R >= 6) for (const [x, s] of [[7, -1], [24, 1]]) { px(g, x + 2 * s, 13, '#fff4b0', true); px(g, x + 2 * s, 12, '#ffffff', true); px(g, x + s, 13, '#ffd84a', true); }
+  }
+  if (H && !isCloth(H.it) && !/crown/i.test(H.it.name)) {
+    const r = H.metal, t = H.trim || TRIM;
+    if (H.R >= 2) for (let x = 11; x <= 20; x += 3) px(g, x, 6, r[3]);
+    if (H.R >= 4) for (const [x, s] of [[9, -1], [22, 1]]) { px(g, x, 4, t[2]); px(g, x + s, 3, t[2]); px(g, x + s, 2, t[3]); px(g, x + 2 * s, 1, t[3]); px(g, x + 2 * s, 2, t[2]); }   // helm wings
+    if (H.R >= 5) { for (let y = -3; y <= 1; y++) px(g, 15, y, y < -1 ? '#ffffff' : H.gem, true); px(g, 16, -1, H.gem, true); px(g, 16, 0, H.gem, true); }
+  }
+  if (Lg && !isCloth(Lg.it)) {
+    const r = Lg.metal, t = Lg.trim || TRIM;
+    if (Lg.R >= 1) for (const x of [12, 19]) px(g, x, 33, r[3]);
+    if (Lg.R >= 3) for (const x0 of [12, 17]) for (let x = x0; x <= x0 + 2; x++) px(g, x, 36, t[2]);
+    if (Lg.R >= 4) for (const x0 of [10, 16]) { box(g, x0, 30, x0 + 5, 32, r); for (let x = x0; x <= x0 + 5; x++) px(g, x, 32, t[2]); }   // tassets
+    if (Lg.R >= 5) for (const x of [13, 18]) { px(g, x, 38, Lg.gem, true); px(g, x, 39, Lg.gem, true); }
+  }
+  if (B && !isCloth(B.it)) {
+    const r = B.metal, t = B.trim || TRIM;
+    if (B.R >= 2) for (const x of [10, 11, 20, 21]) px(g, x, 42, r[3]);
+    if (B.R >= 4) for (const [x, s] of [[10, -1], [21, 1]]) { px(g, x + s, 39, t[2]); px(g, x + 2 * s, 38, t[3]); px(g, x + s, 40, t[1]); }   // boot wings
+    if (B.R >= 5) for (const x of [12, 18]) px(g, x, 40, B.gem, true);
+  }
+}
+
+// Capes: Rare and up wear a cape that gets longer, richer and more magical with rarity.
+function capeBehind(g, R) {
+  if (R < 2) return;
+  const c = CAPE[R], end = [0, 0, 34, 39, 43, 45, 46][R];
+  for (let y = 17; y <= end; y++) {
+    const half = 6 + Math.floor((y - 17) * 0.22);
+    for (let x = 16 - half; x <= 15 + half; x++) {
+      let col = x === 16 - half ? c[2] : x === 15 + half ? c[0] : (x - (16 - half)) % 4 === 0 ? c[0] : c[1];
+      if (y === end) { if (R === 5 && x % 2) continue; col = R >= 4 ? TRIM[2] : c[0]; }        // hem
+      if (R === 6 && (x * 7 + y * 3) % 11 === 0) col = '#fff4b0';                            // stars
+      if (R === 5 && y >= end - 1 && x % 3 === 0) col = '#ff8a2e';                           // ember tatters
+      px(g, x, y, col);
+    }
+    if (R >= 4) { px(g, 16 - half, y, TRIM[1]); px(g, 15 + half, y, TRIM[0]); }               // gold edging
+  }
+  if (R >= 5) for (let x = 0; x < 32; x += 3) px(g, x + (end % 2), end + 1, R === 5 ? '#ff6a1a' : '#fff4b0', true);
+}
+
+const setRarity = (parts) => Math.max(-1, ...Object.values(parts).filter((p) => p && p.it.slot !== 'offhand').map((p) => p.R));
+
 // avatar image with your life-skill outfit underneath and Dungeon armour on top
-export function dungeonAvatarUrl(lifeGear, dEquipped = {}, scale = 4) {
-  const L = (slot) => (dEquipped[slot] && DITEMS[dEquipped[slot]] ? look(dEquipped[slot]) : null);
+// opts.styles: Set of 'metals' | 'ornate' | 'capes' (trial looks; empty = the current look)
+export function dungeonAvatarUrl(lifeGear, dEquipped = {}, scale = 4, opts = {}) {
+  const st = opts.styles || new Set();
+  const L = (slot) => {
+    const l = dEquipped[slot] && DITEMS[dEquipped[slot]] ? look(dEquipped[slot]) : null;
+    return st.has('metals') ? metalsPrep(l) : l;
+  };
   const off = L('offhand');
+  const parts = { legs: L('legs'), boots: L('boots'), chest: L('chest'), helmet: L('helmet'), offhand: off };
   return avatarDataUrl(lifeGear, scale, {
-    behind: (g) => { if (off && /wings/i.test(off.it.name)) wingsBehind(g); },
+    behind: (g) => {
+      if (st.has('capes')) capeBehind(g, setRarity(parts));
+      if (off && /wings/i.test(off.it.name)) wingsBehind(g);
+    },
     over: (g) => {
-      const parts = { legs: L('legs'), boots: L('boots'), chest: L('chest'), helmet: L('helmet'), offhand: off };
       if (parts.legs) legs(g, parts.legs);
       if (parts.boots) boots(g, parts.boots);
       if (parts.chest) chest(g, parts.chest);
       if (parts.helmet) helmet(g, parts.helmet);
+      if (st.has('metals')) metalsEdges(g, parts);
+      if (st.has('ornate')) ornate(g, parts);
       if (parts.offhand) offhand(g, parts.offhand);
     },
   });

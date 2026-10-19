@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Armour rarity trials</title>
+<!-- Dev-only page: ways for higher-rarity Dungeon armour to look cooler on your avatar. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding-bottom: 40px; }
+  main { max-width: 980px; padding-left: 8px; padding-right: 8px; }
+  .panel { padding: 12px; margin-bottom: 12px; }
+  .at-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .at-pick button { padding: 6px 10px; border-radius: 8px; border: 2px solid var(--line); background: var(--panel-2); color: var(--text); font: 700 12px var(--body-font); cursor: pointer; }
+  .at-pick button.on { border-color: var(--gold); color: var(--gold); }
+  .at-hero { display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .at-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 4px; padding: 4px 0 8px; }
+  .at-slot { min-width: 0; text-align: center; font: 700 11px var(--body-font); }
+  .at-av { position: relative; display: grid; place-items: center; height: 140px; }
+  .at-av img { width: 76px; image-rendering: pixelated; position: relative; z-index: 2; }
+  .at-hero .at-av { height: 290px; width: 170px; }
+  .at-hero .at-av img { width: 160px; }
+  .at-hero .at-slot { width: auto; font-size: 14px; }
+  .r0 { color: #b8b0a0 } .r1 { color: #6ad06a } .r2 { color: #5aa0ff } .r3 { color: #c08aff } .r4 { color: #ffb02e } .r5 { color: #ff5a78 } .r6 { color: #fff1a8 }
+  .at-why { color: var(--muted); font-size: 13px; margin: 2px 0 6px; }
+  /* aura trial */
+  .aura-3 img { filter: drop-shadow(0 0 3px #b06af0) drop-shadow(0 0 1px #b06af0); }
+  .aura-4 img { animation: pulseGold 2.2s ease-in-out infinite; }
+  .aura-5 img { animation: pulseRed 1.6s ease-in-out infinite; }
+  .aura-6 img { animation: pulseDiv 2.4s ease-in-out infinite; }
+  @keyframes pulseGold { 50% { filter: drop-shadow(0 0 6px #ffb02e) drop-shadow(0 0 2px #ffd84a); } 0%, 100% { filter: drop-shadow(0 0 3px #ffb02e); } }
+  @keyframes pulseRed { 50% { filter: drop-shadow(0 0 8px #ff2a4a) drop-shadow(0 0 2px #ff8a5a); } 0%, 100% { filter: drop-shadow(0 0 3px #ff2a4a); } }
+  @keyframes pulseDiv { 50% { filter: drop-shadow(0 0 10px #fff1a8) drop-shadow(0 0 3px #ffffff); } 0%, 100% { filter: drop-shadow(0 0 4px #ffd84a); } }
+  .rays { position: absolute; width: 90%; aspect-ratio: 1; border-radius: 50%; z-index: 1; top: 8%;
+    background: repeating-conic-gradient(from 0deg, rgba(255, 240, 170, 0.35) 0 10deg, transparent 10deg 30deg);
+    -webkit-mask: radial-gradient(closest-side, #000 30%, transparent); mask: radial-gradient(closest-side, #000 30%, transparent); animation: spin 14s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .pt { position: absolute; width: 3px; height: 3px; z-index: 3; bottom: 18%; animation: rise linear infinite; opacity: 0; }
+  @keyframes rise { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-110px); opacity: 0; } }
+  .at-hero .pt { width: 5px; height: 5px; }
+  @media (prefers-reduced-motion: reduce) { .aura-4 img, .aura-5 img, .aura-6 img, .rays, .pt { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Armour rarity trials</h1>
+  <p class="at-why">The same chestplate, helm, greaves and boots at every rarity. Each idea adds more as rarity goes up, so better gear is something you can see on your character.</p>
+
+  <div class="panel">
+    <h3>Try it big</h3>
+    <div class="at-pick" id="secs"></div>
+    <div class="at-pick" id="styles"></div>
+    <div class="at-hero" id="hero"></div>
+  </div>
+
+  <div id="rows"></div>
+</main>
+<script type="module">
+  import { DITEMS, SECTIONS } from '../js/dungeon/ddata.js';
+  import { dungeonAvatarUrl } from '../js/dungeon/armour.js';
+  const RAR = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'];
+  const RNAME = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Divine'];
+  const IDEAS = [
+    ['now', [], 'Now', 'What is in the game today: only a gem (Rare+) and gold trim (Epic+).'],
+    ['metals', ['metals'], 'A · Metal tiers', 'The trim metal climbs a ladder you can read at a glance: bronze, silver, gold, gold with gems, crimson-gold on black obsidian, then radiant white-gold.'],
+    ['ornate', ['ornate'], 'B · Ornate armour', 'The armour itself gets bigger and fancier: rivets, segmented plates, layered pauldrons, then spikes, helm wings and filigree, a glowing core, and radiant flares.'],
+    ['capes', ['capes'], 'C · Capes', 'Rare and up earn a cape: short and blue, then longer purple, a gold-edged war cloak, an ember-tattered Mythic cape, and a starry night-sky Divine mantle.'],
+    ['aura', [], 'D · Aura', 'The art stays the same but higher rarity glows: purple at Epic, a pulsing gold at Legendary, rising embers at Mythic, light rays and sparkles at Divine.'],
+    ['mix', ['metals', 'ornate', 'capes'], 'Mix (A + B + C + D)', 'Everything together: each step up changes the metal, the shape, the cape and the glow.'],
+  ];
+  let sec = 3, hero = { r: 3, idea: 'mix' };
+
+  function setItems(r) {
+    const base = { helmet: 'Plate Helm', chest: 'Chestplate', legs: 'Plate Greaves', boots: 'Plate Boots' }, eq = {};
+    for (const [slot, name] of Object.entries(base)) { const id = `_trial_${slot}_${sec}_${r}`; DITEMS[id] = { id, name, slot, rarity: RAR[r], section: sec, stats: {} }; eq[slot] = id; }
+    return eq;
+  }
+  function avatar(r, idea, scale) {
+    const st = new Set(IDEAS.find((i) => i[0] === idea)[1]);
+    const url = dungeonAvatarUrl({}, setItems(r), scale, { styles: st });
+    const aura = idea === 'aura' || idea === 'mix';
+    let fx = '';
+    if (aura && r === 6) fx += '<div class="rays"></div>';
+    if (aura && r >= 5) for (let i = 0; i < 9; i++) {
+      const col = r === 5 ? ['#ff6a1a', '#ffb02e', '#ff3a3a'][i % 3] : ['#fff4b0', '#ffffff', '#ffd84a'][i % 3];
+      fx += `<span class="pt" style="left:${18 + ((i * 37) % 64)}%;background:${col};animation-duration:${1.8 + (i % 4) * 0.5}s;animation-delay:${(i * 0.37) % 2}s"></span>`;
+    }
+    return `<div class="at-av ${aura ? 'aura-' + r : ''}">${fx}<img src="${url}" alt=""></div>`;
+  }
+  function drawHero() {
+    document.getElementById('secs').innerHTML = SECTIONS.map((s, i) => `<button data-s="${i + 1}" class="${sec === i + 1 ? 'on' : ''}">${s.name}</button>`).join('');
+    document.getElementById('styles').innerHTML = IDEAS.map((i) => `<button data-i="${i[0]}" class="${hero.idea === i[0] ? 'on' : ''}">${i[2]}</button>`).join('');
+    document.getElementById('hero').innerHTML = `<div class="at-pick" style="width:100%;justify-content:center">${RNAME.map((n, r) => `<button data-r="${r}" class="r${r} ${hero.r === r ? 'on' : ''}">${n}</button>`).join('')}</div>`
+      + [1, hero.r].filter((v, i, a) => a.indexOf(v) === i).map((r) => `<div class="at-slot r${r}">${avatar(r, hero.idea, 6)}${RNAME[r]}</div>`).join('');
+    document.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => { sec = +b.dataset.s; drawHero(); drawRows(); });
+    document.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => { hero.idea = b.dataset.i; drawHero(); });
+    document.querySelectorAll('[data-r]').forEach((b) => b.onclick = () => { hero.r = +b.dataset.r; drawHero(); });
+  }
+  function drawRows() {
+    document.getElementById('rows').innerHTML = IDEAS.map(([id, , name, why]) => `<div class="panel"><h3>${name}</h3><p class="at-why">${why}</p>
+      <div class="at-strip">${RNAME.map((n, r) => `<div class="at-slot r${r}">${avatar(r, id, 3)}${n}</div>`).join('')}</div></div>`).join('');
+  }
+  drawHero(); drawRows();
+</script>
+</body>
+</html>
