@@ -1,6 +1,6 @@
 // Offline support: network-first so updates show up straight away, falling back
 // to the cache when offline. Bump VERSION if you add/rename shell files.
-const VERSION = 'v35';
+const VERSION = 'v36';
 const CACHE = `life-rpg-${VERSION}`;
 const SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest',

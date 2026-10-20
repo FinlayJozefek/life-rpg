@@ -639,28 +639,34 @@ function bossIntro(name, floor) {
 }
 
 // Floating damage / heal numbers over a fighter.
+// The attacker lunges first; the hit (number, flash, shake) lands at the peak of the lunge.
+const IMPACT = 260;
 function popNumber(ev) {
   const root = battleRoot();
   const host = ev.who === 'player' ? root.querySelector('.fo-hero') : root.querySelector(`[data-e="${ev.uid}"]`);
   if (!host) return;
-  const n = document.createElement('div');
-  n.className = `d-pop ${ev.t === 'heal' ? 'heal' : ev.crit ? 'crit' : ''} ${ev.status ? `st-${ev.status}` : ''} ${ev.eff > 1 ? 'eff' : ''} ${ev.who === 'player' && ev.t === 'dmg' ? 'me' : ''}`;
-  n.innerHTML = ev.t === 'heal' ? `+${fmt(ev.amount)}` : `${fmt(ev.amount)}${ev.eff > 1 ? '<small>super effective!</small>' : ev.eff < 1 ? '<small>resisted</small>' : ''}`;
-  host.appendChild(n);
-  setTimeout(() => n.remove(), 1000);
-  if (ev.t !== 'dmg') return;
-  replay(host, 'hit');
-  if (!ev.status) {
-    if (ev.who === 'enemy') { replay(root.querySelector('.fo-hero'), 'lunge'); fxSlash(host); }
+  const direct = ev.t === 'dmg' && !ev.status;
+  if (direct) replay(ev.who === 'enemy' ? root.querySelector('.fo-hero') : root.querySelector(`[data-e="${ev.fromUid}"]`), 'lunge');
+  const land = () => {
+    if (!host.isConnected) return;
+    const n = document.createElement('div');
+    n.className = `d-pop ${ev.t === 'heal' ? 'heal' : ev.crit ? 'crit' : ''} ${ev.status ? `st-${ev.status}` : ''} ${ev.eff > 1 ? 'eff' : ''} ${ev.who === 'player' && ev.t === 'dmg' ? 'me' : ''}`;
+    n.innerHTML = ev.t === 'heal' ? `+${fmt(ev.amount)}` : `${fmt(ev.amount)}${ev.eff > 1 ? '<small>super effective!</small>' : ev.eff < 1 ? '<small>resisted</small>' : ''}`;
+    host.appendChild(n);
+    setTimeout(() => n.remove(), 1000);
+    if (ev.t !== 'dmg') return;
+    replay(host, 'hit');
+    api.sfx.hit(ev.crit, ev.who === 'player');
+    if (!direct) return;
+    if (ev.who === 'enemy') fxSlash(host);
     else {
-      const att = root.querySelector(`[data-e="${ev.fromUid}"]`);
-      replay(att, 'lunge');
       replay(root.querySelector('.fo-vig'), 'go');
       if (ev.amount > b0().player.maxHp * 0.2) api.vibrate(60);
       api.shake(root);
     }
     if (ev.crit) { replay(root.querySelector('.fo-flash'), 'go'); api.shake(root, true); fxBits(host, '#ffd84a', 14); }
-  }
+  };
+  if (direct) setTimeout(land, IMPACT); else land();
 }
 const b0 = () => battle.b;
 
@@ -669,16 +675,19 @@ function dodgeFx(ev) {
   const root = battleRoot();
   const host = ev.who === 'player' ? root.querySelector('.fo-hero') : root.querySelector(`[data-e="${ev.uid}"]`);
   if (!host) return;
-  replay(host, 'dodge');
-  setTimeout(() => host.classList.remove('dodge'), 450);
-  const n = document.createElement('div');
-  n.className = 'd-pop dodge-pop';
-  n.textContent = 'Dodge!';
-  host.appendChild(n);
-  setTimeout(() => n.remove(), 1000);
   if (ev.who === 'player') { const att = root.querySelector('.fo-foe.targeted') || root.querySelector('.fo-foe'); replay(att, 'lunge'); }
   else replay(root.querySelector('.fo-hero'), 'lunge');
-  api.sfx.tick?.();
+  setTimeout(() => {
+    if (!host.isConnected) return;
+    replay(host, 'dodge');
+    setTimeout(() => host.classList.remove('dodge'), 450);
+    const n = document.createElement('div');
+    n.className = 'd-pop dodge-pop';
+    n.textContent = 'Dodge!';
+    host.appendChild(n);
+    setTimeout(() => n.remove(), 1000);
+    api.sfx.tick?.();
+  }, IMPACT - 60);
 }
 // A short banner across the fight for warnings ("raises his great club…") and boss phase changes.
 function banner(text, kind = '') {
@@ -697,12 +706,12 @@ function playEvents(events, done) {
     if (!battle) return;
     const ev = queue.shift();
     if (!ev) { battle.shown = null; done(); return; }
-    let wait = 0;
+    let wait = 0, barDelay = 0;   // health bars drop when the hit lands, not when the swing starts
     if (ev.t === 'text') {
       battle.log.push(ev.text);
-      if (ev.miss) { dodgeFx(ev); wait = 380; }
-      else if (ev.tele) { banner(ev.text, 'warn'); api.sfx.chime(); wait = 500; }
-      else if (ev.big) { banner(ev.text); wait = 600; }
+      if (ev.miss) { dodgeFx(ev); wait = 820; }
+      else if (ev.tele) { banner(ev.text, 'warn'); api.sfx.chime(); wait = 1100; }
+      else if (ev.big) { banner(ev.text); wait = 900; }
       else wait = 180;
     }
     const k = ev.who === 'player' ? 'p' : `e${ev.uid}`;
@@ -713,20 +722,20 @@ function playEvents(events, done) {
       battle.log.push(ev.status
         ? `${ev.who === 'player' ? 'You take' : `${target} takes`} ${fmt(ev.amount)} ${ev.status} damage`
         : `${ev.who === 'player' ? ev.by : 'You'} · ${ev.move}: ${fmt(ev.amount)}${ev.crit ? ' CRIT!' : ''}${ev.eff > 1 ? ' (super effective!)' : ev.eff < 1 ? ' (resisted)' : ''}`);
-      popNumber(ev); api.sfx.hit(ev.crit, ev.who === 'player'); wait = 330;
+      popNumber(ev); wait = ev.status ? 450 : 850; if (!ev.status) barDelay = IMPACT;
     }
-    if (ev.t === 'heal' && !ev.quiet) { popNumber(ev); wait = 250; }
+    if (ev.t === 'heal' && !ev.quiet) { popNumber(ev); wait = 450; }
     if (ev.t === 'heal' && ev.quiet) wait = 60;
-    if (ev.t === 'phase') { battle.log.push(ev.text); banner(ev.text, 'phase'); api.shake(battleRoot(), true); api.flash('#ff4a2a88'); api.sfx.dropSound(4); wait = 900; }
+    if (ev.t === 'phase') { battle.log.push(ev.text); banner(ev.text, 'phase'); api.shake(battleRoot(), true); api.flash('#ff4a2a88'); api.sfx.dropSound(4); wait = 1600; }
     if (ev.t === 'status') wait = 80;
-    if (ev.t === 'potion') { api.sfx.chime(); wait = 150; }
+    if (ev.t === 'potion') { api.sfx.chime(); wait = 400; }
     if (ev.t === 'death' && ev.who === 'enemy') {
       const el = battleRoot().querySelector(`[data-e="${ev.uid}"]`);
       const foe = battle.b.enemies.find((x) => x.uid === ev.uid);
       if (el) { el.classList.add('dying'); setTimeout(() => fxBits(el, foe?.boss ? BOSS_AURA[foe.id] : '#e6dcc4', foe?.boss ? 40 : 22), 250); }
-      wait = 700;
+      wait = 950;
     }
-    if (wait) { updateBars(); setTimeout(step, wait); } else step();
+    if (wait) { if (barDelay) setTimeout(updateBars, barDelay); else updateBars(); setTimeout(step, wait); } else step();
   };
   step();
 }
