@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hero pose trials</title>
+<!-- Dev-only page: ways for your character to look alive in battle (idle, attack, get hit) and face the enemy. Not deployed. -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { padding-bottom: 40px; }
+  main { max-width: 1100px; padding-left: 8px; padding-right: 8px; }
+  .hp-why { color: var(--muted); font-size: 13px; margin: 2px 0 8px; }
+  .hp-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .hp-pick button { padding: 7px 12px; border-radius: 8px; border: 2px solid var(--line); background: var(--panel-2); color: var(--text); font: 700 13px var(--body-font); cursor: pointer; }
+  .hp-pick button.on { border-color: var(--gold); color: var(--gold); }
+  .hp-pick button.go { background: #7a1e14; border-color: #c8a46a; color: #fff0c8; }
+  .hp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .hp-card h3 { margin: 4px 0; } .hp-card p { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); }
+  /* mock battle: enemy on a platform up top, you down the bottom-left */
+  .scene { position: relative; height: 360px; border-radius: 12px; overflow: hidden; border: 2px solid #3a1a14;
+    background: radial-gradient(ellipse at 70% 0%, #6a1a10 0%, transparent 60%), linear-gradient(#2a0c0a, #120606 70%, #0a0404); }
+  .plat { position: absolute; left: 44%; top: 36%; width: 46%; height: 10%; border-radius: 50%; background: radial-gradient(#3a2a26, #1a1210 70%); box-shadow: 0 6px 0 #0a0606; }
+  .foe { position: absolute; left: 53%; top: 6%; width: 30%; image-rendering: pixelated; transition: filter 0.1s; }
+  .foe.hit { animation: foehit 0.35s; }
+  @keyframes foehit { 0%, 100% { transform: none; filter: none; } 30% { transform: translateX(6px); filter: brightness(3) saturate(0); } 60% { transform: translateX(-4px); } }
+  .shadow { position: absolute; left: 7%; bottom: 5%; width: 34%; height: 5%; border-radius: 50%; background: rgba(0, 0, 0, 0.55); }
+  .hero { position: absolute; left: 8%; bottom: 6%; width: 32%; transform-origin: 50% 100%; }
+  .hero img { width: 100%; image-rendering: pixelated; display: block; }
+  .hero .cape { position: absolute; left: 0; top: 0; width: 100%; image-rendering: pixelated; transform-origin: 50% 33%; animation: cape 1.8s ease-in-out infinite; }
+  @keyframes cape { 0%, 100% { transform: skewX(0deg) scaleY(1); } 50% { transform: skewX(-5deg) scaleY(1.02); } }
+  /* idle styles */
+  .idle-breathe { animation: breathe 1.6s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-2px) scaleY(1.025); } }
+  .idle-ready { animation: ready 1.3s ease-in-out infinite; }
+  @keyframes ready { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(-3px) scaleY(1.02); } }
+  /* actions (added on top of idle, then removed) */
+  .hero.atk { animation: lunge 0.55s ease-out; }
+  @keyframes lunge { 0% { transform: none; } 25% { transform: translate(-6px, 6px) scale(0.97); } 55% { transform: translate(70%, -55%) scale(0.9) rotate(6deg); } 75% { transform: translate(60%, -45%) scale(0.92); } 100% { transform: none; } }
+  .hero.atk-back { animation: lungeback 0.55s ease-out; }
+  @keyframes lungeback { 0% { transform: rotate(-4deg); } 25% { transform: translate(-6px, 8px) rotate(-6deg) scale(1.02); } 55% { transform: translate(65%, -60%) scale(0.78) rotate(4deg); } 75% { transform: translate(58%, -52%) scale(0.8); } 100% { transform: rotate(-4deg); } }
+  .hero.hurt { animation: hurt 0.45s ease-out; }
+  @keyframes hurt { 0%, 100% { transform: none; filter: none; } 20% { transform: translate(-10px, 4px) rotate(-5deg); filter: brightness(2) sepia(1) hue-rotate(-40deg) saturate(5); } 50% { transform: translate(6px, 0); filter: none; } 70% { transform: translate(-3px, 0); } }
+  .slash { position: absolute; left: 55%; top: 12%; width: 28%; height: 28%; pointer-events: none; opacity: 0; }
+  .slash.on { animation: slash 0.35s ease-out 0.2s; }
+  @keyframes slash { 0% { opacity: 0; transform: scale(0.6) rotate(-20deg); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.2) rotate(10deg); } }
+  .slash::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 42%, #fff 48%, #ffd27a 52%, transparent 58%); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Hero poses</h1>
+  <p class="hp-why">Three ways your character could look in a fight. Press Attack and Get hit to see them move. They all use the same gear art; pick an outfit to try.</p>
+  <div class="hp-pick" id="gear"></div>
+  <div class="hp-pick"><button class="go" id="atk">Attack</button><button class="go" id="hurt">Get hit</button></div>
+  <div class="hp-grid" id="grid"></div>
+</main>
+<script type="module">
+  import { DITEMS } from '../js/dungeon/ddata.js';
+  import { dungeonAvatar } from '../js/dungeon/armour.js';
+  import { enemyIcon } from '../js/dungeon/dart.js';
+  import { RECIPES, M } from '../js/dungeon/gearart2.js';
+  const id = (n) => Object.keys(DITEMS).find((k) => DITEMS[k].name === n);
+  const SETS = {
+    'Starter kit': { weapon: 'Rusty Sword', helmet: 'Leather Cap', chest: 'Tattered Tunic', boots: 'Worn Boots' },
+    'Goblin Warlord (Epic)': { helmet: 'Goblin Warlord Helm', chest: 'Goblin Chain Hauberk', legs: 'Goblin Warlord Greaves', boots: 'Goblin Warlord Boots', offhand: "Warlord's Shield" },
+    'Wraithweave (Epic)': { helmet: 'Wraithweave Hood', chest: 'Wraithweave Robe', legs: 'Wraithweave Leggings', boots: 'Wraithweave Boots', offhand: 'Tome of Rites' },
+    'Dread (Epic)': { helmet: 'Dread Helm', chest: 'Dread Plate', legs: 'Dread Greaves', boots: 'Dread Sabatons', offhand: 'Dread Aegis' },
+    'Best Infernal': { helmet: 'Crown of the Phoenix', chest: 'Dread Plate', legs: 'Cinderwalker Greaves', boots: 'Dread Sabatons', offhand: 'Wings of the Seraph' },
+  };
+  let cur = 'Dread (Epic)';
+  const IDEAS = [
+    ['front', 'A · Front, but alive', 'Same front-facing sprite, but it breathes, lunges up at the enemy when you attack and recoils when hit.'],
+    ['back', 'B · Back view', 'Seen from behind like a Pokémon battle, looking up at the enemy. Capes and wings show on your back. Breathes, lunges and recoils.'],
+    ['turned', 'C · Back view, battle-ready', 'From behind, leaning toward the enemy in a ready stance, with your cape blowing. A bigger, more dramatic lunge.'],
+  ];
+  const foe = enemyIcon('demon-lord', 6);
+  function capeUrl(eq, scale) {      // a cape on its own so it can sway (only for gear that has one)
+    const chest = eq.chest && RECIPES[DITEMS[eq.chest].name];
+    if (!chest?.cape) return null;
+    const c = M[chest.cape], cv = document.createElement('canvas'); cv.width = 32 * scale; cv.height = 52 * scale;
+    const x = cv.getContext('2d');
+    for (let y = 25; y <= 43; y++) for (let px = 11; px <= 20; px++) { if (y > 43 && (px + y) % 2) continue; x.fillStyle = px <= 11 ? c[2] : px >= 20 ? c[0] : (px + y) % 5 === 0 ? c[2] : c[1]; x.fillRect(px * scale, y * scale, scale, scale); }
+    return cv.toDataURL();
+  }
+  function draw() {
+    document.getElementById('gear').innerHTML = Object.keys(SETS).map((k) => `<button class="${k === cur ? 'on' : ''}" data-k="${k}">${k}</button>`).join('');
+    const eq = Object.fromEntries(Object.entries(SETS[cur]).map(([s, n]) => [s, id(n)]));
+    const front = dungeonAvatar({}, eq, 6).url, back = dungeonAvatar({}, eq, 6, { back: true }).url;
+    const cape = capeUrl(eq, 6);
+    document.getElementById('grid').innerHTML = IDEAS.map(([k, name, why]) => `<div class="panel hp-card"><h3>${name}</h3><p>${why}</p>
+      <div class="scene" data-k="${k}"><div class="plat"></div><img class="foe" src="${foe}" alt=""><div class="slash"></div><div class="shadow"></div>
+      <div class="hero ${k === 'turned' ? 'idle-ready' : 'idle-breathe'}"><img src="${k === 'front' ? front : back}" alt="">${k === 'turned' && cape ? `<img class="cape" src="${cape}" alt="">` : ''}</div></div></div>`).join('');
+    document.querySelectorAll('#gear button').forEach((b) => b.onclick = () => { cur = b.dataset.k; draw(); });
+  }
+  function play(kind) {
+    document.querySelectorAll('.scene').forEach((sc) => {
+      const h = sc.querySelector('.hero'), idle = sc.dataset.k === 'turned' ? 'idle-ready' : 'idle-breathe';
+      const cls = kind === 'atk' ? (sc.dataset.k === 'front' ? 'atk' : 'atk-back') : 'hurt';
+      h.classList.remove(idle, 'atk', 'atk-back', 'hurt'); void h.offsetWidth; h.classList.add(cls);
+      if (kind === 'atk') { const s = sc.querySelector('.slash'), f = sc.querySelector('.foe'); s.classList.remove('on'); f.classList.remove('hit'); void s.offsetWidth; s.classList.add('on'); setTimeout(() => { f.classList.add('hit'); }, 250); }
+      setTimeout(() => { h.classList.remove(cls); h.classList.add(idle); }, 600);
+    });
+  }
+  document.getElementById('atk').onclick = () => play('atk');
+  document.getElementById('hurt').onclick = () => play('hurt');
+  draw();
+</script>
+</body>
+</html>

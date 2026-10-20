@@ -56,20 +56,21 @@ function helmet(g, L) {
     box(g, 11, 0, 20, 4, L); box(g, 10, 2, 11, 15, L); box(g, 20, 2, 21, 15, L);
     for (let x = 11; x <= 20; x++) px(g, x, 5, r[0]);
     if (rc.tatter) for (const x of [10, 12, 19, 21]) px(g, x, 16, r[1]);
-    if (rc.eyes) { px(g, 12, 6, rc.eyes, true); px(g, 19, 6, rc.eyes, true); }
+    if (L.back) box(g, 11, 0, 20, 15, L);   // seen from behind: the hood covers the whole head
+    else if (rc.eyes) { px(g, 12, 6, rc.eyes, true); px(g, 19, 6, rc.eyes, true); }
     if (s === 'beast') { for (const x of [11, 19]) { px(g, x, -1, r[2]); px(g, x + 1, -2, r[3]); px(g, x, -2, r[2]); } px(g, 13, 2, '#ffd84a', true); px(g, 18, 2, '#ffd84a', true); }
   } else {
     // full helms: cover the head, visor across the face
     box(g, 11, 0, 20, 7, L); box(g, 10, 2, 10, 14, L); box(g, 21, 2, 21, 14, L);
-    const vis = rc.visor || 't';
+    const vis = L.back ? 'none' : rc.visor || 't';
     if (vis !== 'nasal') { box(g, 11, 8, 20, 14, L); }
     if (vis === 't') { for (let x = 12; x <= 19; x++) if (x !== 15 && x !== 16) px(g, x, 10, rc.visorGlow || '#06050c', !!rc.visorGlow); for (let y = 10; y <= 13; y++) { px(g, 15, y, '#06050c'); px(g, 16, y, '#06050c'); } }
     if (vis === 'slit') for (let x = 12; x <= 19; x++) px(g, x, 10, rc.visorGlow || '#06050c', !!rc.visorGlow);
     if (vis === 'grill') for (let x = 12; x <= 19; x++) for (let y = 9; y <= 13; y++) if (x % 2 === 0) px(g, x, y, rc.visorGlow && y < 11 ? rc.visorGlow : '#06050c', !!rc.visorGlow && y < 11);
     if (vis === 'nasal') { for (let x = 11; x <= 20; x++) px(g, x, 7, L.trim ? L.trim[2] : r[0]); for (let y = 8; y <= 11; y++) { px(g, 15, y, r[2]); px(g, 16, y, r[1]); } }
     if (vis === 'skull') { for (const x of [12, 13, 18, 19]) { px(g, x, 9, '#0a0808'); px(g, x, 10, '#0a0808'); } for (let x = 13; x <= 18; x += 2) px(g, x, 13, '#0a0808'); }
-    if (rc.fangs) { px(g, 14, 12, '#f6eed8'); px(g, 17, 12, '#f6eed8'); }
-    if (rc.eyes && vis !== 'skull') { px(g, 13, 10, rc.eyes, true); px(g, 18, 10, rc.eyes, true); }
+    if (rc.fangs && !L.back) { px(g, 14, 12, '#f6eed8'); px(g, 17, 12, '#f6eed8'); }
+    if (rc.eyes && vis !== 'skull' && !L.back) { px(g, 13, 10, rc.eyes, true); px(g, 18, 10, rc.eyes, true); }
     if (s === 'dwarf') for (let y = 14; y <= 17; y++) for (let x = 13 + (y - 14); x <= 18 - (y - 14); x++) px(g, x, y, M.rag[(x + y) % 2 + 1]);
   }
   if (L.trim && s !== 'furhat' && s !== 'crown') for (let x = 10; x <= 21; x++) px(g, x, 7, L.trim[2]);
@@ -81,7 +82,7 @@ function helmet(g, L) {
   if (rc.spires) for (const [x, h] of [[12, 2], [14, 3], [16, 4], [18, 3], [20, 2]]) for (let k = 1; k <= h; k++) px(g, x, -k, k === h ? M.rime[3] : M.rime[2]);
   if (rc.frost) for (let x = 11; x <= 20; x += 2) px(g, x, 0, '#e8f8ff');
   if (rc.tex === 'ember') for (const [x, y] of [[12, 1], [18, 3], [11, 9], [20, 12]]) px(g, x, y, '#ff7a2a', true);
-  if (L.gem && L.R >= 2 && !rc.noGem && s !== 'crown') { px(g, 15, 2, L.gem, true); px(g, 16, 2, L.gem, true); }
+  if (L.gem && L.R >= 2 && !rc.noGem && s !== 'crown' && !L.back) { px(g, 15, 2, L.gem, true); px(g, 16, 2, L.gem, true); }
 }
 
 // ---------- chest ----------
@@ -111,14 +112,14 @@ function chest(g, L) {
   if (rc.cracks) glowLine(g, [[12, 20], [13, 21], [13, 22], [18, 21], [19, 23], [18, 24], [12, 26]], rc.cracks);
   if (rc.runes) glowLine(g, [[11, 21], [20, 21], [11, 24], [20, 24]], rc.runes);
   if (rc.tex === 'ember') glowLine(g, [[12, 21], [18, 23], [13, 25], [19, 20]], '#ff6a1a');
-  if (rc.skull) { for (const [x, y] of [[14, 20], [15, 20], [16, 20], [17, 20], [14, 21], [17, 21], [15, 22], [16, 22]]) px(g, x, y, M.bone[2]); px(g, 15, 21, rc.skull, true); px(g, 16, 21, rc.skull, true); }
-  if (rc.core) { px(g, 15, 22, '#ffffff', true); px(g, 16, 22, rc.core, true); px(g, 15, 23, rc.core, true); px(g, 16, 23, rc.core, true); }
+  if (rc.skull && !L.back) { for (const [x, y] of [[14, 20], [15, 20], [16, 20], [17, 20], [14, 21], [17, 21], [15, 22], [16, 22]]) px(g, x, y, M.bone[2]); px(g, 15, 21, rc.skull, true); px(g, 16, 21, rc.skull, true); }
+  if (rc.core && !L.back) { px(g, 15, 22, '#ffffff', true); px(g, 16, 22, rc.core, true); px(g, 15, 23, rc.core, true); px(g, 16, 23, rc.core, true); }
   if (rc.frost) for (let x = 10; x <= 21; x += 2) px(g, x, 18, '#e8f8ff');
-  if (L.gem && L.R >= 2 && !rc.skull && !rc.core && !rc.noGem) { px(g, 15, 21, L.gem, true); px(g, 16, 21, L.gem, true); }
+  if (L.gem && L.R >= 2 && !rc.skull && !rc.core && !rc.noGem && !L.back) { px(g, 15, 21, L.gem, true); px(g, 16, 21, L.gem, true); }
 }
-function capeBehind(g, L) {
+function capeBehind(g, L, over = false) {
   const c = M[L.rc.cape];
-  for (let y = 18; y <= 40; y++) for (let x = 8; x <= 23; x++) { if (y > 38 && (x + y) % 2) continue; px(g, x, y, x <= 9 ? c[2] : x >= 22 ? c[0] : c[1]); }
+  for (let y = over ? 20 : 18; y <= (over ? 38 : 40); y++) for (let x = over ? 11 : 8; x <= (over ? 20 : 23); x++) { if (y > 38 && (x + y) % 2) continue; px(g, x, y, x <= 9 ? c[2] : x >= 22 ? c[0] : c[1]); }
 }
 
 // ---------- legs ----------
@@ -203,6 +204,14 @@ function offhand(g, L) {
 }
 const mix2 = (c) => c;
 
+// back view: the face becomes the back of the head (hair), with a bit of neck showing
+function faceToHair(g) {
+  const oy = g.oy || 0, hair = g.c[3 + oy]?.[15] || '#5a3a22';
+  for (let y = 5; y <= 15; y++) for (let x = 11; x <= 20; x++) { if (!g.c[y + oy]?.[x]) continue; px(g, x, y, y >= 14 && x > 12 && x < 19 ? '#c08a62' : x === 11 ? mix(hair, '#ffffff', 0.15) : x === 20 || y === 13 ? mix(hair, '#000000', 0.25) : hair); }
+}
+function mirrored(g, draw) { const o = g.px; g.px = function (x, y, c, gl) { o.call(this, 31 - x, y, c, gl); }; try { draw(); } finally { g.px = o; } }
+function mix(a, b, t) { const h = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); const A = h(a), B = h(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); }
+
 function wingsBehind(g) {
   for (const s of [-1, 1]) {
     for (let i = 0; i < 4; i++) {
@@ -222,8 +231,10 @@ function wingsBehind(g) {
 const GLOW = { rare: ['#4a90e2', 0.5], epic: ['#b06af0', 0.75], legendary: ['#ffb02e', 0.9], mythic: ['#ff3a5a', 1], divine: ['#fff1a8', 1] };
 
 // Returns { url, glow, top }: the avatar, its glow layer (null if nothing is Rare+) and the best rarity worn.
-export function dungeonAvatar(lifeGear, dEquipped = {}, scale = 4) {
-  const L = (slot) => (dEquipped[slot] && DITEMS[dEquipped[slot]] ? look(dEquipped[slot]) : null);
+// opts.back: seen from behind (battle view facing the enemies): hair instead of a face, capes and wings on top, off-hand on the other side.
+export function dungeonAvatar(lifeGear, dEquipped = {}, scale = 4, opts = {}) {
+  const back = !!opts.back;
+  const L = (slot) => { const l = dEquipped[slot] && DITEMS[dEquipped[slot]] ? look(dEquipped[slot]) : null; if (l) l.back = back; return l; };
   const off = L('offhand');
   const parts = { legs: L('legs'), boots: L('boots'), chest: L('chest'), helmet: L('helmet'), offhand: off };
   const marks = new Map();
@@ -234,15 +245,19 @@ export function dungeonAvatar(lifeGear, dEquipped = {}, scale = 4) {
   };
   const url = avatarDataUrl(lifeGear, scale, {
     behind: (g) => {
+      if (back) return;
       if (parts.chest?.rc.cape) tracked(g, parts.chest, () => capeBehind(g, parts.chest));
       if (off && /wings/i.test(off.it.name)) tracked(g, off, () => wingsBehind(g));
     },
     over: (g) => {
+      if (back) faceToHair(g);
       if (parts.legs) tracked(g, parts.legs, () => legs(g, parts.legs));
       if (parts.boots) tracked(g, parts.boots, () => boots(g, parts.boots));
       if (parts.chest) tracked(g, parts.chest, () => chest(g, parts.chest));
       if (parts.helmet) tracked(g, parts.helmet, () => helmet(g, parts.helmet));
-      if (parts.offhand) tracked(g, parts.offhand, () => offhand(g, parts.offhand));
+      if (back && parts.chest?.rc.cape) tracked(g, parts.chest, () => capeBehind(g, parts.chest, true));
+      if (parts.offhand) tracked(g, parts.offhand, () => (back ? mirrored(g, () => offhand(g, parts.offhand)) : offhand(g, parts.offhand)));
+      if (back && off && /wings/i.test(off.it.name)) tracked(g, off, () => wingsBehind(g));
     },
   });
   const R = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'];
