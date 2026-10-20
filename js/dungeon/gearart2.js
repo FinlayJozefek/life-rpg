@@ -442,6 +442,333 @@ export const RECIPES = {
   'Wings of the Seraph': { shape: 'seraph' },
 };
 
+// ---------- weapons (diagonal: handle bottom-left, tip top-right) ----------
+// u = along the weapon, v = across (+v = lower-right side, in shadow)
+Object.assign(M, {
+  wood: ['#3a2414', '#6a4426', '#8a5c34', '#a87a4a'], darkwood: ['#1a120c', '#32221a', '#4a3424', '#6a4c34'], silver: ['#5a6070', '#a0a8b8', '#dce2ec', '#ffffff'],
+  holy: ['#7a5a20', '#c09a48', '#f0e2b0', '#ffffff'], ice: ['#3a7ab0', '#7ac0f0', '#c8ecff', '#ffffff'], spectral: ['#2a4a6a', '#5a8ab0', '#a0d8f0', '#e8ffff'],
+  hellsteel: ['#1a0a0a', '#4a1a14', '#7a2418', '#b83a20'], granite: ['#4a4642', '#7a746c', '#a49c90', '#cac2b4'], fang: ['#8a7a5a', '#d8ccae', '#f0e8d4', '#ffffff'],
+  steel: ['#2e323a', '#5e6672', '#a4acb8', '#eef2f8'], slate: ['#262a30', '#3e444c', '#5a626c', '#7e8892'],
+});
+const WO = { x: 5.5, y: 26.5 };
+const uvf = (px, py) => { const dx = px - WO.x, dy = py - WO.y; return [(dx - dy) * Math.SQRT1_2, (dx + dy) * Math.SQRT1_2]; };
+const ptf = (u, v) => [WO.x + (u + v) * Math.SQRT1_2, WO.y + (v - u) * Math.SQRT1_2];
+const fillUV = (g, fn, tag = 1) => g.each((x, y) => { const [u, v] = uvf(x + 0.5, y + 0.5); return fn(u, v, x, y); }, tag);
+
+function wGrip(g, u0, u1, r, mat, wrap) { fillUV(g, (u, v) => (u >= u0 && u <= u1 && Math.abs(v) <= r ? (wrap && Math.floor(u * 1.4) % 2 ? mix(shade(M[mat], v / r), '#000000', 0.3) : shade(M[mat], v / r)) : null)); }
+function wPommel(g, u, r, mat, gemCol) { const [cx, cy] = ptf(u, 0); g.each((x, y) => { const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy); return d <= r ? shade(M[mat], ((x + 0.5 - cx) + (y + 0.5 - cy)) / r / 1.4) : null; }); if (gemCol) gem(g, cx, cy, r * 0.6, gemCol); }
+function wGuard(g, u, half, mat, style, gemCol) {
+  const ramp = M[mat];
+  if (style === 'skull') { const [cx, cy] = ptf(u, 0); g.each((x, y) => { const dx = x + 0.5 - cx, dy = y + 0.5 - cy; const d = Math.hypot(dx, dy * 1.1); if (d > 3) return null; if (Math.hypot(dx + 1.1, dy + 0.3) < 0.8 || Math.hypot(dx - 1.1, dy + 0.3) < 0.8) return '#0a0808'; return shade(M.bone, dx / 3); }, 2); return; }
+  if (style === 'disc') { const [cx, cy] = ptf(u, 0); g.each((x, y) => { const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy); return d < 3.4 ? (d > 2.6 ? ramp[0] : d < 1.4 ? '#ffffff' : shade(ramp, ((x + 0.5 - cx) + (y + 0.5 - cy)) / 4)) : null; }, 2); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g.set(Math.round(cx + Math.cos(a) * 4.4), Math.round(cy + Math.sin(a) * 4.4), '#fff4b0', 4); } return; }
+  fillUV(g, (uu, v) => {
+    if (Math.abs(v) > half) return null;
+    const k = Math.abs(v) / half;
+    const c = style === 'curved' ? u - 1.6 * k * k : style === 'wing' ? u - 2.5 * k : style === 'horns' ? u + 2.8 * k * k : u;
+    const th = style === 'wing' ? 1.4 - k * 0.6 : style === 'horns' ? 1.2 - k * 0.5 : 1.15;
+    if (Math.abs(uu - c) > th) return null;
+    return shade(ramp, -(uu - c) / th);
+  });
+  if (gemCol) { const [cx, cy] = ptf(u, 0); gem(g, cx, cy, 1.5, gemCol); }
+}
+// blade profiles: straight | broad | great | leaf | curved | serrated | flame | rapier | broken | kris
+function wBlade(g, u0, u1, w, profile, mat, opts = {}) {
+  const ramp = M[mat], tip = opts.tip || (profile === 'great' || profile === 'broad' ? 5 : 4);
+  const centre = (u) => { const t = (u - u0) / (u1 - u0); return profile === 'curved' ? -2.4 * t * t : profile === 'flame' || profile === 'kris' ? 0.7 * Math.sin(u * (profile === 'kris' ? 1.1 : 0.85)) : 0; };
+  const half = (u) => {
+    const t = (u - u0) / (u1 - u0);
+    let hw = profile === 'leaf' ? w * (0.75 + 0.55 * Math.sin(Math.PI * Math.min(1, t * 1.2))) : profile === 'rapier' ? w * 0.55 : profile === 'great' ? w * 1.25 : profile === 'broad' ? w * 1.12 : profile === 'curved' ? w * (1 + 0.35 * t) : w;
+    if (u > u1 - tip) hw *= (u1 - u) / tip;
+    return hw;
+  };
+  fillUV(g, (u, v) => {
+    if (u < u0 || u > u1) return null;
+    const c = centre(u), hw = half(u), vv = v - c;
+    let lim = hw;
+    if (profile === 'serrated' && vv > 0 && u < u1 - tip) lim = hw + (Math.floor(u * 1.2) % 2 ? 0.9 : 0);
+    if (profile === 'broken' && u > u1 - 6 && vv < 0 && h2(Math.floor(u), 3, 31) < 0.5) lim = hw * 0.4;
+    if (Math.abs(vv) > lim) return null;
+    const t = vv / Math.max(hw, 0.8);
+    if (u < u1 - tip - 0.5 && u > u0 + 1.2 && Math.abs(vv) < 0.55 && hw >= 1.6) {
+      const f = opts.fuller;
+      if (f === 'glow') return opts.glow;
+      if (f === 'runes') return Math.floor(u) % 3 === 0 ? opts.glow : ramp[0];
+      if (f === 'lava') return Math.floor(u * 0.8) % 2 ? '#ff6a1a' : '#ffb347';
+      if (f === 'groove') return ramp[0];
+    }
+    if (t < -0.72) return opts.edge || ramp[3];
+    const base = shade(ramp, t);
+    return opts.tex ? TEX[opts.tex](Math.floor(u), Math.floor(v + 9), base, ramp) : base;
+  }, 1);
+  // effects
+  if (opts.fx === 'flames') fillUV(g, (u, v) => { const c = centre(u), hw = half(u); const out = -(v - c) - hw; return u > u0 + 2 && u < u1 - 1 && out > 0 && out < 2.4 * (0.5 + h2(Math.floor(u), 1, 32)) && (Math.floor(u) + Math.floor(v)) % 2 === 0 ? (out < 1 ? '#ff6a1a' : '#ffd27a') : null; }, 4);
+  if (opts.fx === 'frost') fillUV(g, (u, v) => { const c = centre(u), hw = half(u); const out = Math.abs(v - c) - hw; return u > u0 + 2 && u < u1 - 2 && out > 0 && out < 1.4 && Math.floor(u) % 3 === 0 ? '#e8f8ff' : null; }, 4);
+  if (opts.fx === 'ghost') fillUV(g, (u, v) => { const c = centre(u), hw = half(u); const out = (v - c) - hw; return u > u0 + 1 && u < u1 && out > 0 && out < 2.6 && (Math.floor(u) + Math.floor(v * 2)) % 3 === 0 ? mix('#b8f0ff', '#2a4a6a', out / 3) : null; }, 4);
+  if (opts.fx === 'holy') fillUV(g, (u, v) => { const c = centre(u), hw = half(u); const out = Math.abs(v - c) - hw; return u > u0 + 1 && u < u1 && out > 0 && out < 1 ? '#fff4b0' : null; }, 4);
+  if (opts.fx === 'soul') fillUV(g, (u, v) => { const c = centre(u), hw = half(u); const out = -(v - c) - hw; return u > u0 + 1 && u < u1 && out > 0 && out < 2.2 && h2(Math.floor(u), Math.floor(v), 33) < 0.55 ? (out < 1 ? '#7affb0' : '#b48cff') : null; }, 4);
+  if (opts.fx === 'embers') fillUV(g, (u, v) => (u > u0 && u < u1 && Math.abs(v - centre(u)) < half(u) && h2(Math.floor(u * 2), Math.floor(v * 2), 34) < 0.12 ? '#ff7a2a' : null), 4);
+  if (opts.fx === 'rust') fillUV(g, (u, v) => (u > u0 && u < u1 && Math.abs(v - centre(u)) < half(u) && h2(Math.floor(u * 2), Math.floor(v * 2), 35) < 0.25 ? '#7a4a2a' : null), 1);
+}
+function wHaft(g, u0, u1, r, mat, bands, tex) { fillUV(g, (u, v) => (u >= u0 && u <= u1 && Math.abs(v) <= r ? (tex ? TEX[tex](Math.floor(u * 2), Math.floor(v * 3), shade(M[mat], v / r), M[mat]) : shade(M[mat], v / r)) : null)); if (bands) for (const ub of [u0 + 1, u1 - 1.5]) fillUV(g, (u, v) => (Math.abs(u - ub) < 0.6 && Math.abs(v) <= r + 0.35 ? shade(M[bands], v / r) : null)); }
+// axe heads: single | double | cleaver | crescent | pick
+function wAxe(g, c, shape, mat, opts = {}) {
+  const ramp = M[mat];
+  const side = (sgn, reach, spread) => fillUV(g, (u, v) => {
+    const vv = v * sgn; if (vv < -1.4) return null;
+    if (shape === 'cleaver') { if (vv > reach || Math.abs(u - c) > 3.6) return null; if (vv > reach - 1.2 && h2(Math.floor(u), 2, 36) < 0.4) return null; return vv > reach - 1.1 ? ramp[3] : opts.tex ? TEX[opts.tex](Math.floor(u * 2), Math.floor(v * 2), shade(ramp, (u - c) / 4 - 0.2), ramp) : shade(ramp, (u - c) / 4 - 0.2); }
+    const edge = reach - ((u - c) ** 2) / spread;
+    if (vv > edge || Math.abs(u - c) > 2.4 + 0.55 * Math.max(0, vv)) return null;
+    if (vv > edge - 1.1) return opts.edge || ramp[3];
+    if (opts.runes && Math.abs(u - c) < 0.5 && vv > 1 && vv < edge - 2) return opts.runes;
+    if (opts.lava && Math.abs(vv - edge * 0.55) < 0.5) return '#ff6a1a';
+    return shade(ramp, (u - c) / 3 - 0.3);
+  }, 1);
+  if (shape === 'pick') { for (const sgn of [1, -1]) fillUV(g, (u, v) => { const vv = v * sgn; const cu = c - (vv * vv) / 14; return vv > 0 && vv < 9 && Math.abs(u - cu) < 1.4 - vv * 0.13 ? shade(ramp, (u - cu)) : null; }, 1); return; }
+  if (shape === 'double') { side(1, 8.5, 9); side(-1, 8.5, 9); }
+  else if (shape === 'crescent') { side(1, 11, 7); fillUV(g, (u, v) => (v < -1 && v > -4 && Math.abs(u - c) < 1.2 - (-v - 1) * 0.3 ? shade(ramp, u - c) : null)); }
+  else if (shape === 'cleaver') side(1, 8, 1);
+  else { side(1, 9.5, 10); fillUV(g, (u, v) => (v < -1 && v > -4.5 && Math.abs(u - c) < 1.2 - (-v - 1) * 0.3 ? shade(ramp, u - c) : null)); }
+  if (opts.gem) { const [cx, cy] = ptf(c, 0); gem(g, cx, cy, 1.3, opts.gem); }
+}
+// hammer heads: club | mace | block | maul | sceptre | spiked
+function wHammer(g, c, shape, mat, opts = {}) {
+  const ramp = M[mat];
+  if (shape === 'club') { fillUV(g, (u, v) => { if (u < 8 || u > 30) return null; const r = 1.4 + (u - 8) * 0.17 + (Math.abs(u - 26) < 2 ? 1 : 0); if (Math.abs(v) > r) return null; return opts.tex ? TEX[opts.tex](Math.floor(u * 2), Math.floor(v * 2), shade(ramp, v / r), ramp) : shade(ramp, v / r); }, 1); return; }
+  if (shape === 'mace') { const [cx, cy] = ptf(c, 0); g.each((x, y) => { const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx); const r = 4 + (Math.cos(a * 6) > 0.6 ? 1.6 : 0); return d < r ? shade(ramp, (dx + dy) / 6) : null; }, 1); return; }
+  if (shape === 'sceptre') {
+    const [cx, cy] = ptf(c, 0);
+    g.each((x, y) => { const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.hypot(dx, dy); return d < 4.2 ? shade(ramp, (dx + dy) / 6) : null; }, 1);
+    for (let k = 0; k < 5; k++) { const a = -Math.PI / 4 - Math.PI / 2 + (k - 2) * 0.45; for (let r = 4; r < 7.5; r += 0.5) g.set(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r), r > 6.4 ? ramp[3] : ramp[2]); }
+    if (opts.flames) g.each((x, y) => { const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy); return d > 7 && d < 9.5 && (x + y) % 2 === 0 && h2(x, y, 37) < 0.6 ? (d < 8.2 ? '#ff6a1a' : '#ffd27a') : null; }, 4);
+    if (opts.gem) gem(g, cx, cy, 2, opts.gem);
+    return;
+  }
+  const hl = shape === 'maul' ? 5.5 : 4.4, hw = shape === 'maul' ? 8 : 6.6;
+  fillUV(g, (u, v) => {
+    if (Math.abs(u - c) > hl || Math.abs(v) > hw) return null;
+    const bevel = Math.abs(u - c) > hl - 0.9 || Math.abs(v) > hw - 0.9;
+    if (opts.runes && !bevel && (Math.abs(u - c) < 0.6 || (Math.abs(v) < hw - 2 && Math.floor(v + 20) % 3 === 0 && Math.abs(u - c) < 2.4))) return opts.runes;
+    if (opts.cracks && !bevel && Math.abs((Math.floor(u * 2) + Math.floor(v * 2)) % 7 - 3) < 0.6) return opts.cracks;
+    const base = bevel ? (u - c > 0 || v < 0 ? ramp[3] : ramp[0]) : shade(ramp, (v / hw) * 0.6 - (u - c) / hl * 0.4);
+    return opts.tex && !bevel ? TEX[opts.tex](Math.floor(u * 2), Math.floor(v * 2), base, ramp) : base;
+  }, 1);
+  if (opts.bands) for (const s of [-1, 1]) fillUV(g, (u, v) => (Math.abs(u - c) < 1.1 && Math.abs(v - s * (hw - 0.5)) < 0.7 ? M[opts.bands][2] : null));
+  if (shape === 'spiked') for (const s of [-1, 1]) for (let k = 0; k < 3; k++) { const [x, y] = ptf(c, s * (hw + 0.8 + k * 0.8)); g.set(Math.round(x), Math.round(y), k ? ramp[3] : ramp[2]); }
+  if (opts.core) { const [cx, cy] = ptf(c, 0); g.each((x, y) => { const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy); return d < 2.6 ? (d < 1.2 ? '#ffffff' : opts.core) : null; }, 4); }
+  if (opts.gem) { const [cx, cy] = ptf(c, 0); gem(g, cx, cy, 1.5, opts.gem); }
+}
+// spear tips: leaf | barbed | fang | icicle | trident
+function wSpear(g, base, shape, mat, opts = {}) {
+  const ramp = M[mat];
+  if (shape === 'trident') {
+    fillUV(g, (u, v) => (u > base - 1 && u < base + 1 && Math.abs(v) < 4.6 ? shade(ramp, -(u - base)) : null), 1);
+    for (const off of [-3.8, 0, 3.8]) fillUV(g, (u, v) => { const L = off ? 7 : 10; if (u < base || u > base + L || Math.abs(v - off) > 0.9 * (1 - (u - base) / L) + 0.3) return null; return shade(ramp, (v - off) / 1.2); }, 1);
+    for (const off of [-3.8, 3.8]) fillUV(g, (u, v) => (u > base + 5 && u < base + 6.5 && v * Math.sign(off) > Math.abs(off) && v * Math.sign(off) < Math.abs(off) + 1.3 ? ramp[3] : null), 1);
+    return;
+  }
+  const L = shape === 'icicle' ? 13 : shape === 'fang' ? 11 : 10, W = shape === 'icicle' ? 1.7 : shape === 'fang' ? 2.4 : 3.1;
+  fillUV(g, (u, v) => {
+    if (u < base || u > base + L) return null;
+    const t = (u - base) / L;
+    const c = shape === 'fang' ? 1.6 * t * t : 0;
+    let hw = shape === 'leaf' || shape === 'barbed' ? W * Math.sin(Math.PI * Math.min(1, t * 1.1)) ** 0.8 : W * (1 - t * 0.92);
+    if (shape === 'barbed' && t < 0.3) hw += (Math.floor((u - base) * 1.3) % 2) * 1.1;
+    if (Math.abs(v - c) > hw) return null;
+    return Math.abs(v - c) < 0.4 && shape !== 'icicle' ? ramp[1] : shape === 'icicle' && (Math.floor(u) % 3 === 0) ? '#ffffff' : shade(ramp, (v - c) / Math.max(hw, 0.7));
+  }, 1);
+}
+function wStaffHead(g, c, shape, opts = {}) {
+  const [cx, cy] = ptf(c, 0);
+  if (shape === 'skull') {
+    g.each((x, y) => { const dx = x + 0.5 - cx, dy = y + 0.5 - cy; const d = Math.hypot(dx, dy * 1.1); if (d < 5 && dy < 3.2) { if (Math.hypot(dx + 1.9, dy + 0.4) < 1.3 || Math.hypot(dx - 1.9, dy + 0.4) < 1.3) return opts.eyes || '#7ae0ff'; if (dy > 1.6 && Math.abs(dx) < 2.6 && x % 2) return '#0a0808'; return shade(M.bone, dx / 5 + (dy < -2 ? -0.4 : 0)); } return null; }, 2);
+    g.each((x, y) => { const d = Math.hypot(x + 0.5 - cx, y + 0.5 - (cy + 4.4)); return d < 1.7 ? (d < 0.8 ? '#ffffff' : opts.orb || '#7ae0ff') : null; }, 4);
+    for (const [x, y] of [[cx - 5, cy - 4], [cx + 4, cy - 6], [cx + 6, cy + 1]]) g.set(Math.round(x), Math.round(y), '#e8f8ff', 4);
+    return;
+  }
+  if (shape === 'crystal') {
+    for (const [ox, oy, hgt, w] of [[0, 0, 10, 2.2], [-3.4, 1.4, 7, 1.6], [3.2, 1.6, 7.5, 1.6], [-1.6, 2.4, 5, 1.2], [1.8, 2.6, 5.5, 1.2]]) g.each((x, y) => { const dx = x + 0.5 - (cx + ox), dy = (cy + oy) - (y + 0.5); if (dy < 0 || dy > hgt) return null; const hw = w * (1 - (dy / hgt) ** 2); return Math.abs(dx) < hw ? (dx < -hw * 0.3 ? M.ice[3] : dx > hw * 0.4 ? M.ice[1] : M.ice[2]) : null; }, 4);
+    g.each((x, y) => { const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy - 1); return d > 3.5 && d < 4.5 && (x + y) % 2 === 0 ? '#e8f8ff' : null; }, 4);
+    return;
+  }
+  // claws holding an orb
+  g.each((x, y) => { const [u, v] = uvf(x + 0.5, y + 0.5); const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy); return d > 4.3 && d < 5.8 && u < c + 2 && Math.abs(v) > 1.2 ? shade(M[opts.claws || 'gold'], v / 4) : null; });
+  g.each((x, y) => { const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy); if (d > 4.3) return null; return (x + 0.5 - cx) + (y + 0.5 - cy) < -3.4 ? '#ffffff' : d > 3.2 ? mix(opts.orb, '#000000', 0.3) : opts.orb; }, 4);
+}
+function wBow(g, mat, opts = {}) {
+  const ramp = M[mat], cx = -12, cy = 16, r = 25, lim = 0.55;
+  g.each((x, y) => { const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy), a = Math.atan2(y + 0.5 - cy, x + 0.5 - cx); if (Math.abs(a) > lim) return null; const th = (opts.thick || 2) - Math.abs(a) / lim * 0.9; if (Math.abs(d - r) > th) return null; const base = shade(ramp, -(d - r) / th * 0.8 + (y < cy ? -0.3 : 0.3)); return opts.tex ? TEX[opts.tex](x, y, base, ramp) : base; }, 1);
+  const tipX = cx + r * Math.cos(lim), tipY = r * Math.sin(lim);
+  for (const s of [-1, 1]) g.each((x, y) => (Math.hypot(x + 0.5 - (tipX + 1.6), y + 0.5 - (cy + s * (tipY + 0.6))) < 1.4 ? (opts.tips ? M[opts.tips][2] : ramp[2]) : null));
+  if (opts.fins) for (const s of [-1, 1]) g.each((x, y) => { const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy); const a = Math.atan2(y + 0.5 - cy, x + 0.5 - cx); return Math.abs(a) < lim && Math.abs(a) > 0.15 && d > r + 1.5 && d < r + 3.6 - Math.abs(a) * 3 && Math.sign(a) === s && (x + y) % 2 === 0 ? M[opts.fins][2] : null; });
+  g.each((x, y) => (x + 0.5 > tipX - 0.2 && x + 0.5 < tipX + 0.8 && Math.abs(y + 0.5 - cy) < tipY ? '#ece4d4' : null));
+  g.each((x, y) => (Math.abs(y + 0.5 - cy) < 2.6 && Math.abs(Math.hypot(x + 0.5 - cx, y + 0.5 - cy) - r) < 2.3 ? shade(M[opts.grip || 'leather'], (x + 0.5 - cx - r) / 2) : null));
+  g.each((x, y) => (Math.abs(y + 0.5 - cy) <= 0.5 && x + 0.5 > tipX && x < 25 ? (opts.arrow || '#c8a070') : null), 1);
+  g.each((x, y) => (x >= 25 && x < 31 && Math.abs(y + 0.5 - cy) <= (31 - x) * 0.45 + 0.2 ? (y + 0.5 < cy ? (opts.head ? M[opts.head][3] : M.steel[3]) : (opts.head ? M[opts.head][1] : M.steel[1])) : null), 1);
+  g.each((x, y) => (x + 0.5 > tipX + 0.8 && x + 0.5 < tipX + 4.5 && Math.abs(y + 0.5 - cy) > 0.6 && Math.abs(y + 0.5 - cy) < 2.6 - (x + 0.5 - tipX) * 0.35 ? (opts.fletch || '#c84a34') : null));
+  if (opts.frost) g.each((x, y) => (Math.abs(Math.hypot(x + 0.5 - cx, y + 0.5 - cy) - r + 2.4) < 0.5 && Math.abs(y + 0.5 - cy) > 4 && y % 3 === 0 ? '#e8f8ff' : null), 4);
+  if (opts.gem) gem(g, cx + r - 0.5, cy, 1.4, opts.gem);
+}
+function wGauntlet(g, rc) {
+  const ramp = M[rc.mat];
+  g.each((x, y) => { if (y < 6 || y > 28) return null; const hw = y < 16 ? 8 : y < 22 ? 8.6 : 7; if (Math.abs(x + 0.5 - 16) > hw) return null; if (y < 15 && Math.floor(x + 0.5 - 16 + 8) % 3 === 2) return ramp[0]; if (y === 15 || y === 22) return M[rc.trim || 'gold'][2]; return TEX[rc.tex || 'plain'](x, y, shade(ramp, (x + 0.5 - 16) / hw - (y < 15 ? 0.2 : 0)), ramp); }, 1);
+  for (const [kx] of [[10], [13], [16], [19]]) g.set(kx, 7, M.gold[3]);
+  if (rc.core) g.each((x, y) => { const d = Math.hypot(x + 0.5 - 16, y + 0.5 - 18.5); return d < 3 ? (d < 1.3 ? '#ffffff' : rc.core) : null; }, 4);
+  if (rc.cracks) g.each((x, y) => (g.get(x, y) && g.tag[y * N + x] === 1 && Math.abs((x * 2 + y * 3) % 13 - 6) < 0.5 && y > 15 ? rc.cracks : null), 4);
+}
+function drawWeapon(g, rc, it, R) {
+  const t = rc.type || it.weaponType;
+  const gemCol = R >= 2 && !rc.noGem ? GEM[RAR(R)] : null;
+  if (t === 'sword' || t === 'dagger') {
+    if (t === 'dagger') { WO.x = 9; WO.y = 23; }
+    const L = t === 'dagger' ? 18 : rc.profile === 'great' ? 30.5 : 29.5;
+    wGrip(g, 0, t === 'dagger' ? 4.5 : rc.profile === 'great' ? 7 : 6, t === 'dagger' ? 1 : 1.35, rc.grip || 'leather', rc.wrap !== false);
+    wBlade(g, t === 'dagger' ? 5.6 : rc.profile === 'great' ? 8.2 : 7.2, L, rc.w || (t === 'dagger' ? 1.7 : 2.5), rc.profile || 'straight', rc.mat, { fuller: rc.fuller, glow: rc.glow, fx: rc.fx, edge: rc.edge, tex: rc.tex });
+    wGuard(g, t === 'dagger' ? 5.2 : rc.profile === 'great' ? 7.6 : 6.8, rc.guardW || (t === 'dagger' ? 2.8 : 4.4), rc.guardMat || 'iron', rc.guard || 'cross', rc.guard === 'skull' || rc.guard === 'disc' ? null : gemCol);
+    wPommel(g, -1.2, t === 'dagger' ? 1.4 : 1.9, rc.guardMat || 'iron', R >= 4 ? gemCol : null);
+    WO.x = 5.5; WO.y = 26.5;
+    return;
+  }
+  if (t === 'axe') { wHaft(g, -2, 26, 1.35, rc.haft || 'wood', rc.bands, rc.haftTex); wAxe(g, 20.5, rc.head || 'single', rc.mat, { runes: rc.runes, lava: rc.lava, edge: rc.edge, gem: gemCol, tex: rc.tex }); return; }
+  if (t === 'hammer') { if (rc.head !== 'club') wHaft(g, -2, rc.head === 'sceptre' ? 21 : 24, rc.head === 'sceptre' ? 1.1 : 1.35, rc.haft || 'wood', rc.bands, rc.haftTex); wHammer(g, rc.head === 'sceptre' ? 23 : 22, rc.head || 'block', rc.mat, { runes: rc.runes, cracks: rc.cracks, core: rc.core, tex: rc.tex, bands: rc.headBands, flames: rc.flames, gem: rc.head === 'club' ? null : gemCol }); if (rc.head === 'club') wGrip(g, 0, 8, 1.4, rc.grip || 'leather', true); return; }
+  if (t === 'spear') { wHaft(g, -4, 21, 1.1, rc.haft || 'wood', rc.bands, rc.haftTex); wSpear(g, 21, rc.tip || 'leaf', rc.mat); if (rc.tassel) fillUV(g, (u, v) => (u > 16.5 && u < 20 && v > 0.8 && v < 1.6 + (20 - u) * 0.55 ? shade(M[rc.tassel], (u - 18) / 2) : null)); if (rc.fx === 'flames') fillUV(g, (u, v) => (u > 21 && u < 33 && Math.abs(v) > 3 && Math.abs(v) < 6 && (Math.floor(u) + Math.floor(v)) % 2 === 0 && h2(Math.floor(u), Math.floor(v), 38) < 0.5 ? (Math.abs(v) < 4.5 ? '#ff6a1a' : '#ffd27a') : null), 4); return; }
+  if (t === 'staff') { wHaft(g, -4, 19, 1.3, rc.haft || 'darkwood', rc.bands); wStaffHead(g, 23.5, rc.head || 'orb', { orb: rc.orb || GEM[RAR(R)] || '#9fd3ff', claws: rc.claws, eyes: rc.eyes }); return; }
+  if (t === 'bow') { wBow(g, rc.mat, rc); return; }
+  if (t === 'gauntlet') { wGauntlet(g, rc); }
+}
+
+// ---------- shields, tomes, lanterns, flasks, drums ----------
+function drawOff2(g, rc, it, R) {
+  const k = rc.kind;
+  if (k === 'shield') {
+    const shape = rc.shape;
+    const rows = shape === 'round' ? (y) => { const d = 13 ** 2 - (y + 0.5 - 16) ** 2; return d < 0 ? null : Math.sqrt(d); }
+      : shape === 'coffin' ? (y) => (y < 2 || y > 30 ? null : y < 9 ? 6 + (y - 2) * 0.85 : 12 - (y - 9) * 0.3)
+      : shape === 'plank' ? (y) => (y < 3 || y > 29 ? null : 9.5 - (y % 7 === 0 ? 1.2 : 0) - (y > 26 && h2(y, 1, 40) < 0.5 ? 2 : 0))
+      : shape === 'tower' ? (y) => (y < 2 || y > 30 ? null : y < 4 ? 8 + (y - 2) * 1.5 : y > 26 ? 11 - (y - 26) * 1.5 : 11)
+      : shape === 'kite' ? (y) => (y < 2 || y > 30 ? null : y < 10 ? 7 + (y - 2) * 0.7 : 12.6 * (1 - (y - 10) / 21))
+      : (y) => (y < 3 || y > 29 ? null : y < 13 ? 12 : 12 * Math.sqrt(Math.max(0, 1 - ((y - 13) / 17) ** 2)));
+    const mask = (x, y) => { const r = rows(y); return r != null && Math.abs(x + 0.5 - 16) <= r ? r : 0; };
+    paintMask(g, mask, M[rc.mat], rc.tex, { lightTop: 8 });
+    if (rc.boards) g.each((x, y) => (mask(x, y) && Math.floor(x + 0.5) % 5 === 1 ? M[rc.mat][0] : null));
+    if (rc.cross) { g.each((x, y) => (mask(x, y) && ((Math.abs(x + 0.5 - 16) < 1 && y > 6 && y < 26) || (Math.abs(y + 0.5 - 12) < 1 && Math.abs(x + 0.5 - 16) < 5)) ? rc.cross : null), 2); }
+    // rim
+    if (rc.rim) g.each((x, y) => { const r = rows(y); if (r == null) return null; const dx = Math.abs(x + 0.5 - 16); if (dx > r) return null; const top = shape === 'round' ? null : rows(y - 1) == null; return r - dx < 1.3 || top || rows(y + 1) == null ? shade(M[rc.rim], (x - 16) / 12) : null; });
+    if (rc.boss) g.each((x, y) => { const d = Math.hypot(x + 0.5 - 16, y + 0.5 - 15); return d < 3.4 ? (d > 2.6 ? M[rc.boss][0] : shade(M[rc.boss], ((x + 0.5 - 16) + (y + 0.5 - 15)) / 3)) : null; });
+    if (rc.rivets) for (const [x, y] of [[8, 7], [23, 7], [8, 24], [23, 24], [16, 4], [16, 27]]) if (mask(x, y)) { g.set(x, y, M.iron[3]); g.set(x, y + 1, M.iron[0]); }
+    if (rc.emblem === 'skull') { const ey = 14; g.each((x, y) => { const dx = x + 0.5 - 16, dy = y + 0.5 - ey; if (Math.hypot(dx, dy * 1.1) < 4 && dy < 2) return Math.hypot(Math.abs(dx) - 1.6, dy + 0.4) < 1 ? (rc.eyes || '#0a0808') : shade(M.bone, dx / 4); if (dy >= 2 && dy < 4 && Math.abs(dx) < 2.4) return x % 2 ? M.bone[1] : '#0a0808'; return null; }, 2); }
+    if (rc.emblem === 'snowflake') for (let a = 0; a < 6; a++) for (let r = 0; r < 6; r += 0.5) { const ang = a * Math.PI / 3; g.set(Math.round(16 + Math.cos(ang) * r - 0.5), Math.round(15 + Math.sin(ang) * r - 0.5), r > 4 ? '#ffffff' : '#e8f8ff', 2); }
+    if (rc.emblem === 'ember') g.each((x, y) => { const dx = x + 0.5 - 16, dy = y + 0.5 - 16; const r = 4.5 - Math.max(0, -dy) * 0.4; return Math.abs(dx) < r * (1 - Math.max(0, -dy) / 8) && dy > -7 && dy < 4 ? (Math.abs(dx) < r * 0.4 && dy > -3 ? '#ffd27a' : '#ff6a1a') : null; }, 4);
+    if (rc.emblem === 'rune') g.each((x, y) => (mask(x, y) && ((Math.abs(x + 0.5 - 16) < 0.7 && y > 8 && y < 24) || Math.abs(Math.abs(x + 0.5 - 16) - (y - 8) * 0.5) < 0.6 && y > 8 && y < 18) ? rc.glow : null), 4);
+    if (rc.cracks) g.each((x, y) => (mask(x, y) && g.tag[y * N + x] === 1 && Math.abs((x * 2 + y * 3) % 15 - 7) < 0.5 ? rc.cracks : null), 4);
+    if (rc.spikes) { for (const [x, y, dx, dy] of [[4, 4, -1, -1], [27, 4, 1, -1], [3, 15, -1, 0], [28, 15, 1, 0], [16, 1, 0, -1]]) for (let s = 0; s < 3; s++) g.set(x + dx * s, y + dy * s, s ? M[rc.spikes][3] : M[rc.spikes][2]); }
+    if (rc.frost) g.each((x, y) => (mask(x, y) && rows(y - 2) == null && x % 2 ? '#e8f8ff' : null));
+    if (rc.scorch) g.each((x, y) => (mask(x, y) && h2(x, y, 41) < 0.25 ? '#140c08' : mask(x, y) && h2(x, y, 42) < 0.05 ? '#ff7a2a' : null));
+    if (GEM[RAR(R)] && R >= 2 && !rc.noGem) gem(g, 16, shape === 'round' ? 15 : 13, 1.8, GEM[RAR(R)]);
+    return;
+  }
+  if (k === 'tome') {
+    const cover = M[rc.mat];
+    g.each((x, y) => (x >= 7 && x <= 25 && y >= 4 && y <= 28 ? (x >= 24 ? (rc.pages || '#f0e6cc') : x <= 8 ? cover[0] : TEX[rc.tex || 'leather'](x, y, shade(cover, (x - 16) / 9 + (y - 16) / 30), cover)) : null), 1);
+    g.each((x, y) => (x >= 24 && x <= 25 && y >= 5 && y <= 27 && y % 2 ? '#c8bca0' : null));
+    for (const [cx, cy] of [[9.5, 5.5], [23.5, 5.5], [9.5, 27.5], [23.5, 27.5]]) g.each((x, y) => (Math.abs(x + 0.5 - cx) < 1.6 && Math.abs(y + 0.5 - cy) < 1.6 ? M[rc.corners || 'gold'][2] : null));
+    if (rc.emblem === 'cross') g.each((x, y) => ((Math.abs(x + 0.5 - 16.5) < 1 && y > 9 && y < 23) || (Math.abs(y + 0.5 - 14) < 1 && Math.abs(x + 0.5 - 16.5) < 5) ? (Math.abs(x + 0.5 - 16.5) < 0.4 || Math.abs(y + 0.5 - 14) < 0.4 ? '#fff4b0' : M.gold[2]) : null), 4);
+    if (rc.emblem === 'runes') g.each((x, y) => { const d = Math.hypot(x + 0.5 - 16.5, y + 0.5 - 16); return (d < 5 && d > 4) || (d < 4 && ((x + y) % 4 === 0)) ? rc.glow : null; }, 4);
+    if (rc.emblem === 'fire') g.each((x, y) => { const dx = x + 0.5 - 16.5, dy = y + 0.5 - 18; const r = 4 - Math.max(0, -dy) * 0.35; return Math.abs(dx) < r * (1 - Math.max(0, -dy) / 9) && dy > -8 && dy < 3 ? (Math.abs(dx) < r * 0.4 ? '#ffd27a' : '#ff4a1a') : null; }, 4);
+    if (rc.emblem === 'eye') { g.each((x, y) => { const d = Math.hypot((x + 0.5 - 16.5) / 4.5, (y + 0.5 - 16) / 2.6); return d < 1 ? (d < 0.4 ? '#0a0808' : d < 0.6 ? rc.glow : '#f0e8d4') : null; }, 4); }
+    if (rc.strap) g.each((x, y) => (y >= 15 && y <= 17 && x >= 20 && x <= 26 ? shade(M[rc.strap], (y - 16) / 2) : null));
+    return;
+  }
+  if (k === 'lantern') {
+    const fr = M[rc.mat], flame = rc.flame || '#ffd27a';
+    g.each((x, y) => (Math.abs(x + 0.5 - 16) < 3 && y >= 2 && y <= 4 && !(Math.abs(x + 0.5 - 16) < 1.5 && y === 3) ? fr[2] : null));
+    g.each((x, y) => (Math.abs(x + 0.5 - 16) <= 6.5 && y >= 5 && y <= 7 ? shade(fr, (x - 16) / 6) : null), 1);
+    g.each((x, y) => (Math.abs(x + 0.5 - 16) <= 5.5 && y >= 8 && y <= 22 ? (Math.abs(x + 0.5 - 16) > 4.5 || y === 15 ? shade(fr, (x - 16) / 5) : mix(flame, '#000000', 0.15 + Math.abs(x + 0.5 - 16) * 0.09)) : null), 4);
+    if (rc.candle) g.each((x, y) => (Math.abs(x + 0.5 - 16) < 1.4 && y >= 16 && y <= 21 ? (x === 15 ? '#fff4e0' : '#e8d8b8') : null), 2);
+    g.each((x, y) => { const fy = (rc.candle ? 14 : 16) - y, w = 1.8 - Math.abs(fy - 1) * 0.4; return fy >= -2 && fy <= 4 && Math.abs(x + 0.5 - 16) < w ? (Math.abs(x + 0.5 - 16) < w * 0.5 ? '#ffffff' : rc.flameCore || '#ffe680') : null; }, 4);
+    g.each((x, y) => (Math.abs(x + 0.5 - 16) <= 6.5 && y >= 23 && y <= 25 ? shade(fr, (x - 16) / 6) : null), 1);
+    if (rc.frost) g.each((x, y) => (g.get(x, y) && (y === 5 || y === 23) && x % 2 ? '#e8f8ff' : null));
+    if (rc.cobweb) for (let i = 0; i < 5; i++) g.set(10 + i, 8 + i, '#c8c8c8');
+    return;
+  }
+  if (k === 'flask') {
+    const liq = rc.liquid || '#7ae0ff';
+    g.each((x, y) => (Math.abs(x + 0.5 - 16) < 2.2 && y >= 2 && y <= 4 ? M[rc.cap || 'gold'][2] : null));
+    g.each((x, y) => (Math.abs(x + 0.5 - 16) < 2.2 && y >= 5 && y <= 10 ? '#d8e8f0' : null), 1);
+    g.each((x, y) => { const d = Math.hypot(x + 0.5 - 16, y + 0.5 - 19); if (d > 9) return null; if (d > 8) return '#d8e8f0'; return y < 14 ? mix('#d8e8f0', '#203040', 0.5) : (x + 0.5 - 16) + (y + 0.5 - 19) < -6 ? '#ffffff' : mix(liq, '#000000', Math.max(0, (d - 4) / 12)); }, 4);
+    if (rc.cross) g.each((x, y) => ((Math.abs(x + 0.5 - 16) < 0.8 && y >= 16 && y <= 24) || (Math.abs(y + 0.5 - 19) < 0.8 && Math.abs(x + 0.5 - 16) < 3) ? '#fff4b0' : null), 4);
+    g.each((x, y) => (Math.hypot(x + 0.5 - 13, y + 0.5 - 22) < 1 || Math.hypot(x + 0.5 - 19, y + 0.5 - 25) < 0.8 ? mix(liq, '#ffffff', 0.6) : null), 4);
+    return;
+  }
+  if (k === 'drum') {   // goblin war drum: hide top, wooden body, rope lacing, bone beater
+    g.each((x, y) => { const dx = Math.abs(x + 0.5 - 16); return y >= 9 && y <= 27 && dx < 11 - (y > 24 ? (y - 24) * 0.8 : 0) ? TEX.rough(x, y, shade(M.wood, (x - 16) / 11), M.wood) : null; }, 1);
+    g.each((x, y) => { const d = Math.hypot((x + 0.5 - 16) / 11, (y + 0.5 - 9) / 3.4); return d < 1 ? (d > 0.85 ? M.rust[1] : shade(M.bone, (x - 16) / 14 - 0.3)) : null; }, 1);
+    g.each((x, y) => (y >= 12 && y <= 25 && Math.abs(x + 0.5 - 16) < 10.5 && Math.abs(((x + 0.5 - 16) + (y % 6 < 3 ? y % 6 : 6 - y % 6) * 1.2) % 4.2) < 0.6 ? M.burlap[2] : null));
+    for (const sx of [-1, 1]) g.each((x, y) => (y >= 15 && y <= 19 && Math.abs(x + 0.5 - 16 - sx * 6) < 2 ? (Math.abs(x + 0.5 - 16 - sx * 6) < 0.8 ? '#0a0808' : M.gobcloth[2]) : null), 2);   // painted goblin eyes
+    g.each((x, y) => (Math.abs((x + 0.5) - (y + 0.5) * -0.9 - 26) < 0.9 && y >= 1 && y <= 9 ? M.bone[2] : null));
+    g.each((x, y) => (Math.hypot(x + 0.5 - 25, y + 0.5 - 1.5) < 1.6 ? M.bone[3] : null));
+    if (GEM[RAR(R)] && R >= 2) gem(g, 16, 21, 1.4, GEM[RAR(R)]);
+  }
+}
+
+Object.assign(RECIPES, {
+  // ---- weapons ----
+  'Rusty Sword': { profile: 'straight', mat: 'rust', fx: 'rust', guard: 'cross', guardMat: 'rust', grip: 'leather' },
+  'Rusty Dagger': { type: 'dagger', profile: 'broken', mat: 'rust', fx: 'rust', guard: 'cross', guardMat: 'rust', grip: 'rag' },
+  'Iron Shortsword': { profile: 'straight', w: 2.2, mat: 'iron', fuller: 'groove', guard: 'cross', guardMat: 'iron', grip: 'leather' },
+  'Goblin Cleaver': { head: 'cleaver', mat: 'rust', tex: 'rough', haft: 'wood', bands: 'rust' },
+  'Goblin Bane Axe': { head: 'crescent', mat: 'steel', runes: '#6ab03a', haft: 'darkwood', bands: 'iron' },
+  'Warg-Fang Spear': { tip: 'fang', mat: 'fang', haft: 'wood', bands: 'leather', tassel: 'wolf' },
+  "Goblin King's Sceptre": { head: 'sceptre', mat: 'gold', haft: 'gold', flames: true, gem: true },
+  'Bone Club': { head: 'club', mat: 'bone', tex: 'rough', grip: 'rag' },
+  'Silver Mace': { head: 'mace', mat: 'silver', haft: 'darkwood', bands: 'silver' },
+  'Blessed Longsword': { profile: 'straight', w: 2.5, mat: 'silver', fuller: 'glow', glow: '#fff4b0', fx: 'holy', guard: 'wing', guardMat: 'gold', grip: 'holy' },
+  'Spectral Blade': { profile: 'curved', w: 2.4, mat: 'spectral', fuller: 'glow', glow: '#e8ffff', fx: 'ghost', guard: 'skull', guardMat: 'bone', grip: 'mourn' },
+  'Deathwhisper Staff': { head: 'skull', haft: 'dread', bands: 'bone', orb: '#7ae0ff', eyes: '#b8f0ff' },
+  "Miner's Pickaxe": { head: 'pick', mat: 'iron', haft: 'wood', bands: 'rust' },
+  'Granite Warhammer': { head: 'block', mat: 'granite', tex: 'stoneblock', haft: 'wood', bands: 'iron' },
+  'Runed Battleaxe': { head: 'double', mat: 'steel', runes: '#4ad0ff', haft: 'darkwood', bands: 'dwarf' },
+  'Golembreaker': { head: 'spiked', mat: 'steel', runes: '#ff8a2e', haft: 'darkwood', bands: 'iron', headBands: 'dwarf' },
+  'Earthshaker Maul': { head: 'maul', mat: 'granite', tex: 'stoneblock', cracks: '#ffb02e', haft: 'darkwood', bands: 'dwarf', headBands: 'dwarf' },
+  'Mountainheart Hammer': { head: 'maul', mat: 'dwarf', core: '#4ad0ff', runes: '#4ad0ff', haft: 'darkwood', bands: 'gold', headBands: 'gold' },
+  "Runesmith's Maul": { head: 'block', mat: 'deep', runes: '#7ae0ff', haft: 'darkwood', bands: 'gold', headBands: 'gold' },
+  "Titan's Fist": { type: 'gauntlet', mat: 'stone', tex: 'stoneblock', trim: 'gold', core: '#ffb02e', cracks: '#ff8a2e' },
+  'Ice Pick': { type: 'dagger', profile: 'rapier', w: 1.4, mat: 'steel', guard: 'cross', guardMat: 'iron', grip: 'fur', fx: 'frost' },
+  'Frostbite Spear': { tip: 'icicle', mat: 'ice', haft: 'wood', bands: 'iron', haftTex: 'fur' },
+  'Glacier Bow': { mat: 'ice', tex: 'crystal', tips: 'ice', grip: 'quilt', head: 'ice', fletch: '#e8f8ff', frost: true },
+  "Huntsman's Spear": { tip: 'barbed', mat: 'steel', haft: 'wood', bands: 'leather', tassel: 'fur' },
+  'Frostbrand Longsword': { profile: 'broad', w: 2.5, mat: 'ice', fuller: 'glow', glow: '#ffffff', fx: 'frost', guard: 'curved', guardMat: 'steel', grip: 'quilt' },
+  'Wyrmfang Bow': { mat: 'fang', thick: 2.4, tips: 'rime', fins: 'rime', grip: 'leather', head: 'ice', fletch: '#7ae0ff', frost: true, gem: '#7ae0ff' },
+  'Blizzard Staff': { head: 'crystal', haft: 'silver', bands: 'ice' },
+  'Charred Blade': { profile: 'broken', mat: 'cinder', fx: 'embers', guard: 'cross', guardMat: 'cinder', grip: 'darkleather' },
+  'Hellforged Axe': { head: 'crescent', mat: 'hellsteel', lava: true, edge: '#ff8a2e', haft: 'dread', bands: 'cinder' },
+  'Soulfire Dagger': { type: 'dagger', profile: 'kris', w: 2.2, mat: 'dread', edge: '#b48cff', fx: 'soul', guard: 'horns', guardMat: 'bone', grip: 'demonhide' },
+  'Infernal Greatsword': { profile: 'flame', w: 2.7, mat: 'hellsteel', fuller: 'lava', fx: 'flames', guard: 'horns', guardMat: 'dread', grip: 'demonhide', edge: '#ff8a2e' },
+  "Demon Lord's Trident": { tip: 'trident', mat: 'dread', haft: 'dread', bands: 'demonhide', fx: 'flames' },
+  'Demonbane Blade': { profile: 'broad', w: 2.6, mat: 'holy', fuller: 'glow', glow: '#ffffff', fx: 'holy', guard: 'wing', guardMat: 'gold', grip: 'holy', edge: '#ffffff' },
+  'Ashbringer': { profile: 'great', w: 2.6, mat: 'silver', fuller: 'runes', glow: '#ffd84a', fx: 'holy', guard: 'disc', guardMat: 'gold', grip: 'holy', edge: '#fff4b0' },
+  // ---- off-hands ----
+  'Splintered Plank': { kind: 'shield', shape: 'plank', mat: 'wood', tex: 'rough', boards: true, rivets: true },
+  'Wooden Buckler': { kind: 'shield', shape: 'round', mat: 'wood', tex: 'leather', boards: true, rim: 'iron', boss: 'iron' },
+  'Goblin War Drum': { kind: 'drum' },
+  "Warlord's Shield": { kind: 'shield', shape: 'heater', mat: 'goblin', tex: 'rough', rim: 'rust', spikes: 'rust', emblem: 'skull', eyes: '#6ab03a' },
+  'Coffin Lid': { kind: 'shield', shape: 'coffin', mat: 'darkwood', tex: 'leather', boards: true, cross: '#c8c0b0', rivets: true },
+  'Candle Lantern': { kind: 'lantern', mat: 'rust', candle: true, cobweb: true },
+  'Holy Water Flask': { kind: 'flask', liquid: '#9fd8ff', cap: 'gold', cross: true },
+  'Tome of Rites': { kind: 'tome', mat: 'linen', tex: 'weave', emblem: 'cross', corners: 'gold' },
+  'Slate Buckler': { kind: 'shield', shape: 'round', mat: 'slate', tex: 'stoneblock', rim: 'iron', boss: 'granite' },
+  'Tower Shield': { kind: 'shield', shape: 'tower', mat: 'iron', tex: 'plates', rim: 'steel', rivets: true },
+  'Runestone Tome': { kind: 'tome', mat: 'granite', tex: 'stoneblock', emblem: 'runes', glow: '#4ad0ff', corners: 'iron', pages: '#d8d0c0' },
+  'Obsidian Bulwark': { kind: 'shield', shape: 'tower', mat: 'obsidian', tex: 'gloss', rim: 'gold', emblem: 'rune', glow: '#b48cff' },
+  'Iceblock Buckler': { kind: 'shield', shape: 'round', mat: 'ice', tex: 'crystal', rim: 'rime' },
+  'Ice Shield': { kind: 'shield', shape: 'heater', mat: 'rime', tex: 'crystal', rim: 'iron', frost: true },
+  'Frost Lantern': { kind: 'lantern', mat: 'steel', flame: '#7ae0ff', flameCore: '#c8f0ff', frost: true },
+  'Rimeguard Shield': { kind: 'shield', shape: 'kite', mat: 'rime', tex: 'crystal', rim: 'steel', emblem: 'snowflake', frost: true },
+  'Scorched Buckler': { kind: 'shield', shape: 'round', mat: 'wood', tex: 'rough', boards: true, rim: 'cinder', boss: 'cinder', scorch: true },
+  'Ember Ward': { kind: 'shield', shape: 'heater', mat: 'cinder', tex: 'ember', rim: 'brim', emblem: 'ember' },
+  'Infernal Tome': { kind: 'tome', mat: 'demonhide', tex: 'hide', emblem: 'eye', glow: '#ff4a2a', corners: 'dread', strap: 'dread' },
+  'Dread Aegis': { kind: 'shield', shape: 'kite', mat: 'dread', tex: 'gloss', rim: 'demonhide', spikes: 'dread', emblem: 'skull', eyes: '#ff3a3a', cracks: '#ff3a3a' },
+});
+
 // Build an item: themed recipe if there is one, otherwise the current art.
 export function buildGear2(it) {
   const rc = RECIPES[it.name];
@@ -452,7 +779,8 @@ export function buildGear2(it) {
   else if (it.slot === 'helmet') drawHelm(g, rc, it, R);
   else if (it.slot === 'legs') drawLegs(g, rc, it, R);
   else if (it.slot === 'boots') drawBoots(g, rc, it, R);
-  else if (it.slot === 'offhand') drawOff(g, rc, it, R);
+  else if (it.slot === 'weapon') drawWeapon(g, rc, it, R);
+  else if (it.slot === 'offhand') (rc.kind ? drawOff2 : drawOff)(g, rc, it, R);
   else drawChest(g, rc, it, R);
   const AURA = { legendary: '#ffb02e', mythic: '#ff4a6a', divine: '#fff1a8' };
   g.outline(R >= 4 ? mix('#05040a', AURA[it.rarity], 0.25) : '#07060c');
@@ -472,4 +800,5 @@ export function gearArtIcon2(it, scale = 3) {
   const url = cv.toDataURL(); cache.set(key, url); return url;
 }
 
+export { M, TEX };
 setGearBuilder(buildGear2);   // every gear icon in the game now uses the themed art

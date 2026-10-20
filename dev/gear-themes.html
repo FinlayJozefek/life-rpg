@@ -41,10 +41,10 @@
   const out = document.getElementById('out');
   const cell = (it) => `<div class="gt-cell"><img class="nw" src="${gearArtIcon2(it, 4)}" alt=""><b style="color:${RC[it.rarity]}">${it.name}</b><small>${it.rarity}${it.set ? ' · set' : ''}${it.shopOnly ? ' · Masterwork' : ''}${RECIPES[it.name] ? ` · ${[RECIPES[it.name].shape || RECIPES[it.name].style, RECIPES[it.name].tex].filter(Boolean).join(", ")}` : ''}</small><div class="gt-was">now <img class="old" src="${gearArtIcon(it, 2)}" alt=""></div></div>`;
   let html = '';
-  for (const [slot, label] of [['chest', 'Chestpieces'], ['helmet', 'Helmets'], ['legs', 'Legs'], ['boots', 'Boots'], ['offhand', 'Legendary, Mythic & Divine off-hands']]) {
+  for (const [slot, label] of [['chest', 'Chestpieces'], ['helmet', 'Helmets'], ['legs', 'Legs'], ['boots', 'Boots'], ['offhand', 'Off-hands'], ['weapon', 'Weapons']]) {
     html += `<h2>${label}</h2>`;
     for (let s = 0; s <= 5; s++) {
-      const list = all.filter((i) => i.slot === slot && i.section === s && (slot !== 'offhand' || RECIPES[i.name])).sort((a, b) => RAR.indexOf(a.rarity) - RAR.indexOf(b.rarity));
+      const list = all.filter((i) => i.slot === slot && i.section === s && true).sort((a, b) => RAR.indexOf(a.rarity) - RAR.indexOf(b.rarity));
       if (!list.length) continue;
       html += `<div class="panel"><h3>${s ? SECTIONS[s - 1].name : 'Starter kit'}</h3><div class="gt-row">${list.map(cell).join('')}</div></div>`;
     }
