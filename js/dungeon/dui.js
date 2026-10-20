@@ -563,7 +563,7 @@ function renderBattle(full = false) {
   battle.stops.forEach((st) => st()); battle.stops = [];
   for (const e of b.enemies) {
     const cv = root.querySelector(`[data-ecv="${e.uid}"]`);
-    if (cv && e.hp > 0) battle.stops.push(mountEnemy(cv, e, e.boss ? 6 : 4));
+    if (cv && shownHp(e) > 0) battle.stops.push(mountEnemy(cv, e, e.boss ? 6 : 4));   // keep drawing it until the killing blow has played
   }
   if (full) root.scrollTop = 0;
   if (battle.deal && !battle.potionPick) {
