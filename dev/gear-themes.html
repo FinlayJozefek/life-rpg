@@ -27,7 +27,7 @@
 <body>
 <main>
   <h1>Gear themes</h1>
-  <p class="gt-why">Trial: every chestpiece and helmet gets its own shape, material and texture. Cloth tunics and robes, stitched leather, fur, chain rings, bone ribcages, dwarven bronze, black obsidian glass, ice crystal, scale mail, glowing cracks. Each set should look nothing like the others. The small icon is what it looks like now.</p>
+  <p class="gt-why">Trial: every chestpiece, helmet, legs and boots get its own shape, material and texture. Cloth tunics and robes, stitched leather, fur, chain rings, bone ribcages, dwarven bronze, black obsidian glass, ice crystal, scale mail, glowing cracks. Each set should look nothing like the others. The small icon is what it looks like now.</p>
   <div class="gt-pick" id="size"><button data-s="" class="on">Normal</button><button data-s="gt-big">Bigger</button></div>
   <div id="out"></div>
 </main>
@@ -39,12 +39,12 @@
   const RC = { common: '#c8c0b0', uncommon: '#6ad06a', rare: '#5aa0ff', epic: '#c08aff', legendary: '#ffb02e', mythic: '#ff5a78', divine: '#fff1a8' };
   const all = Object.values(DITEMS);
   const out = document.getElementById('out');
-  const cell = (it) => `<div class="gt-cell"><img class="nw" src="${gearArtIcon2(it, 4)}" alt=""><b style="color:${RC[it.rarity]}">${it.name}</b><small>${it.rarity}${it.set ? ' · set' : ''}${it.shopOnly ? ' · Masterwork' : ''}${RECIPES[it.name] ? ` · ${RECIPES[it.name].shape}, ${RECIPES[it.name].tex || RECIPES[it.name].style}` : ''}</small><div class="gt-was">now <img class="old" src="${gearArtIcon(it, 2)}" alt=""></div></div>`;
+  const cell = (it) => `<div class="gt-cell"><img class="nw" src="${gearArtIcon2(it, 4)}" alt=""><b style="color:${RC[it.rarity]}">${it.name}</b><small>${it.rarity}${it.set ? ' · set' : ''}${it.shopOnly ? ' · Masterwork' : ''}${RECIPES[it.name] ? ` · ${[RECIPES[it.name].shape || RECIPES[it.name].style, RECIPES[it.name].tex].filter(Boolean).join(", ")}` : ''}</small><div class="gt-was">now <img class="old" src="${gearArtIcon(it, 2)}" alt=""></div></div>`;
   let html = '';
-  for (const [slot, label] of [['chest', 'Chestpieces'], ['helmet', 'Helmets']]) {
+  for (const [slot, label] of [['chest', 'Chestpieces'], ['helmet', 'Helmets'], ['legs', 'Legs'], ['boots', 'Boots'], ['offhand', 'Legendary, Mythic & Divine off-hands']]) {
     html += `<h2>${label}</h2>`;
     for (let s = 0; s <= 5; s++) {
-      const list = all.filter((i) => i.slot === slot && i.section === s).sort((a, b) => RAR.indexOf(a.rarity) - RAR.indexOf(b.rarity));
+      const list = all.filter((i) => i.slot === slot && i.section === s && (slot !== 'offhand' || RECIPES[i.name])).sort((a, b) => RAR.indexOf(a.rarity) - RAR.indexOf(b.rarity));
       if (!list.length) continue;
       html += `<div class="panel"><h3>${s ? SECTIONS[s - 1].name : 'Starter kit'}</h3><div class="gt-row">${list.map(cell).join('')}</div></div>`;
     }
