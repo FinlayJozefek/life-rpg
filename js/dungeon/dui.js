@@ -732,8 +732,8 @@ function playEvents(events, done) {
     if (ev.t === 'death' && ev.who === 'enemy') {
       const el = battleRoot().querySelector(`[data-e="${ev.uid}"]`);
       const foe = battle.b.enemies.find((x) => x.uid === ev.uid);
-      if (el) { el.classList.add('dying'); setTimeout(() => fxBits(el, foe?.boss ? BOSS_AURA[foe.id] : '#e6dcc4', foe?.boss ? 40 : 22), 250); }
-      wait = 950;
+      if (el) { el.classList.add('dying'); setTimeout(() => fxBits(el, foe?.boss ? BOSS_AURA[foe.id] : '#8a7a62', foe?.boss ? 40 : 26), 420); }   // dust as it collapses
+      wait = 1050;
     }
     if (wait) { if (barDelay) setTimeout(updateBars, barDelay); else updateBars(); setTimeout(step, wait); } else step();
   };
