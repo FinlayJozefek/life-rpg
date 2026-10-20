@@ -1026,7 +1026,7 @@ dungeon.init({
   avatarUrl: (scale = 3) => avatarDataUrl({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, scale),
   // your avatar wearing its Dungeon armour (Camp, battles, tower)
   dAvatarUrl: (scale = 3) => dungeonAvatarUrl({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, state.dungeon?.equipped || {}, scale),
-  dAvatar: (scale = 3) => dungeonAvatar({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, state.dungeon?.equipped || {}, scale),
+  dAvatar: (scale = 3, opts = {}) => dungeonAvatar({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, state.dungeon?.equipped || {}, scale, opts),
   avatarImg: () => `<img class="d-faller-img" src="${avatarDataUrl({ head: state.equipped.head, body: state.equipped.body, feet: state.equipped.feet }, 4)}" alt="">`,
 });
 document.querySelectorAll('.tabbar button').forEach((b) => { const sp = b.querySelector('span'); if (sp) sp.innerHTML = ic(TAB_ICONS[b.dataset.view], 'tab-ic'); });

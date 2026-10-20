@@ -1100,8 +1100,15 @@ main { position: relative; z-index: 1; }
 /* effects */
 #d-battle.fo .fo-foe.hit .d-enemy-cv, .fo-hero.hit img:not(.d-gl) { animation: fo-hitflash 0.3s; }
 @keyframes fo-hitflash { 0%, 40% { filter: brightness(4) saturate(0); transform: translateX(6px); } 70% { transform: translateX(-4px); } 100% { filter: none; transform: none; } }
-.fo-hero.lunge { animation: fo-lunge-up 0.35s; }
-@keyframes fo-lunge-up { 40% { transform: translate(40px, -46px) scale(0.92); } }
+.fo-hero.lunge { animation: fo-lunge-up 0.55s ease-out; }
+@keyframes fo-lunge-up { 25% { transform: translate(-6px, 8px) scale(1.03); } 55% { transform: translate(110px, -100px) scale(0.78) rotate(4deg); } 75% { transform: translate(98px, -88px) scale(0.8); } 100% { transform: none; } }
+.fo-hero.hit { animation: fo-knock 0.45s ease-out; }
+@keyframes fo-knock { 20% { transform: translate(-12px, 5px) rotate(-6deg); } 55% { transform: translate(5px, 0); } 100% { transform: none; } }
+.fo-ready { transform-origin: 50% 100%; animation: fo-ready 1.3s ease-in-out infinite; }
+@keyframes fo-ready { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(-3px) scaleY(1.02); } }
+.d-gav > img.d-cape { z-index: 3; transform-origin: 50% 48%; animation: d-cape 1.8s ease-in-out infinite; pointer-events: none; }
+@keyframes d-cape { 0%, 100% { transform: skewX(0deg) scaleY(1); } 50% { transform: skewX(-5deg) scaleY(1.02); } }
+@media (prefers-reduced-motion: reduce) { .fo-ready, .d-gav > img.d-cape { animation: none; } }
 #d-battle .fo-foe.lunge { animation: fo-lunge-down 0.35s; }
 @keyframes fo-lunge-down { 40% { transform: translate(-34px, 40px) scale(1.15); } }
 #d-battle .fo-foe.tele .d-enemy-cv { animation: fo-tele 0.6s ease-in-out infinite alternate; }

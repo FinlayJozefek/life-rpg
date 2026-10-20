@@ -225,6 +225,14 @@ function wingsBehind(g) {
   }
 }
 
+// the cape on its own (back view) so the battle screen can make it blow in the wind
+function capeLayer(L, scale) {
+  const c = M[L.rc.cape], cv = document.createElement('canvas'); cv.width = AW * scale; cv.height = AH * scale;
+  const x = cv.getContext('2d');
+  for (let y = 25; y <= 43; y++) for (let px2 = 11; px2 <= 20; px2++) { if (y > 41 && (px2 + y) % 2) continue; x.fillStyle = px2 <= 11 ? c[2] : px2 >= 20 ? c[0] : (px2 + y) % 5 === 0 ? c[2] : c[1]; x.fillRect(px2 * scale, y * scale, scale, scale); }
+  return cv.toDataURL();
+}
+
 // ---------- rarity glow ----------
 // Each piece glows in its own rarity colour from Rare up (a Mythic crown glows red round your head,
 // an Epic chestplate purple round your body). Drawn as a separate layer the page blurs behind the avatar.
@@ -262,7 +270,8 @@ export function dungeonAvatar(lifeGear, dEquipped = {}, scale = 4, opts = {}) {
   });
   const R = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'];
   const top = R[Math.max(-1, ...Object.values(parts).filter(Boolean).map((p) => p.R))] || null;
-  if (!marks.size) return { url, glow: null, top };
+  const cape = back && parts.chest?.rc.cape ? capeLayer(parts.chest, scale) : null;
+  if (!marks.size) return { url, glow: null, top, cape };
   const cv = document.createElement('canvas'); cv.width = AW * scale; cv.height = AH * scale;
   const ctx = cv.getContext('2d');
   for (const [k, [col, alpha]] of marks) {                      // spread each pixel a little so the glow reaches past the outline
@@ -270,7 +279,7 @@ export function dungeonAvatar(lifeGear, dEquipped = {}, scale = 4, opts = {}) {
     ctx.globalAlpha = alpha * 0.35; ctx.fillRect((x - 2) * scale, (y - 2) * scale, 5 * scale, 5 * scale);
     ctx.globalAlpha = alpha * 0.6; ctx.fillRect((x - 1) * scale, (y - 1) * scale, 3 * scale, 3 * scale);
   }
-  return { url, glow: cv.toDataURL(), top };
+  return { url, glow: cv.toDataURL(), top, cape };
 }
 
 // avatar image with your life-skill outfit underneath and Dungeon armour on top

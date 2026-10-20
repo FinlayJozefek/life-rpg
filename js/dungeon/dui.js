@@ -17,15 +17,15 @@ import { mountGearArt } from './gearart.js';
 
 // Your avatar with each armour piece glowing in its rarity colour (Rare+); Legendary+ pulses, Mythic gives off embers, Divine sparkles.
 const GLOW_RAR = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'];
-function glowAvatar(scale) {
-  const { url, glow, top } = api.dAvatar(scale);
+function glowAvatar(scale, opts = {}) {
+  const { url, glow, top, cape } = api.dAvatar(scale, opts);
   const t = GLOW_RAR.indexOf(top);
   let fx = '';
   if (t >= 5) for (let i = 0; i < 8; i++) {
     const col = t === 5 ? ['#ff6a1a', '#ffb02e', '#ff3a3a'][i % 3] : ['#fff4b0', '#ffffff', '#ffd84a'][i % 3];
     fx += `<span class="d-gpt" style="left:${20 + ((i * 37) % 60)}%;background:${col};animation-duration:${1.8 + (i % 4) * 0.5}s;animation-delay:${(i * 0.37) % 2}s"></span>`;
   }
-  return `<span class="d-gav ${t >= 4 ? 'pulse' : ''}">${glow ? `<img class="d-gl" src="${glow}" alt="">` : ''}<img src="${url}" alt="">${fx}</span>`;
+  return `<span class="d-gav ${t >= 4 ? 'pulse' : ''}">${glow ? `<img class="d-gl" src="${glow}" alt="">` : ''}<img src="${url}" alt="">${cape ? `<img class="d-cape" src="${cape}" alt="">` : ''}${fx}</span>`;
 }
 
 let api = null;          // helpers from app.js
@@ -504,7 +504,7 @@ function renderBattle(full = false) {
   const sec = SECTIONS[sectionOf(run.floor) - 1];
   const target = b.enemies.find((e) => e.uid === battle.target && e.hp > 0) || aliveEnemies(b)[0];
   if (target) battle.target = target.uid;
-  battle.hero ||= glowAvatar(4);
+  battle.hero ||= glowAvatar(4, { back: true });   // seen from behind, facing the enemies
   const statuses = statusChips;
   const foes = b.enemies.map((e) => `<button class="d-enemy fo-foe ${shownHp(e) <= 0 ? 'dead' : ''} ${e.uid === battle.target ? 'targeted' : ''} ${e.boss ? 'boss' : ''} ${e.charging ? 'tele' : ''}" data-action="d-target" data-uid="${e.uid}" data-e="${e.uid}">
       <span class="fo-mark">▼</span>${e.charging ? '<span class="fo-bang">!</span><span class="fo-warn"></span>' : ''}
@@ -552,7 +552,7 @@ function renderBattle(full = false) {
       <div class="fo-plat fo-plat-foe"></div>
       <div class="fo-foes n${Math.min(4, b.enemies.length)}">${foes}</div>
       <div class="fo-plat fo-plat-me"></div>
-      <div class="fo-hero">${battle.hero}</div>
+      <div class="fo-hero"><div class="fo-ready">${battle.hero}</div></div>
     </div>
     <div class="d-player fo-ui">
       <div class="fo-me"><div class="fo-me-top"><b>${esc(S().name)}</b><span class="d-sts">${statuses(p)}${p.ward > 0 ? '<span class="d-st st-ward">ward</span>' : ''}${p.parry ? '<span class="d-st st-ward">parry</span>' : ''}</span></div>
@@ -615,7 +615,7 @@ const typeIcon = (t, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24">${TYP
 const foeName = (e) => `${esc(e.name)}${e.boss && e.phase === 2 ? ' <span class="d-red">ENRAGED</span>' : ''}${e.charging ? ` <span class="fo-telename">⚠ ${esc(e.charging.name)}</span>` : ''}`;
 
 // ---------- battle effects ----------
-const replay = (el, cls) => { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+const replay = (el, cls) => { if (!el) return; el.classList.remove(cls); if (el.classList.contains('fo-hero')) el.classList.remove('hit', 'lunge'); void el.offsetWidth; el.classList.add(cls); };   // the hero only plays one move at a time
 function fxBits(host, colour, count) {
   const root = battleRoot();
   const a = host.getBoundingClientRect(), r = root.getBoundingClientRect();
