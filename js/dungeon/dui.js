@@ -557,7 +557,6 @@ function renderBattle(full = false) {
     <div class="d-player fo-ui">
       <div class="fo-me"><div class="fo-me-top"><b>${esc(S().name)}</b><span class="d-sts">${statuses(p)}${p.ward > 0 ? '<span class="d-st st-ward">ward</span>' : ''}${p.parry ? '<span class="d-st st-ward">parry</span>' : ''}</span></div>
         <div class="d-hpbar me"><span style="width:${(shownHp(p) / p.maxHp * 100).toFixed(1)}%"></span></div><div class="d-hptext">${fmt(shownHp(p))} / ${fmt(p.maxHp)}</div></div>
-      <div class="d-log fo-text">${battle.log.slice(-2).map((l) => `<div>${esc(l)}</div>`).join('')}</div>
       ${hand}
     </div>
     <div class="fo-flash"></div><div class="fo-vig"></div>`;
@@ -615,7 +614,7 @@ const typeIcon = (t, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24">${TYP
 const foeName = (e) => `${esc(e.name)}${e.boss && e.phase === 2 ? ' <span class="d-red">ENRAGED</span>' : ''}${e.charging ? ` <span class="fo-telename">⚠ ${esc(e.charging.name)}</span>` : ''}`;
 
 // ---------- battle effects ----------
-const replay = (el, cls) => { if (!el) return; el.classList.remove(cls); if (el.classList.contains('fo-hero')) el.classList.remove('hit', 'lunge'); void el.offsetWidth; el.classList.add(cls); };   // the hero only plays one move at a time
+const replay = (el, cls) => { if (!el) return; el.classList.remove(cls); if (el.classList.contains('fo-hero')) el.classList.remove('hit', 'lunge', 'dodge'); void el.offsetWidth; el.classList.add(cls); };   // the hero only plays one move at a time
 function fxBits(host, colour, count) {
   const root = battleRoot();
   const a = host.getBoundingClientRect(), r = root.getBoundingClientRect();
@@ -665,6 +664,33 @@ function popNumber(ev) {
 }
 const b0 = () => battle.b;
 
+// Whoever dodged sidesteps and a "Dodge!" pops over them.
+function dodgeFx(ev) {
+  const root = battleRoot();
+  const host = ev.who === 'player' ? root.querySelector('.fo-hero') : root.querySelector(`[data-e="${ev.uid}"]`);
+  if (!host) return;
+  replay(host, 'dodge');
+  setTimeout(() => host.classList.remove('dodge'), 450);
+  const n = document.createElement('div');
+  n.className = 'd-pop dodge-pop';
+  n.textContent = 'Dodge!';
+  host.appendChild(n);
+  setTimeout(() => n.remove(), 1000);
+  if (ev.who === 'player') { const att = root.querySelector('.fo-foe.targeted') || root.querySelector('.fo-foe'); replay(att, 'lunge'); }
+  else replay(root.querySelector('.fo-hero'), 'lunge');
+  api.sfx.tick?.();
+}
+// A short banner across the fight for warnings ("raises his great club…") and boss phase changes.
+function banner(text, kind = '') {
+  const root = battleRoot();
+  root.querySelector('.fo-banner')?.remove();
+  const el = document.createElement('div');
+  el.className = `fo-banner ${kind}`;
+  el.textContent = text;
+  root.appendChild(el);
+  setTimeout(() => el.remove(), kind === 'phase' ? 2200 : 1600);
+}
+
 function playEvents(events, done) {
   const queue = events.slice();
   const step = () => {
@@ -672,7 +698,13 @@ function playEvents(events, done) {
     const ev = queue.shift();
     if (!ev) { battle.shown = null; done(); return; }
     let wait = 0;
-    if (ev.t === 'text') { battle.log.push(ev.text); if (ev.tele) { api.sfx.chime(); wait = 500; } else wait = ev.big ? 600 : 180; }
+    if (ev.t === 'text') {
+      battle.log.push(ev.text);
+      if (ev.miss) { dodgeFx(ev); wait = 380; }
+      else if (ev.tele) { banner(ev.text, 'warn'); api.sfx.chime(); wait = 500; }
+      else if (ev.big) { banner(ev.text); wait = 600; }
+      else wait = 180;
+    }
     const k = ev.who === 'player' ? 'p' : `e${ev.uid}`;
     if (ev.t === 'dmg' && battle.shown && battle.shown[k] !== undefined) battle.shown[k] = Math.max(0, battle.shown[k] - ev.amount);
     if (ev.t === 'heal' && battle.shown && battle.shown[k] !== undefined) battle.shown[k] += ev.amount;
@@ -685,7 +717,7 @@ function playEvents(events, done) {
     }
     if (ev.t === 'heal' && !ev.quiet) { popNumber(ev); wait = 250; }
     if (ev.t === 'heal' && ev.quiet) wait = 60;
-    if (ev.t === 'phase') { battle.log.push(ev.text); api.shake(battleRoot(), true); api.flash('#ff4a2a88'); api.sfx.dropSound(4); wait = 900; }
+    if (ev.t === 'phase') { battle.log.push(ev.text); banner(ev.text, 'phase'); api.shake(battleRoot(), true); api.flash('#ff4a2a88'); api.sfx.dropSound(4); wait = 900; }
     if (ev.t === 'status') wait = 80;
     if (ev.t === 'potion') { api.sfx.chime(); wait = 150; }
     if (ev.t === 'death' && ev.who === 'enemy') {
@@ -718,7 +750,8 @@ function updateBars() {
   const pe = root.querySelector('.d-player');
   pe.querySelector('.d-hpbar span').style.width = `${(shownHp(p) / p.maxHp * 100).toFixed(1)}%`;
   pe.querySelector('.d-hptext').textContent = `${fmt(shownHp(p))} / ${fmt(p.maxHp)}`;
-  root.querySelector('.d-log').innerHTML = battle.log.slice(-2).map((l) => `<div>${esc(l)}</div>`).join('');
+  const log = root.querySelector('.d-log');   // older layout only; face-off battles show no log
+  if (log) log.innerHTML = battle.log.slice(-2).map((l) => `<div>${esc(l)}</div>`).join('');
 }
 
 function act(action) {

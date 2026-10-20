@@ -1281,3 +1281,14 @@ body, .coin-pill, .streak-pill, .stat-num, .d-dpow, .d-hptext, .d-pop, .tc-seal,
 .d-gpt { position: absolute; width: 4px; height: 4px; z-index: 3; bottom: 15%; opacity: 0; pointer-events: none; animation: d-gpt-rise linear infinite; }
 @keyframes d-gpt-rise { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-90px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .d-gav.pulse > img.d-gl, .d-gpt { animation: none; } }
+
+/* battle: dodges and banners (no log box under the fight) */
+.fo-hero.dodge { animation: fo-dodge-hero 0.42s ease-out; }
+@keyframes fo-dodge-hero { 35% { transform: translate(-26px, 4px) rotate(-10deg); opacity: 0.6; } 100% { transform: none; opacity: 1; } }
+#d-battle .fo-foe.dodge { animation: fo-dodge-foe 0.42s ease-out; }
+@keyframes fo-dodge-foe { 35% { transform: translateX(30px) skewX(-12deg); opacity: 0.55; } 100% { transform: none; opacity: 1; } }
+.d-pop.dodge-pop { color: #9fe8ff; font-size: 22px; letter-spacing: 1px; }
+.fo-banner { position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%); z-index: 8; max-width: 86%; padding: 8px 14px; border: 2px solid #c8a24a; border-radius: 4px; background: rgba(12, 10, 8, 0.92); color: #f4e6c8; font: 700 15px var(--body-font); text-align: center; pointer-events: none; animation: fo-banner 1.6s ease-out forwards; }
+.fo-banner.warn { color: #ffb0a0; border-color: #ff5a3a; }
+.fo-banner.phase { font: 400 18px var(--display-font); color: #ffd27a; border-color: #ff5a3a; animation-duration: 2.2s; }
+@keyframes fo-banner { 0% { opacity: 0; transform: translate(-50%, -40%) scale(0.95); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
