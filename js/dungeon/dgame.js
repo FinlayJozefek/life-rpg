@@ -203,7 +203,7 @@ export function enemyXp(e) {
 export const enemyCoins = (e) => Math.round((e.isBoss ? 40 : 3) * SECTION_SCALE[e.section - 1] / 5 * (1 + 0.05 * (e.fis - 1)) * (e.isBoss ? 1 : 0.8 + Math.random() * 0.4));
 
 // Drop chances per normal enemy kill; rise with floor height inside the section.
-const DROP = { common: 0.09, uncommon: 0.045, rare: 0.016, epic: 0.005, mythic: 0.0006 };
+export const DROP = { common: 0.09, uncommon: 0.045, rare: 0.016, epic: 0.005, mythic: 0.0006 };
 export function rollEnemyDrops(e, rng = Math.random, luck = 1) {
   const drops = [];
   const height = 0.7 + 0.06 * e.fis;
@@ -220,7 +220,7 @@ export function rollEnemyDrops(e, rng = Math.random, luck = 1) {
   return drops;
 }
 // Bosses: two rolls; Legendaries only come from bosses.
-const BOSS_TABLE = [['divine', 0.006], ['mythic', 0.03], ['legendary', 0.12], ['epic', 0.3], ['rare', 0.55]];
+export const BOSS_TABLE = [['divine', 0.006], ['mythic', 0.03], ['legendary', 0.12], ['epic', 0.3], ['rare', 0.55]];
 export function rollBossDrops(section, rng = Math.random, luck = 1) {
   const drops = [];
   const items = DITEMS_BY_SECTION[section].filter((i) => !i.shopOnly);
@@ -283,7 +283,8 @@ export const CHEST_TIERS = {
   a: { name: 'Ancient', colour: '#b48cff' },
 };
 // Higher floors in a section give better chests: odds slide from floor 1 to floor 9; the boss floor is always Gold or Ancient.
-const LOW = { w: 0.8, i: 0.16, g: 0.035, a: 0.005 }, HIGH = { w: 0.5, i: 0.32, g: 0.14, a: 0.04 };
+export const LOW = { w: 0.8, i: 0.16, g: 0.035, a: 0.005 };
+export const HIGH = { w: 0.5, i: 0.32, g: 0.14, a: 0.04 };
 export function chestOdds(floor) {
   const fis = floorInSection(floor);
   if (fis === 10) return [['g', 0.9], ['a', 0.1]];
@@ -300,7 +301,7 @@ export const chestInfo = (key) => { const boss = key.includes('b'); const t = ke
 export const chestName = (key) => { const { sec, boss, tier } = chestInfo(key); return `${CHEST_TIERS[tier].name} ${SECTIONS[sec - 1].name}${boss ? ' Boss' : ''} Chest`; };
 export const CHEST_ORDER = ['a', 'g', 'i', 'w'];
 // what each tier holds
-const LOOT = {
+export const LOOT = {
   w: { coins: 1, gear: 0.32, odds: [['common', 0.55], ['uncommon', 0.32], ['rare', 0.11], ['epic', 0.02]], mats: [0.5, 1, 2], potion: 0.15 },
   i: { coins: 1.5, gear: 0.5, odds: [['common', 0.3], ['uncommon', 0.4], ['rare', 0.25], ['epic', 0.05]], mats: [0.75, 1, 2], potion: 0.25 },
   g: { coins: 2.5, gear: 1, odds: [['rare', 0.7], ['epic', 0.27], ['legendary', 0.03]], mats: [1, 2, 3], potion: 0.4 },

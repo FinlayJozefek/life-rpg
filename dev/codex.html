@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dungeon Codex</title>
+<!-- Dev-only page: everything that makes up the Dungeon, read live from the game's own data. Not deployed.
+     Rendered once; the filters only show/hide rows, so a saved snapshot still filters (see "Save snapshot"). -->
+<style>
+  @font-face { font-family: 'New Rocker'; src: url('../fonts/new-rocker.woff2') format('woff2'); }
+  @font-face { font-family: 'Alegreya Sans'; src: url('../fonts/alegreya-sans-400.woff2') format('woff2'); font-weight: 400; }
+  @font-face { font-family: 'Alegreya Sans'; src: url('../fonts/alegreya-sans-700.woff2') format('woff2'); font-weight: 700; }
+  :root { --bg: #17130f; --panel: #221c16; --panel2: #2c241c; --line: #4a3c2c; --text: #f1e6d2; --muted: #b9a88e; --gold: #f0c060; --good: #7fd07a; --bad: #ff8a7a;
+    --c-common: #c8c0b0; --c-uncommon: #6ad06a; --c-rare: #5aa0ff; --c-epic: #c08aff; --c-legendary: #ffb02e; --c-mythic: #ff5a78; --c-divine: #fff1a8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 'Alegreya Sans', system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: #120e0b; border-bottom: 2px solid var(--line); padding: 10px 12px 0; }
+  h1 { font: 26px 'New Rocker', serif; color: var(--gold); margin: 0 0 2px; }
+  h2 { font: 22px 'New Rocker', serif; color: var(--gold); margin: 22px 0 8px; }
+  h3 { font: 700 17px 'Alegreya Sans', sans-serif; margin: 14px 0 6px; color: var(--gold); }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+  nav { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; }
+  nav button, .chips button { flex: 0 0 auto; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font: 700 13px 'Alegreya Sans', sans-serif; cursor: pointer; }
+  nav button.on, .chips button.on { background: var(--gold); color: #1a1208; border-color: var(--gold); }
+  main { max-width: 1100px; margin: 0 auto; padding: 4px 12px 60px; }
+  section.tab { display: none; } section.tab.on { display: block; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
+  .chips span { color: var(--muted); font-size: 12px; align-self: center; margin-right: 2px; }
+  input[type=search] { width: 100%; max-width: 360px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font: inherit; }
+  .count { color: var(--muted); font-size: 13px; margin: 6px 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--rc, var(--line)); border-radius: 10px; padding: 10px; }
+  .card.hide, tr.hide { display: none; }
+  .top { display: flex; gap: 10px; align-items: flex-start; }
+  .top img { width: 64px; height: 64px; image-rendering: pixelated; flex: 0 0 auto; background: #0e0b08; border-radius: 8px; }
+  .nm { font-weight: 700; font-size: 16px; line-height: 1.15; }
+  .meta { color: var(--muted); font-size: 12.5px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
+  .stats b { background: var(--panel2); border-radius: 6px; padding: 1px 7px; font-size: 12.5px; font-weight: 700; }
+  .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 7px; }
+  ul { margin: 2px 0 0; padding-left: 18px; } li { margin: 1px 0; font-size: 13.5px; }
+  .rar { font-weight: 700; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 5px 6px; text-align: left; vertical-align: top; }
+  th { color: var(--gold); font-weight: 700; background: var(--panel); position: sticky; top: 0; }
+  .tw { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  td img { width: 40px; image-rendering: pixelated; vertical-align: middle; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .note { background: #2b2213; border: 1px solid #6a5222; border-radius: 10px; padding: 8px 10px; font-size: 13.5px; margin: 8px 0; }
+  .weak { color: var(--good); } .resist { color: var(--bad); }
+  .muted { color: var(--muted); }
+  @media (max-width: 420px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Dungeon Codex</h1>
+  <p class="sub" id="stamp">Everything in the Dungeon, read straight from the game's data.</p>
+  <nav id="nav"></nav>
+</header>
+<main id="main"></main>
+
+<script type="module">
+  import * as DD from '../js/dungeon/ddata.js';
+  import * as DG from '../js/dungeon/dgame.js';
+  import { enemyIcon, chestIcon } from '../js/dungeon/dart.js';
+  import { gearArtIcon } from '../js/dungeon/gearart.js';
+  import { moveText, passiveText } from '../js/dungeon/dui.js';
+  const { DITEMS, SECTIONS, FAMILIES, ENEMIES, BOSSES, FAMILY_ROSTER, SETS, POTIONS, MATERIALS, RAR, RAR_NAME, TYPE_NAME, WEAPON_TYPES, SECTION_SCALE, SLOT_NAME_D, RARITY_MULT } = DD;
+  const { DROP, BOSS_TABLE, LOOT, LOW, HIGH, CHEST_TIERS, floorLayout, makeEnemy, makeBoss, enemyXp, weaponMoves, itemStats, sellPrice, buyPrice, upgradeCost, MAX_PLUS, recommendedPower, xpToNext, xpForLevel, BASE, SECTION_FUDGE, FLOOR_STEP, ENEMY_BASE, UPGRADE_STEP } = DG;
+
+  const fmt = (n) => Math.round(n).toLocaleString('en-NZ');
+  const pct = (p) => (p >= 0.1 ? `${Math.round(p * 100)}%` : p >= 0.01 ? `${(p * 100).toFixed(1)}%` : `${(p * 100).toFixed(2)}%`);
+  const oneIn = (p) => (p <= 0 ? '—' : p >= 0.5 ? pct(p) : `1 in ${fmt(1 / p)}`);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const secName = (s) => (s === 0 ? 'Starter kit' : SECTIONS[s - 1].name);
+  const rar = (r) => `<span class="rar" style="color:var(--c-${r})">${RAR_NAME[r]}</span>`;
+  const items = Object.values(DITEMS);
+  const famLine = (f) => `<span class="weak">weak to ${FAMILIES[f].weak.map((t) => TYPE_NAME[t]).join(' & ')}</span> · <span class="resist">resists ${FAMILIES[f].resist.map((t) => TYPE_NAME[t]).join(' & ')}</span>`;
+  const STAGE_FLOORS = ['floors 1–3', 'floors 4–5', 'floors 6–7', 'floors 8–9'];
+
+  // ---------- how each item can be obtained ----------
+  const height = (fis) => 0.7 + 0.06 * fis;
+  const enemyPool = (sec, r) => items.filter((i) => i.section === sec && i.rarity === r && !i.bossOnly && !i.shopOnly && !i.grindDrop);
+  const bossPool = (sec, r) => items.filter((i) => i.section === sec && i.rarity === r && !i.shopOnly);
+  const chestPool = (sec, r) => items.filter((i) => i.section === sec && i.rarity === r && !i.shopOnly && !i.grindDrop);
+  function bossRarityOdds(sec) {           // per roll, following rollBossDrops (empty rarities fall through to the next)
+    const out = {}; let carry = 0;
+    for (const [r, p] of BOSS_TABLE) { if (bossPool(sec, r).length) { out[r] = p + carry; carry = 0; } else carry += p; }
+    return out;
+  }
+  function sources(it) {
+    const s = it.section, out = [];
+    if (s === 0) return ['Given free when you first enter the Dungeon'];
+    if (it.shopOnly) out.push(`Blacksmith only: ${fmt(buyPrice(it.id))} coins`);
+    else if (['common', 'uncommon'].includes(it.rarity)) out.push(`Blacksmith: ${fmt(buyPrice(it.id))} coins`);
+    if (it.grindDrop) out.push(`${secName(s)} enemies: ${oneIn(it.grindDrop)} kills`);
+    if (!it.bossOnly && !it.shopOnly && !it.grindDrop && DROP[it.rarity] && !(it.rarity === 'mythic' && s < 3)) {
+      const n = enemyPool(s, it.rarity).length;
+      out.push(`${secName(s)} enemies: ${oneIn(DROP[it.rarity] * height(1) / n)} kills on floor 1 → ${oneIn(DROP[it.rarity] * height(9) / n)} on floor 9`);
+    }
+    if (!it.shopOnly) {
+      const pr = bossRarityOdds(s)[it.rarity];
+      if (pr) { const q = pr / bossPool(s, it.rarity).length; out.push(`${BOSSES[SECTIONS[s - 1].boss].name}: ${oneIn(1 - (1 - q) ** 2)} kills (2 rolls each)`); }
+    }
+    if (!it.shopOnly && !it.grindDrop) {
+      const parts = [];
+      for (const [k, label] of [['w', 'Wooden'], ['i', 'Iron'], ['g', 'Gold'], ['a', 'Ancient'], ['bg', 'Boss Gold'], ['ba', 'Boss Ancient']]) {
+        const L = LOOT[k], odd = L.odds.find(([r]) => r === it.rarity);
+        if (!odd) continue;
+        const n = chestPool(s, it.rarity).length; if (!n) continue;
+        parts.push(`${label} ${oneIn(L.gear * odd[1] / n)}`);
+      }
+      if (parts.length) out.push(`${secName(s)} chests: ${parts.join(' · ')}`);
+    }
+    return out.length ? out : ['Not obtainable right now'];
+  }
+
+  // ---------- tabs ----------
+  const TABS = [['overview', 'Overview'], ['items', 'Items'], ['moves', 'Weapon moves'], ['enemies', 'Enemies'], ['bosses', 'Bosses'], ['chests', 'Chests'], ['shop', 'Shop, Forge & Potions'], ['sets', 'Sets'], ['progress', 'Crypts levels']];
+  const html = {};
+
+  // Overview
+  html.overview = `<h2>The tower</h2>
+  <p>5 areas × 10 floors. Floors 1–9 of each area are normal fights (Health carries between the fights on a floor); floor 10 is the boss. Die on a floor you haven't beaten and you drop to the start of that area.</p>
+  <div class="tw"><table><tr><th>Area</th><th>Monsters</th><th>Unlocks at Crypts</th><th>Strength scale</th><th>Boss</th><th class="num">Recommended Power</th><th>Material</th></tr>
+  ${SECTIONS.map((s, i) => `<tr><td><b>${s.name}</b><br><span class="muted">floors ${i * 10 + 1}–${i * 10 + 10}</span></td><td>${FAMILIES[s.family].name}<br><span class="meta">${famLine(s.family)}</span><br><span class="meta">guests: ${FAMILIES[s.guest].name} (15%)</span></td><td class="num">${s.crypts}</td><td class="num">×${(SECTION_SCALE[i] / SECTION_SCALE[0]).toFixed(1)}</td><td><img src="${enemyIcon(s.boss, 2)}" alt=""> ${BOSSES[s.boss].name}</td><td class="num">${fmt(recommendedPower(i + 1))}</td><td>${MATERIALS[s.material].name}</td></tr>`).join('')}</table></div>
+  <h3>Enemies per floor (same in every area)</h3>
+  <div class="tw"><table><tr><th>Floor</th>${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((f) => `<th class="num">${f}</th>`).join('')}</tr>
+  <tr><td>Fights</td>${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((f) => `<td class="num">${f === 10 ? 'boss' : floorLayout(f).join('+')}</td>`).join('')}</tr></table></div>
+  <h3>Damage types</h3>
+  <p>Hitting a weakness does <b>×${DD.WEAK_MULT}</b> damage, a resistance <b>×${DD.RESIST_MULT}</b>. Enemies get ${Math.round(FLOOR_STEP * 100)}% stronger each floor inside an area.</p>
+  <div class="tw"><table><tr><th>Family</th><th>Weak to</th><th>Resists</th></tr>${Object.entries(FAMILIES).map(([k, f]) => `<tr><td>${f.name}</td><td class="weak">${f.weak.map((t) => TYPE_NAME[t]).join(', ')}</td><td class="resist">${f.resist.map((t) => TYPE_NAME[t]).join(', ')}</td></tr>`).join('')}</table></div>
+  <h3>Your base stats (before gear)</h3>
+  <p>Health ${BASE.hp}, Attack ${BASE.atk}, Defence ${BASE.def}, crit ${Math.round(BASE.crit * 100)}%. These are multiplied by an area's strength scale once you have <b>both</b> that area's Crypts level <b>and</b> have reached the area. Each Crypts level also adds +1% damage.</p>
+  <h3>Rarity strength</h3>
+  <div class="tw"><table><tr><th>Rarity</th><th class="num">Stat budget</th><th class="num">Sell (×area scale)</th></tr>${RAR.map((r) => `<tr><td>${rar(r)}</td><td class="num">×${RARITY_MULT[r]}</td><td class="num">${({ common: 2, uncommon: 5, rare: 12, epic: 30, legendary: 80, mythic: 200, divine: 600 })[r]}</td></tr>`).join('')}</table></div>`;
+
+  // Items
+  const SLOTS = ['weapon', 'helmet', 'chest', 'legs', 'boots', 'offhand'];
+  const itemCards = items.slice().sort((a, b) => a.section - b.section || SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot) || RAR.indexOf(a.rarity) - RAR.indexOf(b.rarity)).map((it) => {
+    const s = itemStats(it.id, 0), s10 = itemStats(it.id, MAX_PLUS);
+    const statB = [s.atk && `${fmt(s.atk)} Atk`, s.def && `${fmt(s.def)} Def`, s.hp && `${fmt(s.hp)} HP`, s.crit && `${Math.round(s.crit * 100)}% crit`, s.dodge && `${Math.round(s.dodge * 100)}% dodge`].filter(Boolean);
+    const stat10 = [s10.atk && `${fmt(s10.atk)} Atk`, s10.def && `${fmt(s10.def)} Def`, s10.hp && `${fmt(s10.hp)} HP`].filter(Boolean).join(' · ');
+    const moves = it.slot === 'weapon' ? weaponMoves(it.id, null) : [];
+    const p = { dtype: it.dtype || (WEAPON_TYPES[it.weaponType]?.dtype === 'element' ? 'lightning' : WEAPON_TYPES[it.weaponType]?.dtype) };
+    const pas = passiveText(it);
+    let upTotal = 0; for (let k = 0; k < MAX_PLUS; k++) upTotal += upgradeCost(it.id, k).coins;
+    const type = it.slot === 'weapon' ? `${WEAPON_TYPES[it.weaponType]?.name || it.weaponType} · ${TYPE_NAME[p.dtype] || p.dtype}` : it.slot === 'offhand' ? it.kind : 'armour';
+    const search = `${it.name} ${secName(it.section)} ${it.rarity} ${it.slot} ${type} ${pas.join(' ')}`.toLowerCase();
+    return `<div class="card item" style="--rc:var(--c-${it.rarity})" data-sec="${it.section}" data-slot="${it.slot}" data-rar="${it.rarity}" data-q="${esc(search)}">
+      <div class="top"><img src="${gearArtIcon(it, 2)}" alt=""><div><div class="nm" style="color:var(--c-${it.rarity})">${esc(it.name)}</div>
+      <div class="meta">${rar(it.rarity)} ${SLOT_NAME_D[it.slot]} · ${esc(type)} · ${secName(it.section)}${it.shopOnly ? ' · Masterwork' : ''}${it.bossOnly ? ' · boss drop' : ''}</div>
+      <div class="stats">${statB.map((x) => `<b>${x}</b>`).join('')}</div>${stat10 ? `<div class="meta">at +${MAX_PLUS}: ${stat10}</div>` : ''}</div></div>
+      ${moves.length ? `<div class="k">Moves</div><ul>${moves.map((m) => `<li><b>${esc(m.name)}</b>${m.sig ? ' ✦' : ''} — ${moveText(m, p) || 'utility'}</li>`).join('')}</ul>` : ''}
+      ${pas.length ? `<div class="k">Effects</div><ul>${pas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+      ${it.set ? `<div class="k">Set</div><div>${SETS[it.set].name} (4 pieces): ${SETS[it.set].text}</div>` : ''}
+      <div class="k">How to get it</div><ul>${sources(it).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+      <div class="k">Coins</div><div class="meta">Sells for ${fmt(sellPrice(it.id))}${it.section ? ` · Forge +0→+${MAX_PLUS}: ${fmt(upTotal)} coins + ${(MAX_PLUS * (MAX_PLUS + 1)) / 2} ${MATERIALS[SECTIONS[Math.max(1, it.section) - 1].material].name}` : ''}</div>
+    </div>`;
+  }).join('');
+  html.items = `<h2>Items</h2>
+  <input type="search" id="q" placeholder="Search items, effects, areas…">
+  <div class="chips" data-f="sec"><span>Area</span><button class="on" data-v="">All</button>${[0, 1, 2, 3, 4, 5].map((s) => `<button data-v="${s}">${secName(s)}</button>`).join('')}</div>
+  <div class="chips" data-f="slot"><span>Slot</span><button class="on" data-v="">All</button>${SLOTS.map((s) => `<button data-v="${s}">${SLOT_NAME_D[s]}</button>`).join('')}</div>
+  <div class="chips" data-f="rar"><span>Rarity</span><button class="on" data-v="">All</button>${RAR.map((r) => `<button data-v="${r}" style="color:var(--c-${r})">${RAR_NAME[r]}</button>`).join('')}</div>
+  <div class="count" id="itemCount"></div>
+  <div class="note">Drop chances are per item (one specific item, not "any item of that rarity"), with no luck bonuses. ✦ = signature move.</div>
+  <div class="grid" id="itemGrid">${itemCards}</div>`;
+
+  // Weapon moves
+  html.moves = `<h2>Weapon types and their standard moves</h2><p class="sub">Power is a % of your Attack. Signature moves on special weapons replace one or two of these (see each weapon in Items).</p>
+  ${Object.entries(WEAPON_TYPES).map(([k, w]) => { const p = { dtype: w.dtype === 'element' ? 'lightning' : w.dtype }; return `<h3>${w.name} <span class="muted">(${w.dtype === 'element' ? 'element: lightning unless the staff says otherwise' : TYPE_NAME[w.dtype]})</span></h3><ul>${w.moves.map((m) => `<li><b>${m.name}</b> — ${moveText(m, p) || 'utility'}</li>`).join('')}</ul>`; }).join('')}
+  <h2>All signature moves</h2><div class="tw"><table><tr><th>Move</th><th>What it does</th><th>On</th></tr>
+  ${Object.entries(DD.SIGNATURES).map(([n, m]) => `<tr><td><b>${esc(n)}</b></td><td>${moveText(m, { dtype: m.dtype || '' }) || 'utility'}</td><td>${items.filter((i) => (i.sig || []).includes(n) || i.grantMove === n).map((i) => `<span style="color:var(--c-${i.rarity})">${esc(i.name)}</span>`).join(', ') || '<span class="muted">unused</span>'}</td></tr>`).join('')}</table></div>`;
+
+  // Enemies
+  const enemyRows = Object.entries(ENEMIES).map(([id, e]) => {
+    const home = SECTIONS.findIndex((s) => s.family === e.family) + 1;
+    const where = []; FAMILY_ROSTER[e.family].forEach((st, i) => { if (st.includes(id)) where.push(STAGE_FLOORS[i]); });
+    const guestIn = SECTIONS.filter((s) => s.guest === e.family && FAMILY_ROSTER[e.family].slice(0, 2).some((st) => st.includes(id))).map((s) => s.name);
+    const a = makeEnemy(id, home, 1), b = makeEnemy(id, home, 9);
+    const coins = (fis) => 3 * SECTION_SCALE[home - 1] / 5 * (1 + 0.05 * (fis - 1));
+    const tags = [e.fast && 'fast (acts first)', e.healer && `heals allies ${Math.round(e.healer * 100)}%`, e.regen && `regenerates ${Math.round(e.regen * 100)}%/turn`, e.dodge && `${Math.round(e.dodge * 100)}% dodge`].filter(Boolean);
+    return `<div class="card enemy" data-sec="${home}" style="--rc:#7a6a52"><div class="top"><img src="${enemyIcon(id, 2)}" alt=""><div><div class="nm">${e.name}</div>
+      <div class="meta">${FAMILIES[e.family].name} · ${secName(home)} ${where.join(', ')}${guestIn.length ? ` · also a guest in ${guestIn.join(', ')}` : ''}</div>
+      <div class="meta">${famLine(e.family)}</div></div></div>
+      <div class="k">Stats (floor 1 → floor 9 of ${secName(home)})</div><div class="stats"><b>HP ${fmt(a.maxHp)} → ${fmt(b.maxHp)}</b><b>Atk ${fmt(a.atk)} → ${fmt(b.atk)}</b><b>Def ${fmt(a.def)} → ${fmt(b.def)}</b></div>
+      ${tags.length ? `<div class="meta">${tags.join(' · ')}</div>` : ''}
+      <div class="k">Moves</div><ul>${e.moves.map((m) => `<li><b>${m.name}</b> — ${m.power ? `${Math.round(m.power * 100)}% ${TYPE_NAME[m.type] || m.type}` : m.type}${m.tele ? ' · <i>telegraphed</i>' : ''}${m.poison ? ' · poison' : ''}${m.burn ? ' · burn' : ''}${m.stun ? ` · ${Math.round(m.stun * 100)}% stun` : ''}${m.freeze ? ' · freeze' : ''} <span class="muted">(weight ${m.weight})</span></li>`).join('')}</ul>
+      <div class="k">Rewards per kill</div><div class="meta">~${fmt(coins(1))} → ${fmt(coins(9))} coins · ${fmt(enemyXp(a))} → ${fmt(enemyXp(b))} Crypts XP</div></div>`;
+  }).join('');
+  const dropTable = `<div class="tw"><table><tr><th>Rarity</th><th class="num">Chance per kill (floor 1)</th><th class="num">Floor 9</th><th>Notes</th></tr>
+    ${Object.entries(DROP).map(([r, p]) => `<tr><td>${rar(r)}</td><td class="num">${pct(p * height(1))}</td><td class="num">${pct(p * height(9))}</td><td class="muted">${r === 'mythic' ? 'Stone Depths and up only' : ''}</td></tr>`).join('')}
+    <tr><td>${rar('mythic')} grind weapons</td><td class="num">1 in 2,000</td><td class="num">1 in 2,000</td><td class="muted">${items.filter((i) => i.grindDrop).map((i) => i.name).join(', ')}</td></tr></table></div>`;
+  html.enemies = `<h2>Enemies</h2><p class="sub">Each kill rolls every rarity separately (so one kill can drop more than one item). The item is then picked at random from that area's items of that rarity.</p>${dropTable}
+  <div class="chips" data-f="esec" style="margin-top:12px"><span>Area</span><button class="on" data-v="">All</button>${[1, 2, 3, 4, 5].map((s) => `<button data-v="${s}">${secName(s)}</button>`).join('')}</div>
+  <div class="grid" id="enemyGrid">${enemyRows}</div>`;
+
+  // Bosses
+  html.bosses = `<h2>Bosses</h2>` + SECTIONS.map((s, i) => {
+    const B = BOSSES[s.boss], b = makeBoss(i + 1), odds = bossRarityOdds(i + 1);
+    const mvLine = (n) => { const m = B.moves[n]; return `<li><b>${n}</b> — ${m.power ? `${Math.round(m.power * 100)}%${m.hits ? ` ×${m.hits}` : ''} ${TYPE_NAME[m.type] || m.type}` : m.type === 'summon' ? `summons a ${ENEMIES[m.summon].name}` : m.type}${m.tele ? ` · <i>telegraphed: "${esc(m.tele)}"</i>` : ''}${m.burn ? ' · burn' : ''}${m.poison ? ' · poison' : ''}${m.freeze ? ` · ${Math.round(m.freeze * 100)}% freeze` : ''}${m.stun ? ` · ${Math.round(m.stun * 100)}% stun` : ''}${m.lifesteal ? ' · heals itself' : ''}${m.defUp ? ` · +${Math.round(m.defUp * 100)}% Defence` : ''}${m.slow ? ' · slows' : ''}</li>`; };
+    return `<div class="card" style="--rc:var(--c-legendary);margin-bottom:10px"><div class="top"><img src="${enemyIcon(s.boss, 3)}" alt="" style="width:96px;height:96px"><div>
+      <div class="nm">${B.name} <span class="muted">· floor ${i * 10 + 10}, ${s.name}</span></div><div class="meta">${famLine(B.family)}${B.extraWeak ? ` · <span class="weak">extra weak to ${B.extraWeak.map((t) => TYPE_NAME[t]).join(', ')}</span>` : ''}</div>
+      <div class="stats"><b>HP ${fmt(b.maxHp)}</b><b>Atk ${fmt(b.atk)}</b><b>Def ${fmt(b.def)}</b><b>Power to beat ~${fmt(recommendedPower(i + 1))}</b></div></div></div>
+      <div class="k">Pattern (repeats)</div><div>${B.pattern.join(' → ')}</div>
+      <div class="k">Phase 2 at ${Math.round(B.phase2.at * 100)}% Health (+${Math.round((B.phase2.atk - 1) * 100)}% Attack)</div><div>${B.phase2.pattern.join(' → ')}</div><div class="meta">"${esc(B.phase2.text)}"</div>
+      <div class="k">Moves</div><ul>${Object.keys(B.moves).map(mvLine).join('')}</ul>
+      <div class="k">Drops: 2 rolls per kill</div><ul>${Object.entries(odds).map(([r, p]) => `<li>${rar(r)} ${pct(p)} per roll: ${bossPool(i + 1, r).map((it) => `${esc(it.name)} (${oneIn(1 - (1 - p / bossPool(i + 1, r).length) ** 2)} kills)`).join(', ')}</li>`).join('')}</ul>
+      <div class="meta">${fmt(40 * SECTION_SCALE[i] / 5 * 1.45)} coins · ${fmt(enemyXp(b))} Crypts XP · plus a Gold (90%) or Ancient (10%) boss chest</div></div>`;
+  }).join('');
+
+  // Chests
+  const tierRows = [['w', 'Wooden'], ['i', 'Iron'], ['g', 'Gold'], ['a', 'Ancient'], ['bg', 'Boss Gold'], ['ba', 'Boss Ancient']];
+  html.chests = `<h2>Chests</h2><p class="sub">Every floor you clear (replays too) gives a chest from that area. Open them in Camp → Bag.</p>
+  <h3>Which chest you get</h3><div class="tw"><table><tr><th>Floor in area</th><th class="num">Wooden</th><th class="num">Iron</th><th class="num">Gold</th><th class="num">Ancient</th></tr>
+  ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((f) => { const t = (f - 1) / 8; return `<tr><td>${f}</td>${['w', 'i', 'g', 'a'].map((k) => `<td class="num">${pct(LOW[k] + (HIGH[k] - LOW[k]) * t)}</td>`).join('')}</tr>`; }).join('')}
+  <tr><td>10 (boss)</td><td class="num">—</td><td class="num">—</td><td class="num">90%</td><td class="num">10%</td></tr></table></div>
+  <h3>What's inside</h3><div class="tw"><table><tr><th></th><th>Chest</th><th class="num">Gear</th><th>Gear rarity</th><th>Materials</th><th class="num">Potion</th><th class="num">Coins: Goblin Warrens → Infernal Spire</th></tr>
+  ${tierRows.map(([k, n]) => { const L = LOOT[k], boss = k.startsWith('b'), base = boss ? 8 : 2.6, lo = boss ? 1 : 0.8, hi = boss ? 1.5 : 1.6;
+    return `<tr><td><img src="${chestIcon(`3${k}`, { scale: 2 })}" alt=""></td><td><b>${n}</b></td><td class="num">${pct(L.gear)}</td><td>${L.odds.map(([r, p]) => `${rar(r)} ${pct(p)}`).join(' · ')}</td><td>${pct(L.mats[0])} chance, ${L.mats[1]}–${L.mats[2]}</td><td class="num">${pct(L.potion)}</td>
+      <td class="num">${fmt(base * SECTION_SCALE[0] * L.coins * lo)}–${fmt(base * SECTION_SCALE[0] * L.coins * hi)} → ${fmt(base * SECTION_SCALE[4] * L.coins * lo)}–${fmt(base * SECTION_SCALE[4] * L.coins * hi)}</td></tr>`; }).join('')}</table></div>
+  <div class="note">Chests never contain Masterworks or the 1-in-2,000 grind weapons. If a rarity has no items in that area, nothing drops for that roll.</div>`;
+
+  // Shop, Forge, Potions
+  const masterworks = items.filter((i) => i.shopOnly);
+  html.shop = `<h2>Blacksmith</h2><p class="sub">Sells Commons and Uncommons from areas you've unlocked, plus Masterworks.</p>
+  <div class="tw"><table><tr><th></th><th>Masterwork</th><th>Area</th><th class="num">Price</th></tr>${masterworks.map((i) => `<tr><td><img src="${gearArtIcon(i, 1)}" alt=""></td><td style="color:var(--c-${i.rarity})"><b>${esc(i.name)}</b><br><span class="meta">${RAR_NAME[i.rarity]} ${SLOT_NAME_D[i.slot]}</span></td><td>${secName(i.section)}</td><td class="num">${fmt(buyPrice(i.id))}</td></tr>`).join('')}</table></div>
+  <h3>Common & Uncommon prices by area</h3><div class="tw"><table><tr><th>Area</th><th class="num">Common</th><th class="num">Uncommon</th><th class="num">Sell: Rare / Epic / Legendary</th></tr>
+  ${SECTIONS.map((s, i) => { const c = items.find((x) => x.section === i + 1 && x.rarity === 'common'), u = items.find((x) => x.section === i + 1 && x.rarity === 'uncommon'), sp = (r) => fmt(({ rare: 12, epic: 30, legendary: 80 })[r] * SECTION_SCALE[i]); return `<tr><td>${s.name}</td><td class="num">${fmt(buyPrice(c.id))}</td><td class="num">${fmt(buyPrice(u.id))}</td><td class="num">${sp('rare')} / ${sp('epic')} / ${sp('legendary')}</td></tr>`; }).join('')}</table></div>
+  <h2>Forge</h2><p class="sub">Each +1 adds ${Math.round(UPGRADE_STEP * 100)}% to the item's stats, up to +${MAX_PLUS}. Costs coins plus that area's material (+1 needs 1, +2 needs 2 … +10 needs 10).</p>
+  <div class="tw"><table><tr><th>Area</th>${RAR.filter((r) => r !== 'divine').map((r) => `<th class="num">${RAR_NAME[r]}: +1 / all +10</th>`).join('')}</tr>
+  ${SECTIONS.map((s, i) => `<tr><td>${s.name}</td>${RAR.filter((r) => r !== 'divine').map((r) => { const one = SECTION_SCALE[i] * RARITY_MULT[r] * 4; return `<td class="num">${fmt(one)} / ${fmt(one * 55)}</td>`; }).join('')}</tr>`).join('')}</table></div>
+  <h2>Potions</h2><p class="sub">Up to ${DD.POTIONS_PER_FIGHT} per fight. Prices are the same in every area.</p>
+  <div class="tw"><table><tr><th>Potion</th><th>Effect</th><th class="num">Price</th></tr>${Object.values(POTIONS).map((p) => `<tr><td><b>${p.name}</b></td><td>${p.heal ? `heals ${Math.round(p.heal * 100)}% Health` : p.text}</td><td class="num">${fmt(p.price)}</td></tr>`).join('')}</table></div>`;
+
+  // Sets
+  html.sets = `<h2>Armour sets</h2><p class="sub">Wear all 4 pieces of a set for its bonus.</p>` + Object.entries(SETS).map(([k, st]) => `<div class="card" style="--rc:var(--c-epic);margin-bottom:10px"><div class="nm">${st.name} <span class="muted">· ${secName(st.section)}</span></div><div>${st.text}</div>
+    <div class="stats" style="margin-top:6px">${items.filter((i) => i.set === k).map((i) => `<b style="display:flex;align-items:center;gap:4px"><img src="${gearArtIcon(i, 1)}" style="width:32px;image-rendering:pixelated" alt="">${esc(i.name)}</b>`).join('')}</div></div>`).join('');
+
+  // Progress
+  const LV = [1, 2, 3, 5, 8, 10, 12, 15, 20, 25, 30, 35, 40];
+  html.progress = `<h2>Crypts levels</h2><p class="sub">Crypts XP comes from Dungeon kills. Each level adds +1% damage; areas unlock at set levels, and your base stats jump when you reach a new area with the level for it.</p>
+  <div class="tw"><table><tr><th class="num">Level</th><th class="num">XP to next</th><th class="num">Total XP</th><th>Unlocks</th></tr>${LV.map((L) => `<tr><td class="num">${L}</td><td class="num">${fmt(xpToNext(L))}</td><td class="num">${fmt(xpForLevel(L))}</td><td>${SECTIONS.filter((s) => s.crypts === L).map((s) => s.name).join(', ')}</td></tr>`).join('')}</table></div>`;
+
+  // ---------- build page ----------
+  const nav = document.getElementById('nav'), main = document.getElementById('main');
+  nav.innerHTML = TABS.map(([k, n], i) => `<button data-tab="${k}" class="${i ? '' : 'on'}">${n}</button>`).join('') + '<button id="snap" title="Download a single-file copy">Save snapshot</button>';
+  main.innerHTML = TABS.map(([k], i) => `<section class="tab ${i ? '' : 'on'}" id="t-${k}">${html[k]}</section>`).join('');
+  document.getElementById('stamp').textContent = `Everything in the Dungeon, read straight from the game's data · ${items.length} items · ${Object.keys(ENEMIES).length} enemies · ${SECTIONS.length} bosses · generated ${new Date().toLocaleString('en-NZ')}`;
+  const ui = document.getElementById('ui-script');
+  new Function(ui.textContent)();
+  document.getElementById('snap').onclick = () => {
+    const doc = document.documentElement.cloneNode(true);
+    doc.querySelectorAll('script[type=module]').forEach((s) => s.remove());
+    doc.querySelector('#snap')?.remove();
+    doc.querySelectorAll('style').forEach((s) => { s.textContent = s.textContent.replace(/@font-face[^}]+}/g, ''); });
+    const blob = new Blob(['<!doctype html>\n' + doc.outerHTML], { type: 'text/html' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'dungeon-codex.html'; a.click();
+  };
+</script>
+<!-- plain script so it also works in a saved snapshot: tabs and filters only show/hide what's already on the page -->
+<script id="ui-script">
+  (function () {
+    if (!document.querySelector('#nav button')) return;   // module hasn't built the page yet (it calls this again)
+    if (window.__codexUi) return; window.__codexUi = true;
+    const nav = document.getElementById('nav');
+    nav.addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (!b) return;
+      nav.querySelectorAll('button[data-tab]').forEach((x) => x.classList.toggle('on', x === b));
+      document.querySelectorAll('section.tab').forEach((s) => s.classList.toggle('on', s.id === 't-' + b.dataset.tab)); scrollTo(0, 0); });
+    const f = { sec: '', slot: '', rar: '', esec: '', q: '' };
+    function apply() {
+      let n = 0;
+      document.querySelectorAll('.card.item').forEach((c) => { const ok = (!f.sec || c.dataset.sec === f.sec) && (!f.slot || c.dataset.slot === f.slot) && (!f.rar || c.dataset.rar === f.rar) && (!f.q || c.dataset.q.includes(f.q)); c.classList.toggle('hide', !ok); if (ok) n++; });
+      const ic = document.getElementById('itemCount'); if (ic) ic.textContent = n + ' items shown';
+      document.querySelectorAll('.card.enemy').forEach((c) => c.classList.toggle('hide', !!f.esec && c.dataset.sec !== f.esec));
+    }
+    document.querySelectorAll('.chips[data-f]').forEach((row) => row.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return;
+      row.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); f[row.dataset.f] = b.dataset.v; apply(); }));
+    const q = document.getElementById('q'); if (q) q.addEventListener('input', () => { f.q = q.value.trim().toLowerCase(); apply(); });
+    apply();
+  })();
+</script>
+</body>
+</html>

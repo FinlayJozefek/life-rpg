@@ -44,7 +44,7 @@ const rarTag = (r) => `<span class="rtag r-${r}">${RAR_NAME[r]}</span>`;
 const scaleFor = (sec) => SECTION_SCALE[sec - 1] * SECTION_FUDGE[sec - 1];
 
 // ---------- describing items and moves ----------
-function moveText(mv, p) {
+export function moveText(mv, p) {
   const bits = [];
   if (mv.power > 0) bits.push(`${Math.round(mv.power * (mv.hits || 1) * 100)}% ${TYPE_NAME[moveType(p, mv)] || ''}${mv.hits > 1 ? ` (${mv.hits} hits)` : ''}`);
   if (mv.aoe) bits.push('hits all');
@@ -66,7 +66,7 @@ function moveText(mv, p) {
   if (mv.charges) bits.push(`${mv.charges} uses per fight`);
   return bits.join(' · ');
 }
-function passiveText(it) {
+export function passiveText(it) {
   const t = [];
   if (it.slayer) t.push(`+${Math.round(it.slayer.bonus * 100)}% damage to ${FAMILIES[it.slayer.family].name}s`);
   if (it.firstStrike) t.push('always strikes first');
