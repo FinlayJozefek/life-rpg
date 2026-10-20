@@ -353,6 +353,10 @@ export function buildGear(it) {
   return { g, R, aura: AURA[RAR[R]] || null, glow: m.glow, rarity: RAR[R] };
 }
 
+// The themed art (gearart2.js) plugs itself in here; it falls back to buildGear for anything without a recipe.
+let builder = buildGear;
+export function setGearBuilder(fn) { builder = fn; cache.clear(); }
+
 function paint(ctx, g, scale, f = null) {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     let col = g.c[y * N + x];
@@ -367,7 +371,7 @@ const cache = new Map();
 export function gearArtIcon(it, scale = 3) {
   const key = `${it.id || it.name}|${it.rarity}|${it.section}|${scale}`;
   if (cache.has(key)) return cache.get(key);
-  const { g, aura } = buildGear(it);
+  const { g, aura } = builder(it);
   const pad = 4 * scale;   // same padding for every item so icons line up; Legendary+ glow fills it
   const cv = document.createElement('canvas'); cv.width = cv.height = N * scale + pad * 2;
   const ctx = cv.getContext('2d');
@@ -385,7 +389,7 @@ export function gearArtIcon(it, scale = 3) {
 
 // Animated icon: Epic+ shimmer sweep, glowing parts pulse, Mythic sparkles, Divine halo rays. Returns stop().
 export function mountGearArt(canvas, it, scale = 4) {
-  const { g, R, aura } = buildGear(it);
+  const { g, R, aura } = builder(it);
   const pad = 5 * scale;
   canvas.width = canvas.height = N * scale + pad * 2;
   const ctx = canvas.getContext('2d');

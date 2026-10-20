@@ -1,6 +1,7 @@
 // Dungeon pixel art: enemies, bosses and gear icons.
 // Enemies use the same 16x16 drawing format as pets (8-char rows are mirrored).
 import { gearArtIcon } from './gearart.js';
+import './gearart2.js';   // themed gear art
 import { BASES } from '../pets.js';
 import { DITEMS } from './ddata.js';
 import { drawingIcon, mountDrawing } from '../sprites2.js';

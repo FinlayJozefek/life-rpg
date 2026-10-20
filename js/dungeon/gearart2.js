@@ -1,7 +1,7 @@
 // Trial (dev/gear-themes.html): every armour piece gets its own recipe -- shape, material and surface
 // texture -- so no two items look alike and each set has a clearly different look.
 // 32x32 front view, light from the top-left. Falls back to the current art for anything without a recipe.
-import { buildGear, GEM, TRIM } from './gearart.js';
+import { buildGear, GEM, TRIM, setGearBuilder } from './gearart.js';
 
 const N = 32;
 function h2(x, y, s = 0) { let h = (x * 374761393 + y * 668265263 + s * 2147483647) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
@@ -471,3 +471,5 @@ export function gearArtIcon2(it, scale = 3) {
   draw(ctx);
   const url = cv.toDataURL(); cache.set(key, url); return url;
 }
+
+setGearBuilder(buildGear2);   // every gear icon in the game now uses the themed art
